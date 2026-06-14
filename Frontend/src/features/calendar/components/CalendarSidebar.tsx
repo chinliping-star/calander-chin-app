@@ -21,7 +21,7 @@ const FRIENDS: Friend[] = [
 ];
 
 const CARD_STYLE: CSSProperties = {
-  backgroundColor: '#ffffff',
+  backgroundColor: 'var(--bg)',
   border: '1px solid var(--border)',
   boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
 };

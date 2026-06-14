@@ -10,7 +10,7 @@ interface DayCellProps {
 
 const STATUS_STYLES: Record<string, CSSProperties> = {
   available: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--bg)',
     border: '1px solid #f0e6ec',
   },
   blocked: {
@@ -18,8 +18,8 @@ const STATUS_STYLES: Record<string, CSSProperties> = {
     border: '1px solid #e5e7eb',
   },
   accepted: {
-    backgroundColor: '#fff0f6',
-    border: '1.5px solid #ffb3ce',
+    backgroundColor: 'var(--color-tertiary)',
+    border: '1.5px solid var(--color-primary-light)',
   },
   pending: {
     backgroundColor: '#faf5ff',
@@ -30,14 +30,14 @@ const STATUS_STYLES: Record<string, CSSProperties> = {
 const PILL_STYLES: Record<string, CSSProperties> = {
   available: { backgroundColor: '#f3f4f6', color: '#6b7280' },
   blocked:   { backgroundColor: '#e5e7eb', color: '#9ca3af' },
-  accepted:  { backgroundColor: '#FF7FB1', color: '#ffffff' },
+  accepted:  { backgroundColor: 'var(--color-primary)', color: '#ffffff' },
   pending:   { backgroundColor: '#ede9fe', color: '#7c3aed' },
 };
 
 const DAY_NUMBER_STYLES: Record<string, CSSProperties> = {
-  available: { color: '#4A3E4E', fontWeight: 600 },
+  available: { color: 'var(--text-h)', fontWeight: 600 },
   blocked:   { color: '#9ca3af', fontWeight: 400 },
-  accepted:  { color: '#CC5A87', fontWeight: 700 },
+  accepted:  { color: 'var(--color-primary-dark)', fontWeight: 700 },
   pending:   { color: '#7c3aed', fontWeight: 700 },
 };
 
@@ -72,8 +72,8 @@ export function DayCell({ data, isToday = false, onClick }: DayCellProps) {
         className="relative flex flex-col items-start justify-start gap-1 rounded-xl p-1.5"
         style={{
           minHeight: '72px', height: '100%',
-          background: 'linear-gradient(135deg, #FF7FB1 0%, #ff5c9d 100%)',
-          border: '2px solid #CC5A87',
+          background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
+          border: '2px solid var(--color-primary-dark)',
           boxShadow: '0 4px 12px rgba(255,127,177,0.40)',
         }}
       >

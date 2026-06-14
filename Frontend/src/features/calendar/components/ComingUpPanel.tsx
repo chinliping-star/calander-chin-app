@@ -55,7 +55,7 @@ const INITIAL_REQUESTS: MeetupRequest[] = [
 ];
 
 const CARD_STYLE: CSSProperties = {
-  backgroundColor: '#ffffff',
+  backgroundColor: 'var(--bg)',
   border: '1px solid var(--border)',
   boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
 };
@@ -163,7 +163,7 @@ export function ComingUpPanel() {
                 key={req.id}
                 className="flex flex-col gap-3 rounded-xl p-3"
                 style={{
-                  backgroundColor: '#f9f9f9',
+                  backgroundColor: 'var(--color-neutral)',
                   border: '1px solid var(--border)',
                 }}
               >
@@ -225,7 +225,7 @@ export function ComingUpPanel() {
                     style={{
                       borderColor: 'var(--color-secondary)',
                       color: 'var(--color-secondary)',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--bg)',
                     }}
                     aria-label={`Decline ${req.proposer.displayName}'s meetup: ${req.title}`}
                   >
