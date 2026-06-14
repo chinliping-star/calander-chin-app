@@ -32,7 +32,7 @@ export function FriendCard({ friend }: FriendCardProps) {
     <article
       className="relative flex flex-col rounded-2xl p-4 group cursor-pointer"
       style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--bg)',
         border: '1px solid var(--border)',
         boxShadow: '0 2px 12px rgba(74,62,78,0.07)',
       }}
@@ -55,7 +55,7 @@ export function FriendCard({ friend }: FriendCardProps) {
           <div
             className="absolute right-0 top-8 w-36 rounded-xl py-1 z-20"
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--bg)',
               border: '1px solid var(--border)',
               boxShadow: '0 4px 20px rgba(74,62,78,0.15)',
             }}
