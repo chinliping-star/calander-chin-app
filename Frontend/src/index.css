@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Polished Rose palette — exact values from design system */
+  --color-primary: #FF7FB1;
+  --color-primary-light: #FFB3CE;
+  --color-primary-dark: #CC5A87;
+  --color-secondary: #4A3E4E;
+  --color-secondary-light: #6B5C70;
+  --color-tertiary: #FFF0F6;
+  --color-neutral: #F8F9FA;
+
+  /* Button variants */
+  --btn-primary-bg: #FF7FB1;
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: transparent;
+  --btn-secondary-text: #4A3E4E;
+  --btn-secondary-border: #4A3E4E;
+  --btn-inverted-bg: #4A3E4E;
+  --btn-inverted-text: #ffffff;
+  --btn-outlined-bg: #ffffff;
+  --btn-outlined-text: #4A3E4E;
+  --btn-outlined-border: #e8dfe6;
+
+  /* Calendar day states */
+  --day-available: #ffffff;
+  --day-blocked: #d1d5db;
+  --day-accepted: #FF7FB1;
+  --day-pending: #c084fc;
+
+  --text: #6b6375;
+  --text-h: #4A3E4E;
+  --bg: #fff;
+  --surface: #FFF0F6;
+  --border: #e8dfe6;
+  --code-bg: #FFF0F6;
+  --accent: #FF7FB1;
+  --accent-bg: rgba(255, 127, 177, 0.12);
+  --accent-border: rgba(255, 127, 177, 0.45);
+  --social-bg: rgba(255, 240, 246, 0.6);
+  --shadow:
+    rgba(74, 62, 78, 0.08) 0 10px 15px -3px, rgba(74, 62, 78, 0.04) 0 4px 6px -2px;
+
+  --sans: 'Manrope', system-ui, 'Segoe UI', sans-serif;
+  --heading: 'Manrope', system-ui, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 16px/150% var(--sans);
+  letter-spacing: 0.16px;
+  color-scheme: light;
+  color: var(--text);
+  background: var(--color-neutral);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+/* Dark mode intentionally disabled — HelloXXX is light-mode only */
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}

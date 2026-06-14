@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd f:/riseart/client && mkdir -p .claude/agents .claude/skills .claude/rules/frontend)",
+      "Bash(cd f:/riseart/client && touch .claude/agents/.gitkeep .claude/skills/.gitkeep && find .claude -type f | sort && echo \"---\" && ls .mcp.json)",
+      "Bash(npx skills *)",
+      "Bash(cd f:/riseart/client && cat package.json && echo \"===SRC===\" && find src -type f | sort && echo \"===PUBLIC===\" && ls public/ && echo \"===ASSETS ROOT===\" && ls ../assets/ 2>/dev/null)",
+      "Read(//f//**)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/motion/package.json'\\).version\\)\")",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(file /f/riseart/client/src/assets/footage*)",
+      "Bash(ffmpeg -version)",
+      "PowerShell($f = \\(Get-Command ffmpeg -ErrorAction SilentlyContinue\\); if \\($f\\) { $f.Source } else { \"NO_FFMPEG\" })",
+      "PowerShell(winget install --id Gyan.FFmpeg -e --accept-source-agreements --accept-package-agreements 2>&1)",
+      "Bash(/usr/bin/find /c/Users/CHISHT~1/AppData/Local/Temp/claude/f--riseart -name \"bpdmzsf2l.output\")",
+      "Bash(xargs grep -lEi \"successfully installed|already installed|Found FFmpeg|Failed|No package|error\")",
+      "PowerShell($ff = \"$env:LOCALAPPDATA\\\\Microsoft\\\\WinGet\\\\Links\\\\ffprobe.exe\"; foreach\\($v in @\\(\"video 1.mp4\",\"vvideo 2.mp4\",\"video 3.mp4\"\\)\\){ Write-Output \"== $v ==\"; & $ff -v error -select_streams v:0 -show_entries stream=width,height,codec_name,duration,bit_rate -of default=noprint_wrappers=1 \"f:\\\\riseart\\\\client\\\\src\\\\assets\\\\$v\" })",
+      "PowerShell(Get-ChildItem -Path \"$env:LOCALAPPDATA\\\\Microsoft\\\\WinGet\\\\Packages\" -Recurse -Filter ffprobe.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName)",
+      "PowerShell($bin = \"C:\\\\Users\\\\Chishty Computer\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\ffmpeg-8.1.1-full_build\\\\bin\"; $ff = \"$bin\\\\ffprobe.exe\"; foreach\\($v in @\\(\"video 1.mp4\",\"vvideo 2.mp4\",\"video 3.mp4\"\\)\\){ Write-Output \"== $v ==\"; & $ff -v error -select_streams v:0 -show_entries stream=width,height,codec_name,duration,bit_rate -of default=noprint_wrappers=1 \"f:\\\\riseart\\\\client\\\\src\\\\assets\\\\$v\" })",
+      "PowerShell($bin = \"C:\\\\Users\\\\Chishty Computer\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\ffmpeg-8.1.1-full_build\\\\bin\"; $ff = \"$bin\\\\ffmpeg.exe\"; $src = \"f:\\\\riseart\\\\client\\\\src\\\\assets\"; $map = @{ \"video 1.mp4\"=\"hero-1.mp4\"; \"vvideo 2.mp4\"=\"hero-2.mp4\"; \"video 3.mp4\"=\"hero-3.mp4\" }; foreach\\($k in $map.Keys\\){ $out = $map[$k]; & $ff -y -i \"$src\\\\$k\" -vf \"scale=1920:-2\" -c:v libx264 -preset slow -crf 28 -pix_fmt yuv420p -an -movflags +faststart \"$src\\\\$out\"; Write-Output \"DONE $out\" }; Write-Output \"ALL_DONE\")",
+      "Bash(break)",
+      "PowerShell($ff = \"C:\\\\Users\\\\Chishty Computer\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\ffmpeg-8.1.1-full_build\\\\bin\\\\ffmpeg.exe\"; & $ff -y -i \"f:\\\\riseart\\\\client\\\\src\\\\assets\\\\hero-1.mp4\" -vf \"scale=1280:-2\" -frames:v 1 -q:v 4 \"f:\\\\riseart\\\\client\\\\src\\\\assets\\\\hero-poster.jpg\"; \\(Get-Item \"f:\\\\riseart\\\\client\\\\src\\\\assets\\\\hero-poster.jpg\"\\).Length)",
+      "Bash(npm --version)",
+      "Bash(grep -iE \"npm error \\(code|syscall|errno|path|ENOENT|EACCES|network|404|ETARGET|notarget|version\\)\" \"C:/Users/Chishty Computer/AppData/Local/npm-cache/_logs/2026-06-02T10_55_10_619Z-debug-0.log\" | head -20)",
+      "Read(//c/Users/Chishty Computer/AppData/Local/npm-cache/_logs/**)"
+    ]
+  }
+}
