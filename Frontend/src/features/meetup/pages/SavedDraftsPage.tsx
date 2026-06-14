@@ -99,7 +99,7 @@ export function SavedDraftsPage() {
             type="button"
             onClick={() => navigate(-1)}
             className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:opacity-80 focus-visible:outline-none"
-            style={{ backgroundColor: '#ffffff', border: '1px solid var(--border)', color: 'var(--text-h)' }}
+            style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
             aria-label="Go back"
           >
             <ArrowLeft size={16} />
@@ -124,7 +124,7 @@ export function SavedDraftsPage() {
         {drafts.length === 0 && (
           <div
             className="flex flex-col items-center justify-center gap-4 rounded-2xl p-16 text-center"
-            style={{ backgroundColor: '#ffffff', border: '1px solid var(--border)' }}
+            style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
           >
             <span className="text-5xl">📭</span>
             <div>
@@ -153,7 +153,7 @@ export function SavedDraftsPage() {
                 key={draft.id}
                 className="rounded-2xl overflow-hidden"
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--bg)',
                   border: '1px solid var(--border)',
                   boxShadow: '0 2px 12px rgba(74,62,78,0.07)',
                 }}
@@ -161,7 +161,7 @@ export function SavedDraftsPage() {
                 {/* Top accent strip */}
                 <div
                   className="h-1 w-full"
-                  style={{ background: 'linear-gradient(90deg, #FF7FB1, #c084fc)' }}
+                  style={{ background: 'linear-gradient(90deg, var(--color-primary), #c084fc)' }}
                 />
 
                 <div className="p-5">

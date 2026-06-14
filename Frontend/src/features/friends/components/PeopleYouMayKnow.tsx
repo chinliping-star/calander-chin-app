@@ -39,14 +39,14 @@ export function PeopleYouMayKnow() {
         <h2
           id="people-heading"
           className="text-lg font-bold tracking-tight"
-          style={{ color: '#111827', margin: 0 }}
+          style={{ color: 'var(--text-h)', margin: 0 }}
         >
           People you may know
         </h2>
         <button
           type="button"
           className="text-xs font-semibold transition-opacity hover:opacity-70 focus-visible:outline-none"
-          style={{ color: '#EC4899' }}
+          style={{ color: 'var(--color-primary)' }}
         >
           View All
         </button>
@@ -67,8 +67,8 @@ function PersonCard({ person }: { person: SuggestedPerson }) {
     <div
       className="group flex flex-col rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-1"
       style={{
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
+        backgroundColor: 'var(--bg)',
+        border: '1px solid var(--border)',
         boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
       }}
       onMouseEnter={(e) => {
@@ -79,7 +79,7 @@ function PersonCard({ person }: { person: SuggestedPerson }) {
       }}
     >
       {/* Square photo with padding + rounded */}
-      <div className="w-full p-4 pt-5 flex items-center justify-center" style={{ backgroundColor: '#F9FAFB' }}>
+      <div className="w-full p-4 pt-5 flex items-center justify-center" style={{ backgroundColor: 'var(--color-neutral)' }}>
         <div className="w-full aspect-square overflow-hidden rounded-xl">
           <img
             src={person.avatarUrl}
@@ -93,10 +93,10 @@ function PersonCard({ person }: { person: SuggestedPerson }) {
       {/* Body */}
       <div className="flex flex-col gap-3 p-3.5">
         <div>
-          <p className="text-sm font-bold leading-snug" style={{ color: '#111827' }}>
+          <p className="text-sm font-bold leading-snug" style={{ color: 'var(--text-h)' }}>
             {person.displayName}
           </p>
-          <p className="text-xs mt-0.5 leading-snug" style={{ color: '#6B7280' }}>
+          <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--text)' }}>
             {person.mutualContext}
           </p>
         </div>
@@ -114,18 +114,18 @@ function ConnectButton() {
       className="w-full py-1.5 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
       style={{
         backgroundColor: 'transparent',
-        border: '1.5px solid #EC4899',
-        color: '#EC4899',
+        border: '1.5px solid var(--color-primary)',
+        color: 'var(--color-primary)',
       }}
       onMouseEnter={(e) => {
         const btn = e.currentTarget;
-        btn.style.backgroundColor = '#EC4899';
+        btn.style.backgroundColor = 'var(--color-primary)';
         btn.style.color = '#ffffff';
       }}
       onMouseLeave={(e) => {
         const btn = e.currentTarget;
         btn.style.backgroundColor = 'transparent';
-        btn.style.color = '#EC4899';
+        btn.style.color = 'var(--color-primary)';
       }}
     >
       Connect
