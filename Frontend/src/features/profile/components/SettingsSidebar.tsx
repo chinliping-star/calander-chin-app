@@ -1,22 +1,19 @@
 import { User, Lock, Bell, Settings, HelpCircle, LogOut } from 'lucide-react';
 import { cn } from '../../../lib/utils.ts';
 
-export type SettingsSection = 'profile' | 'privacy' | 'notifications' | 'account';
+export type SettingsSection = 'profile' | 'privacy' | 'notifications' | 'account' | 'help';
 
 interface SettingsSidebarProps {
   active: SettingsSection;
   onSelect: (section: SettingsSection) => void;
 }
 
-const NAV_ITEMS: {
-  key: SettingsSection;
-  label: string;
-  icon: React.FC<{ size?: number }>;
-}[] = [
-  { key: 'profile', label: 'Profile', icon: User },
-  { key: 'privacy', label: 'Privacy', icon: Lock },
+const NAV_ITEMS: { key: SettingsSection; label: string; icon: React.FC<{ size?: number }> }[] = [
+  { key: 'profile',       label: 'Profile',       icon: User },
+  { key: 'privacy',       label: 'Privacy',       icon: Lock },
   { key: 'notifications', label: 'Notifications', icon: Bell },
-  { key: 'account', label: 'Account', icon: Settings },
+  { key: 'account',       label: 'Account',       icon: Settings },
+  { key: 'help',          label: 'Help Center',   icon: HelpCircle },
 ];
 
 export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
@@ -55,7 +52,7 @@ export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
                   )}
                   style={
                     isActive
-                      ? { backgroundColor: 'var(--color-primary)', color: '#ffffff' }
+                      ? { backgroundColor: 'rgba(255,127,177,0.12)', color: 'var(--color-primary)' }
                       : { color: 'var(--text)' }
                   }
                 >
@@ -68,21 +65,8 @@ export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
         </ul>
       </nav>
 
-      <div
-        className="my-3"
-        style={{ borderTop: '1px solid var(--border)' }}
-        role="separator"
-        aria-hidden="true"
-      />
+      <div className="my-3" style={{ borderTop: '1px solid var(--border)' }} role="separator" aria-hidden="true" />
 
-      <button
-        type="button"
-        className="flex items-center gap-2.5 px-3 py-2.5 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
-        style={{ color: 'var(--text)' }}
-      >
-        <HelpCircle size={15} />
-        Help Center
-      </button>
       <button
         type="button"
         className="flex items-center gap-2.5 px-3 py-2.5 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
