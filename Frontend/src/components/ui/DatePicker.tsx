@@ -80,12 +80,12 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', error
           'w-full flex items-center justify-between gap-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7FB1]',
         )}
         style={{
-          border: error ? '1.5px solid #FF7FB1' : open ? '1.5px solid #FF7FB1' : '1px solid var(--border)',
+          border: error ? '1.5px solid var(--color-primary)' : open ? '1.5px solid var(--color-primary)' : '1px solid var(--border)',
           borderRadius: '12px',
           padding: '10px 14px',
           fontSize: '14px',
           color: value ? 'var(--text-h)' : 'var(--text)',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg)',
           fontFamily: 'var(--sans)',
           boxShadow: open ? '0 0 0 3px rgba(255,127,177,0.15)' : 'none',
         }}
@@ -101,7 +101,7 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', error
         <div
           className="absolute z-50 mt-2 w-72 rounded-2xl p-4 select-none"
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg)',
             border: '1px solid var(--border)',
             boxShadow: '0 8px 32px rgba(74,62,78,0.16)',
           }}
@@ -169,9 +169,9 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', error
                   className="flex h-8 w-full items-center justify-center rounded-full text-xs font-medium transition-all hover:scale-110 focus-visible:outline-none"
                   style={
                     isSelected
-                      ? { backgroundColor: '#FF7FB1', color: '#ffffff', fontWeight: 700, boxShadow: '0 2px 8px rgba(255,127,177,0.4)' }
+                      ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', fontWeight: 700, boxShadow: '0 2px 8px rgba(255,127,177,0.4)' }
                       : isToday
-                      ? { backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)', fontWeight: 700, border: '1.5px solid #FFB3CE' }
+                      ? { backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)', fontWeight: 700, border: '1.5px solid var(--color-primary-light)' }
                       : { color: 'var(--text-h)' }
                   }
                   aria-label={dateStr}
