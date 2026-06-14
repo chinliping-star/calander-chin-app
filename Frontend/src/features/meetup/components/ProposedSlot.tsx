@@ -28,7 +28,7 @@ export function ProposedSlot({ slots, onAdd, onUpdate }: ProposedSlotProps) {
       <div
         className="rounded-2xl p-5"
         style={{
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg)',
           border: '1px solid var(--border)',
           boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
         }}
@@ -109,7 +109,7 @@ export function ProposedSlot({ slots, onAdd, onUpdate }: ProposedSlotProps) {
                     value={slot.location}
                     onChange={(e) => onUpdate(slot.id, 'location', e.target.value)}
                     placeholder="Add a place"
-                    style={{ ...inputStyle, paddingLeft: '30px', backgroundColor: '#ffffff' }}
+                    style={{ ...inputStyle, paddingLeft: '30px', backgroundColor: 'var(--bg)' }}
                     aria-label="Slot location"
                   />
                 </div>

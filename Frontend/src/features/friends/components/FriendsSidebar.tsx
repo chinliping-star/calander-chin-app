@@ -1,4 +1,5 @@
 import { Users, Mail, Calendar, Archive, HelpCircle, LogOut, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../lib/utils.ts';
 import type { SidebarSection } from '../types.ts';
 
@@ -20,11 +21,12 @@ const NAV_ITEMS: {
 ];
 
 export function FriendsSidebar({ active, onSelect }: FriendsSidebarProps) {
+  const navigate = useNavigate();
   return (
     <aside
       className="flex flex-col h-full rounded-2xl p-5 gap-2"
       style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--bg)',
         border: '1px solid var(--border)',
         boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
         minHeight: '520px',
@@ -89,6 +91,7 @@ export function FriendsSidebar({ active, onSelect }: FriendsSidebarProps) {
       <div className="flex flex-col gap-1 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
         <button
           type="button"
+          onClick={() => navigate('/settings?section=help')}
           className="flex items-center gap-2.5 px-3 py-2 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
           style={{ color: 'var(--text)' }}
         >
