@@ -63,11 +63,11 @@ function MeetupList({ meetups }: { meetups: MeetupItem[] }) {
         <div key={`${m.day}-${m.label}`}
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:shadow-sm cursor-pointer"
           style={{
-            backgroundColor: m.status === 'pending' ? '#faf5ff' : '#fff0f6',
-            border: m.status === 'pending' ? '1px dashed #c084fc' : '1px solid #ffb3ce',
+            backgroundColor: m.status === 'pending' ? '#faf5ff' : 'var(--color-tertiary)',
+            border: m.status === 'pending' ? '1px dashed #c084fc' : '1px solid var(--color-primary-light)',
           }}>
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-            style={{ backgroundColor: m.status === 'pending' ? '#c084fc' : '#FF7FB1' }}>
+            style={{ backgroundColor: m.status === 'pending' ? '#c084fc' : 'var(--color-primary)' }}>
             {m.day}
           </span>
           <div className="flex-1 min-w-0">
@@ -84,7 +84,7 @@ function MeetupList({ meetups }: { meetups: MeetupItem[] }) {
           <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0"
             style={m.status === 'pending'
               ? { backgroundColor: '#ede9fe', color: '#7c3aed' }
-              : { backgroundColor: '#FF7FB1', color: '#ffffff' }}>
+              : { backgroundColor: 'var(--color-primary)', color: '#ffffff' }}>
             {m.status === 'pending' ? 'Pending' : 'Planned'}
           </span>
         </div>
@@ -125,8 +125,8 @@ function MonthlyView() {
       {/* Legend */}
       <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
         {[
-          { label: 'Available', bg: '#ffffff', border: '1px solid #f0e6ec', text: '#6b6375' },
-          { label: 'Planned',   bg: '#fff0f6', border: '1.5px solid #ffb3ce', text: '#CC5A87' },
+          { label: 'Available', bg: 'var(--bg)', border: '1px solid #f0e6ec', text: 'var(--text)' },
+          { label: 'Planned',   bg: 'var(--color-tertiary)', border: '1.5px solid var(--color-primary-light)', text: 'var(--color-primary-dark)' },
           { label: 'Pending',   bg: '#faf5ff', border: '1.5px dashed #c084fc', text: '#7c3aed' },
           { label: 'Blocked',   bg: '#f3f4f6', border: '1px solid #e5e7eb',   text: '#9ca3af' },
         ].map(({ label, bg, border, text }) => (
@@ -171,15 +171,15 @@ function WeeklyView() {
               {/* Day header */}
               <div className="flex flex-col items-center py-2 rounded-xl"
                 style={{
-                  backgroundColor: isToday ? '#FF7FB1' : 'var(--color-tertiary)',
-                  border: isToday ? '2px solid #CC5A87' : '1px solid var(--border)',
+                  backgroundColor: isToday ? 'var(--color-primary)' : 'var(--color-tertiary)',
+                  border: isToday ? '2px solid var(--color-primary-dark)' : '1px solid var(--border)',
                 }}>
                 <span className="text-[9px] font-bold uppercase tracking-widest"
                   style={{ color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--color-primary)' }}>
                   {WEEK_DAYS_SHORT[i]}
                 </span>
                 <span className="text-base font-bold leading-none"
-                  style={{ color: isToday ? '#ffffff' : 'var(--text-h)' }}>
+                  style={{ color: isToday ? 'var(--bg)' : 'var(--text-h)' }}>
                   {day}
                 </span>
                 {isToday && <span className="text-[8px] text-white opacity-80">Today</span>}
@@ -190,7 +190,7 @@ function WeeklyView() {
                 style={{
                   backgroundColor: override?.status === 'blocked' ? '#f3f4f6'
                     : override?.status === 'pending' ? '#faf5ff'
-                    : '#ffffff',
+                    : 'var(--bg)',
                   border: override?.status === 'pending' ? '1.5px dashed #c084fc'
                     : '1px solid var(--border)',
                 }}>
@@ -207,7 +207,7 @@ function WeeklyView() {
                   <div key={m.label} className="rounded-lg px-1.5 py-1"
                     style={{ backgroundColor: m.status === 'pending' ? '#ede9fe' : '#fff0f6' }}>
                     <p className="text-[9px] font-bold truncate"
-                      style={{ color: m.status === 'pending' ? '#7c3aed' : '#CC5A87' }}>
+                      style={{ color: m.status === 'pending' ? '#7c3aed' : 'var(--color-primary-dark)' }}>
                       {m.label}
                     </p>
                     <p className="text-[8px]" style={{ color: 'var(--text)' }}>{m.time}</p>
@@ -241,7 +241,7 @@ function DailyView() {
     <div className="flex flex-col gap-3 flex-1">
       {/* Day header */}
       <div className="flex items-center justify-center gap-3 py-3 rounded-2xl"
-        style={{ background: 'linear-gradient(135deg, #FF7FB1 0%, #ff5c9d 100%)', boxShadow: '0 4px 12px rgba(255,127,177,0.35)' }}>
+        style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)', boxShadow: '0 4px 12px rgba(255,127,177,0.35)' }}>
         <div className="text-center">
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>Sunday</p>
           <p className="text-3xl font-bold text-white leading-none">14</p>
@@ -264,10 +264,10 @@ function DailyView() {
               {meetup ? (
                 <div className="flex-1 rounded-xl px-3 py-2"
                   style={{
-                    backgroundColor: meetup.status === 'pending' ? '#faf5ff' : '#fff0f6',
-                    border: meetup.status === 'pending' ? '1.5px dashed #c084fc' : '1.5px solid #ffb3ce',
+                    backgroundColor: meetup.status === 'pending' ? '#faf5ff' : 'var(--color-tertiary)',
+                    border: meetup.status === 'pending' ? '1.5px dashed #c084fc' : '1.5px solid var(--color-primary-light)',
                   }}>
-                  <p className="text-xs font-bold" style={{ color: meetup.status === 'pending' ? '#7c3aed' : '#CC5A87' }}>
+                  <p className="text-xs font-bold" style={{ color: meetup.status === 'pending' ? '#7c3aed' : 'var(--color-primary-dark)' }}>
                     {meetup.label}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -351,7 +351,7 @@ export function CalendarGrid() {
               aria-pressed={view === key}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2"
               style={view === key
-                ? { backgroundColor: '#FF7FB1', color: '#ffffff', boxShadow: '0 2px 8px rgba(255,127,177,0.35)' }
+                ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 8px rgba(255,127,177,0.35)' }
                 : { color: 'var(--text)' }}>
               <Icon size={12} />
               {label}
@@ -360,10 +360,16 @@ export function CalendarGrid() {
         </div>
       </div>
 
-      {/* View content */}
-      {view === 'monthly' && <MonthlyView />}
-      {view === 'weekly'  && <WeeklyView />}
-      {view === 'daily'   && <DailyView />}
+      {/* View content — key triggers remount → smooth slide-in */}
+      <div
+        key={view}
+        className="flex flex-col flex-1 gap-4"
+        style={{ animation: 'calendarViewIn 0.45s cubic-bezier(0.16,1,0.3,1) forwards' }}
+      >
+        {view === 'monthly' && <MonthlyView />}
+        {view === 'weekly'  && <WeeklyView />}
+        {view === 'daily'   && <DailyView />}
+      </div>
     </section>
   );
 }
