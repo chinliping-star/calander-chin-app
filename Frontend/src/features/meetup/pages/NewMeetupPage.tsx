@@ -46,7 +46,7 @@ export function NewMeetupPage() {
     padding: '10px 14px',
     fontSize: '14px',
     color: 'var(--text-h)',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--bg)',
     outline: 'none',
     width: '100%',
     fontFamily: 'var(--sans)',
