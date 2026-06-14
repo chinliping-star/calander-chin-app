@@ -118,3 +118,95 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ── Global button animations ───────────────────────────────────────────── */
+
+button, a[role="button"] {
+  cursor: pointer;
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.95) !important;
+}
+
+/* Primary pink buttons — glow + lift */
+button[style*="#FF7FB1"]:not(:disabled),
+button[style*="var(--color-primary)"]:not(:disabled) {
+  position: relative;
+  overflow: hidden;
+}
+
+button[style*="#FF7FB1"]:hover:not(:disabled),
+button[style*="var(--color-primary)"]:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(255, 127, 177, 0.45) !important;
+}
+
+/* Inverted dark buttons — lift + shadow */
+button[style*="#4A3E4E"]:hover:not(:disabled),
+button[style*="var(--btn-inverted-bg)"]:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(74, 62, 78, 0.30) !important;
+}
+
+/* Outlined / ghost buttons — border brighten */
+button[style*="transparent"]:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 62, 78, 0.10) !important;
+}
+
+/* Nav / icon buttons — subtle pop */
+button:not([style*="#FF7FB1"]):not([style*="var(--color-primary)"]):not([style*="#4A3E4E"]):hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* Ripple on click */
+@keyframes ripple {
+  from { transform: scale(0); opacity: 0.35; }
+  to   { transform: scale(3); opacity: 0; }
+}
+
+button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+button:active::after {
+  animation: ripple 0.4s ease-out;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.5) 0%, transparent 70%);
+}
+
+/* Card hover lift */
+@keyframes cardLift {
+  from { transform: translateY(0); box-shadow: 0 2px 12px rgba(74,62,78,0.08); }
+  to   { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(74,62,78,0.14); }
+}
+
+/* Fade-in for dropdowns / modals */
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+[role="dialog"], [role="menu"] {
+  animation: fadeSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Ping badge animation */
+@keyframes ping {
+  75%, 100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Smooth page transitions */
+#root > * {
+  animation: fadeSlideDown 0.22s ease forwards;
+}
