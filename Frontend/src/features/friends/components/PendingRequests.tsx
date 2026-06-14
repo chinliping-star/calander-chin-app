@@ -28,7 +28,7 @@ function RequestCard({ request, onAccept, onReject }: {
     <div
       className="flex items-center gap-3.5 rounded-2xl p-4"
       style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--bg)',
         border: '1px solid var(--border)',
         boxShadow: '0 2px 12px rgba(74,62,78,0.07)',
       }}
