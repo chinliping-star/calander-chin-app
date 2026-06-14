@@ -58,7 +58,7 @@ export function ProposeMeetupPage() {
             <div
               className="rounded-2xl p-6 flex flex-col gap-5"
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--bg)',
                 border: '1px solid var(--border)',
                 boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
               }}
@@ -114,7 +114,7 @@ export function ProposeMeetupPage() {
               <div
                 className="rounded-2xl overflow-hidden"
                 style={{
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--bg)',
                   border: '1px solid var(--border)',
                   boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
                 }}
@@ -162,7 +162,7 @@ export function ProposeMeetupPage() {
       <div
         className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-4 px-6 py-4 lg:px-12"
         style={{
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg)',
           borderTop: '1px solid var(--border)',
           boxShadow: '0 -4px 24px rgba(74,62,78,0.10)',
         }}
