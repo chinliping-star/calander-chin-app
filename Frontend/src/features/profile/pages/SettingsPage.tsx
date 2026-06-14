@@ -1,8 +1,11 @@
 import { useState, useRef } from 'react';
-import { Pencil, ChevronRight, MessageCircle, FileText, Shield, Mail, Phone, ExternalLink } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Pencil, ChevronRight, MessageCircle, FileText, Shield, Mail, Phone, ExternalLink, Check } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { SettingsSidebar } from '../components/SettingsSidebar.tsx';
 import { ToggleSwitch } from '../components/ToggleSwitch.tsx';
+import { useThemeStore, THEMES } from '../../../lib/theme.ts';
+import { usePreferences, CURSORS } from '../../../lib/preferences.ts';
 import type { SettingsSection } from '../components/SettingsSidebar.tsx';
 
 const inputStyle: React.CSSProperties = {
@@ -31,7 +34,7 @@ function SectionCard({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="rounded-2xl p-6"
-      style={{ backgroundColor: '#ffffff', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(74,62,78,0.08)' }}
+      style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(74,62,78,0.08)' }}
     >
       {children}
     </div>
@@ -111,6 +114,256 @@ function ProfileSection() {
             </button>
           </div>
         </form>
+      </SectionCard>
+    </section>
+  );
+}
+
+// ─── Appearance / Theme ───────────────────────────────────────────────────────
+
+function ThemeCard({ t, isActive, onSelect }: { t: import('../../../lib/theme.ts').ThemeMeta; isActive: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={isActive}
+      aria-label={`${t.label} theme`}
+      className="relative flex flex-col gap-0 rounded-2xl overflow-hidden transition-all focus-visible:outline-none focus-visible:ring-2 text-left"
+      style={{
+        border: isActive ? `2px solid ${t.primary}` : `2px solid ${t.border}`,
+        boxShadow: isActive
+          ? `0 0 0 3px ${t.primary}30, 0 8px 24px ${t.primary}20`
+          : `0 2px 8px rgba(0,0,0,0.06)`,
+        transform: isActive ? 'scale(1.02)' : 'scale(1)',
+      }}
+    >
+      {/* ── Mini UI preview ── */}
+      <div style={{ backgroundColor: t.bg, padding: '10px 10px 8px' }}>
+        {/* Navbar strip */}
+        <div
+          className="flex items-center justify-between rounded-lg px-2 py-1 mb-2"
+          style={{ backgroundColor: t.surface === '#0F172A' ? t.surface : t.surface, border: `1px solid ${t.border}` }}
+        >
+          <span style={{ fontSize: '7px', fontWeight: 800, color: t.primary, letterSpacing: '-0.3px' }}>Friendiary</span>
+          <div className="flex gap-1">
+            <div style={{ width: '20px', height: '4px', borderRadius: '2px', backgroundColor: t.border }} />
+            <div style={{ width: '14px', height: '4px', borderRadius: '2px', backgroundColor: t.border }} />
+          </div>
+        </div>
+
+        {/* Content row */}
+        <div className="flex gap-1.5">
+          {/* Sidebar */}
+          <div
+            className="flex flex-col gap-1 rounded-md p-1.5"
+            style={{ width: '36px', backgroundColor: t.surface === '#0F172A' ? '#1E293B' : t.surface, border: `1px solid ${t.border}`, flexShrink: 0 }}
+          >
+            {[t.primary, t.border, t.border].map((c, i) => (
+              <div key={i} style={{ height: '4px', borderRadius: '2px', backgroundColor: i === 0 ? `${t.primary}30` : t.border, width: i === 0 ? '100%' : '70%' }}>
+                {i === 0 && <div style={{ width: '40%', height: '100%', borderRadius: '2px', backgroundColor: t.primary }} />}
+              </div>
+            ))}
+          </div>
+
+          {/* Main content */}
+          <div className="flex-1 flex flex-col gap-1.5">
+            {/* Heading */}
+            <div style={{ height: '5px', borderRadius: '3px', backgroundColor: t.textH, width: '60%', opacity: 0.8 }} />
+            {/* Body lines */}
+            <div style={{ height: '3px', borderRadius: '2px', backgroundColor: t.text, width: '90%', opacity: 0.5 }} />
+            <div style={{ height: '3px', borderRadius: '2px', backgroundColor: t.text, width: '75%', opacity: 0.5 }} />
+            {/* Button row */}
+            <div className="flex gap-1 mt-0.5">
+              <div style={{ height: '8px', width: '28px', borderRadius: '4px', backgroundColor: t.primary }} />
+              <div style={{ height: '8px', width: '22px', borderRadius: '4px', border: `1px solid ${t.border}` }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Calendar row mini */}
+        <div className="flex gap-0.5 mt-2">
+          {[false, false, true, false, false, false, false].map((today, i) => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                height: '14px',
+                borderRadius: '3px',
+                backgroundColor: today ? t.primary : t.surface === '#0F172A' ? '#1E293B' : t.surface,
+                border: today ? 'none' : `1px solid ${t.border}`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Footer: label + swatches ── */}
+      <div
+        className="flex items-center justify-between px-3 py-2"
+        style={{ backgroundColor: t.surface === '#0F172A' ? '#0F172A' : '#ffffff', borderTop: `1px solid ${t.border}` }}
+      >
+        <div className="flex items-center gap-1.5">
+          {/* Color dot swatches */}
+          {[t.primary, t.bg, t.textH].map((c, i) => (
+            <div
+              key={i}
+              style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                backgroundColor: c,
+                border: `1px solid ${t.border}`,
+              }}
+            />
+          ))}
+          <span className="text-xs font-bold ml-1" style={{ color: t.textH, fontSize: '11px' }}>
+            {t.label}
+          </span>
+        </div>
+        {isActive && (
+          <span
+            className="flex h-4 w-4 items-center justify-center rounded-full shrink-0"
+            style={{ backgroundColor: t.primary }}
+          >
+            <Check size={9} color="#fff" strokeWidth={3} />
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function ThemeSection() {
+  const { theme, setTheme } = useThemeStore();
+
+  return (
+    <section aria-labelledby="theme-heading">
+      <SectionCard>
+        <SectionHeading id="theme-heading">Appearance</SectionHeading>
+        <p className="text-sm mb-6" style={{ color: 'var(--text)' }}>
+          Pick a theme — applies instantly everywhere. Saved across sessions.
+        </p>
+
+        {/* Active theme badge */}
+        <div className="flex items-center gap-2 mb-5">
+          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
+            Active theme:
+          </span>
+          <span
+            className="px-3 py-1 rounded-full text-xs font-bold"
+            style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1px solid var(--accent-border)' }}
+          >
+            {THEMES.find(t => t.id === theme)?.label ?? 'Pink'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {THEMES.map(t => (
+            <ThemeCard key={t.id} t={t} isActive={theme === t.id} onSelect={() => setTheme(t.id)} />
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 mt-5 flex-wrap">
+          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Preview shows:</span>
+          {[
+            { dot: 'var(--color-primary)', label: 'Accent / buttons' },
+            { dot: 'var(--bg)', label: 'Background', border: true },
+            { dot: 'var(--text-h)', label: 'Headings' },
+          ].map(({ dot, label, border }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: dot, border: border ? '1px solid var(--border)' : 'none' }} />
+              <span className="text-xs" style={{ color: 'var(--text)' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+    </section>
+  );
+}
+
+// ─── Calendar Preferences ────────────────────────────────────────────────────
+
+function CalendarSection() {
+  const { weekStart, defaultView, timeFormat, setWeekStart, setDefaultView, setTimeFormat, cursor, setCursor } = usePreferences();
+
+  function RadioGroup<T extends string>({
+    label, value, options, onChange,
+  }: { label: string; value: T; options: { id: T; label: string }[]; onChange: (v: T) => void }) {
+    return (
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text)' }}>{label}</p>
+        <div className="flex gap-2 flex-wrap">
+          {options.map(o => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => onChange(o.id)}
+              className="px-4 py-2 rounded-full text-sm font-semibold transition-all focus-visible:outline-none"
+              style={value === o.id
+                ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 8px var(--accent-bg)' }
+                : { backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)', border: '1px solid var(--border)' }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <section aria-labelledby="calendar-heading">
+      <SectionCard>
+        <SectionHeading id="calendar-heading">Calendar Preferences</SectionHeading>
+        <div className="flex flex-col gap-7">
+          <RadioGroup
+            label="Week starts on"
+            value={weekStart}
+            options={[{ id: 'monday', label: 'Monday' }, { id: 'sunday', label: 'Sunday' }]}
+            onChange={setWeekStart}
+          />
+          <RadioGroup
+            label="Default view"
+            value={defaultView}
+            options={[{ id: 'month', label: 'Month' }, { id: 'week', label: 'Week' }, { id: 'day', label: 'Day' }]}
+            onChange={setDefaultView}
+          />
+          <RadioGroup
+            label="Time format"
+            value={timeFormat}
+            options={[{ id: '12h', label: '12-hour (2:30 PM)' }, { id: '24h', label: '24-hour (14:30)' }]}
+            onChange={setTimeFormat}
+          />
+
+          {/* Divider */}
+          <div style={{ borderTop: '1px solid var(--border)' }} />
+
+          {/* Custom cursor */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text)' }}>Custom Cursor</p>
+            <div className="flex gap-3 flex-wrap">
+              {CURSORS.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setCursor(c.id)}
+                  aria-pressed={cursor === c.id}
+                  className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl transition-all focus-visible:outline-none"
+                  style={cursor === c.id
+                    ? { backgroundColor: 'var(--accent-bg)', border: '2px solid var(--color-primary)', boxShadow: '0 0 0 3px var(--accent-bg)' }
+                    : { backgroundColor: 'var(--color-neutral)', border: '2px solid var(--border)' }}
+                >
+                  <span style={{ fontSize: '24px', lineHeight: 1 }}>{c.emoji}</span>
+                  <span className="text-xs font-semibold" style={{ color: cursor === c.id ? 'var(--color-primary)' : 'var(--text-h)' }}>
+                    {c.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs mt-3" style={{ color: 'var(--text)' }}>
+              Cursor changes apply immediately across the whole app.
+            </p>
+          </div>
+        </div>
       </SectionCard>
     </section>
   );
@@ -311,7 +564,7 @@ function HelpSection() {
         {/* Quick links */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           {[
-            { icon: MessageCircle, label: 'Live Chat',      sub: 'Chat with support', color: '#FF7FB1' },
+            { icon: MessageCircle, label: 'Live Chat',      sub: 'Chat with support', color: 'var(--color-primary)' },
             { icon: Mail,          label: 'Email Us',       sub: 'support@friendiary.app', color: '#7c3aed' },
             { icon: Phone,         label: 'Call Us',        sub: '+1 (800) 123-4567', color: '#059669' },
           ].map(({ icon: Icon, label, sub, color }) => (
@@ -337,7 +590,7 @@ function HelpSection() {
                 style={{ border: '1px solid var(--border)' }}>
                 <button type="button" onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:opacity-80 focus-visible:outline-none"
-                  style={{ backgroundColor: openFaq === i ? 'var(--color-tertiary)' : '#ffffff' }}>
+                  style={{ backgroundColor: openFaq === i ? 'var(--color-tertiary)' : 'var(--bg)' }}>
                   <span className="text-sm font-semibold" style={{ color: 'var(--text-h)' }}>{item.q}</span>
                   <ChevronRight size={14} className="shrink-0 transition-transform"
                     style={{ color: 'var(--color-primary)', transform: openFaq === i ? 'rotate(90deg)' : 'none' }} />
@@ -377,14 +630,21 @@ function HelpSection() {
 
 const SECTION_MAP: Record<SettingsSection, React.ReactNode> = {
   profile:       <ProfileSection />,
+  appearance:    <ThemeSection />,
+  calendar:      <CalendarSection />,
   privacy:       <PrivacySection />,
   notifications: <NotificationsSection />,
   account:       <AccountSection />,
   help:          <HelpSection />,
 };
 
+const VALID_SECTIONS: SettingsSection[] = ['profile', 'appearance', 'calendar', 'privacy', 'notifications', 'account', 'help'];
+
 export function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
+  const [searchParams] = useSearchParams();
+  const sectionParam = searchParams.get('section') as SettingsSection | null;
+  const initSection: SettingsSection = sectionParam && VALID_SECTIONS.includes(sectionParam) ? sectionParam : 'profile';
+  const [activeSection, setActiveSection] = useState<SettingsSection>(initSection);
 
   return (
     <AppShell>
