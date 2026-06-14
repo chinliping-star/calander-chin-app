@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, ArrowLeft } from 'lucide-react';
+import { DatePicker } from '../../../components/ui/DatePicker.tsx';
+import { TimePicker } from '../../../components/ui/TimePicker.tsx';
 import { InviteFriendsPicker } from '../components/InviteFriendsPicker.tsx';
 import type { NewMeetupFormValues } from '../types.ts';
 
@@ -144,17 +146,12 @@ export function NewMeetupPage() {
                 <label htmlFor="meetup-date" style={labelStyle}>
                   When
                 </label>
-                <input
+                <DatePicker
                   id="meetup-date"
-                  type="date"
                   value={values.date}
-                  onChange={(e) => set('date', e.target.value)}
-                  aria-describedby={errors.date ? 'date-error' : undefined}
-                  aria-invalid={!!errors.date}
-                  style={{
-                    ...inputStyle,
-                    borderColor: errors.date ? 'var(--color-primary)' : 'var(--border)',
-                  }}
+                  onChange={(d) => set('date', d)}
+                  placeholder="Pick a date"
+                  error={!!errors.date}
                 />
                 {errors.date && (
                   <p id="date-error" className="mt-1.5 text-xs" style={{ color: 'var(--color-primary)' }} role="alert">
@@ -166,17 +163,12 @@ export function NewMeetupPage() {
                 <label htmlFor="meetup-time" style={labelStyle}>
                   Time
                 </label>
-                <input
+                <TimePicker
                   id="meetup-time"
-                  type="time"
                   value={values.time}
-                  onChange={(e) => set('time', e.target.value)}
-                  aria-describedby={errors.time ? 'time-error' : undefined}
-                  aria-invalid={!!errors.time}
-                  style={{
-                    ...inputStyle,
-                    borderColor: errors.time ? 'var(--color-primary)' : 'var(--border)',
-                  }}
+                  onChange={(t) => set('time', t)}
+                  placeholder="Pick a time"
+                  error={!!errors.time}
                 />
                 {errors.time && (
                   <p id="time-error" className="mt-1.5 text-xs" style={{ color: 'var(--color-primary)' }} role="alert">
@@ -243,13 +235,13 @@ export function NewMeetupPage() {
               >
                 Create Meetup
               </button>
-              <a
-                href="/friends"
+              <Link
+                to="/friends"
                 className="text-sm font-medium hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 rounded"
-                style={{ color: 'var(--text)' }}
+                style={{ color: 'var(--text)', textDecoration: 'none' }}
               >
                 Cancel
-              </a>
+              </Link>
             </div>
           </form>
         </div>
