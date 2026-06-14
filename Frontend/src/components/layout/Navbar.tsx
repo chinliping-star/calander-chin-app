@@ -5,6 +5,8 @@ import { cn } from '../../lib/utils.ts';
 const NAV_LINKS = [
   { label: 'My Calendar', href: '/' },
   { label: 'Friends',     href: '/friends' },
+  { label: 'Diary',       href: '/diary' },
+  { label: 'Pricing',     href: '/pricing' },
 ];
 
 export function Navbar() {
