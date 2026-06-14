@@ -89,12 +89,12 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between gap-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7FB1]"
         style={{
-          border: error ? '1.5px solid #FF7FB1' : open ? '1.5px solid #FF7FB1' : '1px solid var(--border)',
+          border: error ? '1.5px solid var(--color-primary)' : open ? '1.5px solid var(--color-primary)' : '1px solid var(--border)',
           borderRadius: '12px',
           padding: '10px 14px',
           fontSize: '14px',
           color: value ? 'var(--text-h)' : 'var(--text)',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg)',
           fontFamily: 'var(--sans)',
           boxShadow: open ? '0 0 0 3px rgba(255,127,177,0.15)' : 'none',
         }}
@@ -110,7 +110,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
         <div
           className="absolute z-50 mt-2 rounded-2xl p-4 select-none"
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg)',
             border: '1px solid var(--border)',
             boxShadow: '0 8px 32px rgba(74,62,78,0.16)',
             width: '240px',
@@ -131,7 +131,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
                 className="flex-1 py-1.5 rounded-full text-xs font-bold transition-all focus-visible:outline-none"
                 style={
                   selPeriod === p
-                    ? { backgroundColor: '#FF7FB1', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
+                    ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
                     : { color: 'var(--text)' }
                 }
               >
@@ -157,7 +157,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
                     )}
                     style={
                       selHour === h
-                        ? { backgroundColor: '#FF7FB1', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
+                        ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
                         : { backgroundColor: 'var(--color-tertiary)', color: 'var(--text-h)' }
                     }
                   >
@@ -184,7 +184,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
                     className="h-8 rounded-xl text-xs font-semibold transition-all hover:scale-105 focus-visible:outline-none"
                     style={
                       selMinute === m
-                        ? { backgroundColor: '#FF7FB1', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
+                        ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
                         : { backgroundColor: 'var(--color-tertiary)', color: 'var(--text-h)' }
                     }
                   >
@@ -204,7 +204,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
               type="button"
               onClick={() => confirm(selHour, selMinute, selPeriod)}
               className="px-4 py-1.5 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none"
-              style={{ backgroundColor: '#FF7FB1' }}
+              style={{ backgroundColor: 'var(--color-primary)' }}
             >
               Set Time
             </button>
