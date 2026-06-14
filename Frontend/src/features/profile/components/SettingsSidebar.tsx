@@ -1,7 +1,7 @@
-import { User, Lock, Bell, Settings, HelpCircle, LogOut } from 'lucide-react';
+import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays } from 'lucide-react';
 import { cn } from '../../../lib/utils.ts';
 
-export type SettingsSection = 'profile' | 'privacy' | 'notifications' | 'account' | 'help';
+export type SettingsSection = 'profile' | 'appearance' | 'calendar' | 'privacy' | 'notifications' | 'account' | 'help';
 
 interface SettingsSidebarProps {
   active: SettingsSection;
@@ -10,6 +10,8 @@ interface SettingsSidebarProps {
 
 const NAV_ITEMS: { key: SettingsSection; label: string; icon: React.FC<{ size?: number }> }[] = [
   { key: 'profile',       label: 'Profile',       icon: User },
+  { key: 'appearance',    label: 'Appearance',    icon: Palette },
+  { key: 'calendar',      label: 'Calendar',      icon: CalendarDays },
   { key: 'privacy',       label: 'Privacy',       icon: Lock },
   { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'account',       label: 'Account',       icon: Settings },
@@ -21,7 +23,7 @@ export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
     <aside
       className="flex flex-col rounded-2xl p-5 gap-1"
       style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--bg)',
         border: '1px solid var(--border)',
         boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
         minWidth: '180px',
