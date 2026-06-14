@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Send, BookmarkPlus } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { MoodPicker } from '../components/MoodPicker.tsx';
@@ -29,6 +30,7 @@ const labelStyle: React.CSSProperties = {
 };
 
 export function ProposeMeetupPage() {
+  const navigate = useNavigate();
   const [title, setTitle] = useState('Coffee & Catch-up');
   const [intent, setIntent] = useState(
     "Let's grab a latte and talk about the upcoming weekend plans...",
@@ -177,6 +179,7 @@ export function ProposeMeetupPage() {
         </button>
         <button
           type="button"
+          onClick={() => navigate('/meetups/saved')}
           className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
           style={{
             border: '1px solid var(--border)',
