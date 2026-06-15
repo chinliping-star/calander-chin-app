@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+﻿import type { CSSProperties } from 'react';
 import { cn } from '../../../lib/utils.ts';
 import type { CalendarDayData } from '../types.ts';
 
@@ -74,7 +74,7 @@ export function DayCell({ data, isToday = false, onClick }: DayCellProps) {
           minHeight: '72px', height: '100%',
           background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
           border: '2px solid var(--color-primary-dark)',
-          boxShadow: '0 4px 12px rgba(255,127,177,0.40)',
+          boxShadow: '0 4px 12px var(--accent-border)',
         }}
       >
         <span className="text-[10px] md:text-xs font-bold" style={{ color: 'rgba(255,255,255,0.9)' }}>

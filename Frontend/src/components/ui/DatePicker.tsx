@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { cn } from '../../lib/utils.ts';
 
@@ -87,7 +87,7 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', error
           color: value ? 'var(--text-h)' : 'var(--text)',
           backgroundColor: 'var(--bg)',
           fontFamily: 'var(--sans)',
-          boxShadow: open ? '0 0 0 3px rgba(255,127,177,0.15)' : 'none',
+          boxShadow: open ? '0 0 0 3px var(--accent-bg)' : 'none',
         }}
         aria-haspopup="true"
         aria-expanded={open}

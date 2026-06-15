@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Clock, MapPin, LayoutGrid, AlignJustify, Calendar } from 'lucide-react';
 import { ChevronLeft, ChevronRight } from '../../../components/ui/Icon.tsx';
 import { DayCell } from './DayCell.tsx';
@@ -42,7 +42,6 @@ const JUNE_MEETUPS: MeetupItem[] = [
   { day: 25, label: '🌿 Brunch',         time: '11:00 AM', location: 'The Green Spot',       status: 'accepted', with: 'Sara' },
 ];
 
-const WEEK_DAYS_LONG  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const WEEK_DAYS_SHORT = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
 const HOURS = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM'];
 
@@ -241,7 +240,7 @@ function DailyView() {
     <div className="flex flex-col gap-3 flex-1">
       {/* Day header */}
       <div className="flex items-center justify-center gap-3 py-3 rounded-2xl"
-        style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)', boxShadow: '0 4px 12px rgba(255,127,177,0.35)' }}>
+        style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)', boxShadow: '0 4px 12px var(--accent-border)' }}>
         <div className="text-center">
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>Sunday</p>
           <p className="text-3xl font-bold text-white leading-none">14</p>
@@ -351,7 +350,7 @@ export function CalendarGrid() {
               aria-pressed={view === key}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2"
               style={view === key
-                ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 8px rgba(255,127,177,0.35)' }
+                ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 8px var(--accent-border)' }
                 : { color: 'var(--text)' }}>
               <Icon size={12} />
               {label}

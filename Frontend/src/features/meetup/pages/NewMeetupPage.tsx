@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, ArrowLeft } from 'lucide-react';
 import { DatePicker } from '../../../components/ui/DatePicker.tsx';
@@ -88,7 +88,7 @@ export function NewMeetupPage() {
         </div>
         <p
           className="text-xs font-bold tracking-widest uppercase"
-          style={{ color: 'rgba(255,127,177,0.7)' }}
+          style={{ color: 'var(--color-primary-light)' }}
         >
           Powered by Friendiary
         </p>
