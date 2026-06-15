@@ -4,9 +4,9 @@ import { UserPlus } from '../../../components/ui/Icon.tsx';
 import type { Friend } from '../../../types/index.ts';
 
 const CURRENT_USER = {
-  displayName: 'Muneb',
-  username: '@muneb.star',
-  avatarUrl: 'https://i.pravatar.cc/150?img=3',
+  displayName: 'Chin',
+  username: '@chin.star',
+  avatarUrl: 'https://i.pravatar.cc/150?img=47',
   friends: 8,
   meetups: 14,
   photos: 26,

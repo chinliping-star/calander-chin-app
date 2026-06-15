@@ -55,8 +55,8 @@ function SectionHeading({ id, children }: { id: string; children: React.ReactNod
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
 function ProfileSection() {
-  const [displayName, setDisplayName] = useState('Muneb');
-  const [username, setUsername] = useState('@muneb.star');
+  const [displayName, setDisplayName] = useState('Chin');
+  const [username, setUsername] = useState('@chin.star');
   const [bio, setBio] = useState("Social enthusiast and diary keeper. Let's make every meetup count!");
   const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -74,7 +74,7 @@ function ProfileSection() {
         <form onSubmit={handleSave} className="flex flex-col gap-5">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
-              <img src="https://i.pravatar.cc/150?img=3" alt="Your avatar"
+              <img src="https://i.pravatar.cc/150?img=47" alt="Your avatar"
                 className="h-[72px] w-[72px] rounded-full object-cover" width={72} height={72} />
               <button type="button" aria-label="Edit photo" onClick={() => fileRef.current?.click()}
                 className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm focus-visible:outline-none hover:opacity-90"
