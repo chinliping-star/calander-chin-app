@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Check, Zap, Star, Crown } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 
@@ -93,8 +93,6 @@ export function PricingPage() {
   const [billing, setBilling] = useState<Billing>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const saving = billing === 'yearly' ? '30%' : null;
-
   return (
     <AppShell>
       <div className="max-w-5xl mx-auto pb-20">
@@ -133,7 +131,7 @@ export function PricingPage() {
                 onClick={() => setBilling(b)}
                 className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all focus-visible:outline-none"
                 style={billing === b
-                  ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 8px rgba(255,127,177,0.35)' }
+                  ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 8px var(--accent-border)' }
                   : { color: 'var(--text)' }}
               >
                 {b === 'monthly' ? 'Monthly' : 'Yearly'}
@@ -163,11 +161,11 @@ export function PricingPage() {
                   backgroundColor: plan.bg,
                   border: plan.highlighted ? `2px solid ${plan.border}` : `1px solid ${plan.border}`,
                   boxShadow: plan.highlighted
-                    ? '0 12px 40px rgba(255,127,177,0.20)'
+                    ? '0 12px 40px var(--accent-border)'
                     : '0 2px 12px rgba(74,62,78,0.08)',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = plan.highlighted ? '0 20px 48px rgba(255,127,177,0.28)' : '0 12px 32px rgba(74,62,78,0.14)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = plan.highlighted ? '0 12px 40px rgba(255,127,177,0.20)' : '0 2px 12px rgba(74,62,78,0.08)'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = plan.highlighted ? '0 20px 48px var(--accent-border)' : '0 12px 32px rgba(74,62,78,0.14)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = plan.highlighted ? '0 12px 40px var(--accent-border)' : '0 2px 12px rgba(74,62,78,0.08)'; }}
               >
                 {/* Badge */}
                 {plan.badge && (
@@ -245,7 +243,7 @@ export function PricingPage() {
         {/* Feature comparison strip */}
         <div
           className="rounded-2xl p-6 mb-12 flex flex-col sm:flex-row items-center justify-between gap-4"
-          style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, #c084fc 100%)', boxShadow: '0 8px 32px rgba(255,127,177,0.30)' }}
+          style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, #c084fc 100%)', boxShadow: '0 8px 32px var(--accent-border)' }}
         >
           <div>
             <p className="text-white font-bold text-base">Not sure which plan?</p>
