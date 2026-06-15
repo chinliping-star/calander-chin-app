@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { cn } from '../../lib/utils.ts';
 
@@ -96,7 +96,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
           color: value ? 'var(--text-h)' : 'var(--text)',
           backgroundColor: 'var(--bg)',
           fontFamily: 'var(--sans)',
-          boxShadow: open ? '0 0 0 3px rgba(255,127,177,0.15)' : 'none',
+          boxShadow: open ? '0 0 0 3px var(--accent-bg)' : 'none',
         }}
         aria-haspopup="true"
         aria-expanded={open}
@@ -131,7 +131,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
                 className="flex-1 py-1.5 rounded-full text-xs font-bold transition-all focus-visible:outline-none"
                 style={
                   selPeriod === p
-                    ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
+                    ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px var(--accent-border)' }
                     : { color: 'var(--text)' }
                 }
               >
@@ -157,7 +157,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
                     )}
                     style={
                       selHour === h
-                        ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
+                        ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px var(--accent-border)' }
                         : { backgroundColor: 'var(--color-tertiary)', color: 'var(--text-h)' }
                     }
                   >
@@ -184,7 +184,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
                     className="h-8 rounded-xl text-xs font-semibold transition-all hover:scale-105 focus-visible:outline-none"
                     style={
                       selMinute === m
-                        ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px rgba(255,127,177,0.35)' }
+                        ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px var(--accent-border)' }
                         : { backgroundColor: 'var(--color-tertiary)', color: 'var(--text-h)' }
                     }
                   >
