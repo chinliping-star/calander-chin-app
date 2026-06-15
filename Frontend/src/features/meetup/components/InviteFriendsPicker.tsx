@@ -1,4 +1,4 @@
-import { X, Plus } from 'lucide-react';
+﻿import { X, Plus } from 'lucide-react';
 import type { InvitableFriend } from '../types.ts';
 
 const AVAILABLE_FRIENDS: InvitableFriend[] = [
@@ -54,7 +54,7 @@ export function InviteFriendsPicker({ selected, onChange }: InviteFriendsPickerP
             key={friend.id}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
             style={{
-              backgroundColor: 'rgba(255,127,177,0.12)',
+              backgroundColor: 'var(--accent-bg)',
               color: 'var(--color-primary)',
               border: '1px solid rgba(255,127,177,0.3)',
             }}
