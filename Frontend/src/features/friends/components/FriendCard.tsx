@@ -1,4 +1,4 @@
-import { MoreHorizontal, Calendar, Clock, Coffee } from 'lucide-react';
+﻿import { MoreHorizontal, Calendar, Clock, Coffee } from 'lucide-react';
 import { useState } from 'react';
 import type { FriendProfile } from '../types.ts';
 
@@ -7,11 +7,11 @@ interface FriendCardProps {
 }
 
 const TAG_COLORS: Record<string, { bg: string; text: string }> = {
-  'CLOSE FRIEND':   { bg: 'rgba(255,127,177,0.13)', text: '#d6488a' },
+  'CLOSE FRIEND':   { bg: 'var(--accent-bg)', text: '#d6488a' },
   'BOOK CLUB':      { bg: 'rgba(192,132,252,0.13)', text: '#7c3aed' },
   'GYM BUDDY':      { bg: 'rgba(74,62,78,0.09)',    text: 'var(--text-h)' },
   'COWORKER':       { bg: 'rgba(74,62,78,0.09)',    text: 'var(--text-h)' },
-  'BEST FRIEND':    { bg: 'rgba(255,127,177,0.13)', text: '#d6488a' },
+  'BEST FRIEND':    { bg: 'var(--accent-bg)', text: '#d6488a' },
   'WORK COLLEAGUE': { bg: 'rgba(74,62,78,0.09)',    text: 'var(--text-h)' },
   'FAMILY':         { bg: 'rgba(192,132,252,0.13)', text: '#7c3aed' },
 };
