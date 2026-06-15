@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+﻿import { X } from 'lucide-react';
 import type { InvitableFriend } from '../types.ts';
 
 const ALL_FRIENDS: InvitableFriend[] = [
@@ -43,7 +43,7 @@ export function FriendSelector({ selected, onChange }: FriendSelectorProps) {
           {selectedFriends.length > 0 && (
             <span
               className="text-xs font-bold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: 'rgba(255,127,177,0.12)', color: 'var(--color-primary)' }}
+              style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}
               aria-live="polite"
               aria-label={`${selectedFriends.length} friends selected`}
             >
@@ -60,9 +60,9 @@ export function FriendSelector({ selected, onChange }: FriendSelectorProps) {
                 key={friend.id}
                 className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
                 style={{
-                  backgroundColor: 'rgba(255,127,177,0.10)',
+                  backgroundColor: 'var(--accent-bg)',
                   color: 'var(--color-primary)',
-                  border: '1px solid rgba(255,127,177,0.25)',
+                  border: '1px solid var(--accent-border)',
                 }}
               >
                 <img
