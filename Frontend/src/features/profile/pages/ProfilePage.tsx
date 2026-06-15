@@ -59,10 +59,10 @@ interface Club {
 // ── Fake data ─────────────────────────────────────────────────────────────────
 
 const PROFILE_USER = {
-  displayName: 'Muneb',
-  username: 'muneb.star',
+  displayName: 'Chin',
+  username: 'chin.star',
   bio: "Social enthusiast and diary keeper. Let's make every meetup count! Coffee addict, occasional runner, and board game champion.",
-  avatarUrl: 'https://i.pravatar.cc/150?img=3',
+  avatarUrl: 'https://i.pravatar.cc/150?img=47',
   bannerUrl: 'https://randomuser.me/api/portraits/women/3.jpg',
   friendsCount: 42,
   meetupsCount: 86,

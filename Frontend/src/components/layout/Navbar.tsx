@@ -90,8 +90,8 @@ export function Navbar() {
             style={{ borderColor: 'var(--color-primary)' }}
           >
             <img
-              src="https://i.pravatar.cc/150?img=3"
-              alt="Muneb"
+              src="https://i.pravatar.cc/150?img=47"
+              alt="Chin"
               className="h-full w-full object-cover"
               loading="lazy"
               width={48}
