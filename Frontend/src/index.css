@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -36,8 +36,8 @@
   --border: #e8dfe6;
   --code-bg: #FFF0F6;
   --accent: #FF7FB1;
-  --accent-bg: rgba(255, 127, 177, 0.12);
-  --accent-border: rgba(255, 127, 177, 0.45);
+  --accent-bg: var(--accent-bg);
+  --accent-border: var(--accent-border);
   --social-bg: rgba(255, 240, 246, 0.6);
   --shadow:
     rgba(74, 62, 78, 0.08) 0 10px 15px -3px, rgba(74, 62, 78, 0.04) 0 4px 6px -2px;
@@ -79,8 +79,8 @@
   --border: #e8dfe6;
   --code-bg: #FFF0F6;
   --accent: #FF7FB1;
-  --accent-bg: rgba(255,127,177,0.12);
-  --accent-border: rgba(255,127,177,0.45);
+  --accent-bg: var(--accent-bg);
+  --accent-border: var(--accent-border);
   --shadow: rgba(74,62,78,0.08) 0 10px 15px -3px, rgba(74,62,78,0.04) 0 4px 6px -2px;
   color-scheme: light;
 }
@@ -101,8 +101,8 @@
   --border: #E2E8F0;
   --code-bg: #F8FAFC;
   --accent: #FF7FB1;
-  --accent-bg: rgba(255,127,177,0.10);
-  --accent-border: rgba(255,127,177,0.35);
+  --accent-bg: var(--accent-bg);
+  --accent-border: var(--accent-border);
   --shadow: rgba(51,65,85,0.08) 0 10px 15px -3px, rgba(51,65,85,0.04) 0 4px 6px -2px;
   color-scheme: light;
 }
@@ -123,8 +123,8 @@
   --border: #334155;
   --code-bg: #0F172A;
   --accent: #FF7FB1;
-  --accent-bg: rgba(255,127,177,0.15);
-  --accent-border: rgba(255,127,177,0.40);
+  --accent-bg: var(--accent-bg);
+  --accent-border: var(--accent-border);
   --shadow: rgba(0,0,0,0.40) 0 10px 15px -3px, rgba(0,0,0,0.25) 0 4px 6px -2px;
   color-scheme: dark;
   background: #0F172A;
@@ -366,7 +366,7 @@ button[style*="var(--color-primary)"]:not(:disabled) {
 button[style*="#FF7FB1"]:hover:not(:disabled),
 button[style*="var(--color-primary)"]:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 20px rgba(255, 127, 177, 0.45) !important;
+  box-shadow: 0 6px 20px var(--accent-border) !important;
 }
 
 /* Inverted dark buttons — lift + shadow */
