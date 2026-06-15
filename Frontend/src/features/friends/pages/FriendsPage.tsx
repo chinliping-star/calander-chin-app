@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState } from 'react';
 import { LayoutGrid, Activity, Search, Clock, Archive, CheckCircle, XCircle, Inbox, Star } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { cn } from '../../../lib/utils.ts';
@@ -147,7 +147,7 @@ function InvitesPanel() {
                 type="button"
                 onClick={() => setAccepted(s => new Set([...s, inv.id]))}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none"
-                style={{ backgroundColor: 'var(--color-primary)', boxShadow: '0 2px 8px rgba(255,127,177,0.35)' }}
+                style={{ backgroundColor: 'var(--color-primary)', boxShadow: '0 2px 8px var(--accent-border)' }}
               >
                 <CheckCircle size={13} />
                 Accept
@@ -290,13 +290,6 @@ export function FriendsPage() {
     });
   }
 
-  // 2 random friends (non-favorites) — stable per session via useMemo
-  const randomTwo = useMemo(() => {
-    const pool = FRIENDS.filter(f => !favorites.has(f.id));
-    const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 2);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <AppShell >
@@ -424,7 +417,7 @@ export function FriendsPage() {
                 className="flex flex-col items-center justify-center gap-2 rounded-2xl p-6 text-center cursor-pointer hover:opacity-80 transition-opacity"
                 style={{
                   border: '2px dashed var(--color-primary)',
-                  backgroundColor: 'rgba(255,127,177,0.04)',
+                  backgroundColor: 'var(--accent-bg)',
                   minHeight: '160px',
                 }}
                 role="button"
@@ -434,7 +427,7 @@ export function FriendsPage() {
               >
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-full"
-                  style={{ backgroundColor: 'rgba(255,127,177,0.12)' }}
+                  style={{ backgroundColor: 'var(--accent-bg)' }}
                 >
                   <Search size={20} style={{ color: 'var(--color-primary)' }} />
                 </div>
