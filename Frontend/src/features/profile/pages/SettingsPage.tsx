@@ -158,7 +158,7 @@ function ThemeCard({ t, isActive, onSelect }: { t: import('../../../lib/theme.ts
             className="flex flex-col gap-1 rounded-md p-1.5"
             style={{ width: '36px', backgroundColor: t.surface === '#0F172A' ? '#1E293B' : t.surface, border: `1px solid ${t.border}`, flexShrink: 0 }}
           >
-            {[t.primary, t.border, t.border].map((c, i) => (
+            {[t.primary, t.border, t.border].map((_c, i) => (
               <div key={i} style={{ height: '4px', borderRadius: '2px', backgroundColor: i === 0 ? `${t.primary}30` : t.border, width: i === 0 ? '100%' : '70%' }}>
                 {i === 0 && <div style={{ width: '40%', height: '100%', borderRadius: '2px', backgroundColor: t.primary }} />}
               </div>
@@ -418,7 +418,7 @@ function NotificationsSection() {
   ]);
 
   const toggle = (
-    list: typeof email,
+    _list: typeof email,
     setList: React.Dispatch<React.SetStateAction<typeof email>>,
     id: string,
   ) => setList(prev => prev.map(n => n.id === id ? { ...n, checked: !n.checked } : n));
