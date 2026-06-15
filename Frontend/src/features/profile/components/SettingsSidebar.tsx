@@ -1,4 +1,4 @@
-import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays } from 'lucide-react';
+﻿import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays } from 'lucide-react';
 import { cn } from '../../../lib/utils.ts';
 
 export type SettingsSection = 'profile' | 'appearance' | 'calendar' | 'privacy' | 'notifications' | 'account' | 'help';
@@ -54,7 +54,7 @@ export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
                   )}
                   style={
                     isActive
-                      ? { backgroundColor: 'rgba(255,127,177,0.12)', color: 'var(--color-primary)' }
+                      ? { backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }
                       : { color: 'var(--text)' }
                   }
                 >
