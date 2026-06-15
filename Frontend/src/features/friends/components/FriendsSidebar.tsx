@@ -1,4 +1,4 @@
-import { Users, Mail, Calendar, Archive, HelpCircle, LogOut, UserPlus } from 'lucide-react';
+﻿import { Users, Mail, Calendar, Archive, HelpCircle, LogOut, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../lib/utils.ts';
 import type { SidebarSection } from '../types.ts';
@@ -60,7 +60,7 @@ export function FriendsSidebar({ active, onSelect }: FriendsSidebarProps) {
                   )}
                   style={
                     isActive
-                      ? { backgroundColor: 'rgba(236,72,153,0.12)', color: 'var(--color-primary)' }
+                      ? { backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }
                       : { color: 'var(--text)' }
                   }
                 >
