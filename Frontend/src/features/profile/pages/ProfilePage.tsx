@@ -1,5 +1,10 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useFriendsApi } from '../../friends/api/friends.api.ts';
+import { PostFeed } from '../../posts/components/PostFeed.tsx';
+import { NewPostModal } from '../../posts/components/NewPostModal.tsx';
+import { usePostsApi } from '../../posts/api/posts.api.ts';
 import {
   UserPlus,
   MessageCircle,
@@ -17,10 +22,13 @@ import {
 } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { cn } from '../../../lib/utils.ts';
+import { useAuthStore } from '../../../store/auth.ts';
+import { api } from '../../../lib/api.ts';
+import type { User } from '../../../types/index.ts';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type TabId = 'overview' | 'meetups' | 'friends' | 'interests' | 'bookings';
+type TabId = 'overview' | 'meetups' | 'friends' | 'interests' | 'bookings' | 'posts';
 
 interface Friend {
   id: string;
@@ -56,19 +64,8 @@ interface Club {
   emoji: string;
 }
 
-// ── Fake data ─────────────────────────────────────────────────────────────────
-
-const PROFILE_USER = {
-  displayName: 'Chin',
-  username: 'chin.star',
-  bio: "Social enthusiast and diary keeper. Let's make every meetup count! Coffee addict, occasional runner, and board game champion.",
-  avatarUrl: 'https://i.pravatar.cc/150?img=47',
-  bannerUrl: 'https://randomuser.me/api/portraits/women/3.jpg',
-  friendsCount: 42,
-  meetupsCount: 86,
-  photosCount: 23,
-  isPremium: true,
-};
+// ── Fake social counts (real counts come later when API is wired) ─────────────
+const FAKE_COUNTS = { friendsCount: 0, meetupsCount: 0, photosCount: 0 };
 
 const FRIENDS: Friend[] = [
   { id: '1', displayName: 'Mia Thompson',  username: 'mia.t',  avatarUrl: 'https://i.pravatar.cc/150?img=5',  isMutual: true },
@@ -333,7 +330,7 @@ function FriendsTab() {
     <section aria-labelledby="friends-tab-heading">
       <div className="flex items-center justify-between mb-4">
         <h3 id="friends-tab-heading" className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
-          Friends · {PROFILE_USER.friendsCount}
+          Friends
         </h3>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -380,19 +377,17 @@ function FriendsTab() {
         <div
           className="flex flex-col items-center justify-center gap-2 rounded-2xl p-4 text-center"
           style={{ backgroundColor: 'var(--color-neutral)', border: '2px dashed var(--border)', minHeight: '140px' }}
-          aria-label={`+${PROFILE_USER.friendsCount - FRIENDS.length} more friends`}
+          aria-label="More friends"
         >
-          <p className="text-lg font-black" style={{ color: 'var(--color-primary)' }}>
-            +{PROFILE_USER.friendsCount - FRIENDS.length}
-          </p>
-          <p className="text-[11px]" style={{ color: 'var(--text)' }}>more friends</p>
+          <p className="text-[11px]" style={{ color: 'var(--text)' }}>More coming soon</p>
         </div>
       </div>
     </section>
   );
 }
 
-function InterestsTab() {
+function InterestsTab({ interests }: { interests: string[] }) {
+  const tags = interests.length > 0 ? interests : INTEREST_TAGS;
   return (
     <div className="flex flex-col gap-6">
       {/* Interest tag cloud */}
@@ -401,10 +396,10 @@ function InterestsTab() {
           Interests
         </h3>
         <div className="flex flex-wrap gap-3">
-          {INTEREST_TAGS.map((tag, idx) => {
+          {tags.map((tag, idx) => {
             // Vary sizes slightly for a tag-cloud feel
-            const sizes = ['text-xs', 'text-sm', 'text-xs', 'text-base', 'text-xs', 'text-sm', 'text-xs', 'text-sm'];
-            const pads  = ['px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-5 py-2.5', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2'];
+            const sizes = ['text-xs', 'text-sm', 'text-xs', 'text-base', 'text-xs', 'text-sm', 'text-xs', 'text-sm', 'text-xs', 'text-sm', 'text-xs', 'text-sm', 'text-xs', 'text-sm', 'text-xs'];
+            const pads  = ['px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-5 py-2.5', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5'];
             return (
               <span
                 key={tag}
@@ -460,7 +455,7 @@ function InterestsTab() {
   );
 }
 
-function BookingsTab({ isOwn }: { isOwn: boolean }) {
+function BookingsTab({ isOwn, isPremium }: { isOwn: boolean; isPremium: boolean }) {
   const bookingTypeColors: Record<Booking['type'], { bg: string; text: string; label: string }> = {
     event:       { bg: 'rgba(167,139,250,0.15)', text: '#7c3aed', label: 'Event' },
     class:       { bg: 'var(--accent-bg)',        text: 'var(--color-primary)', label: 'Class' },
@@ -515,7 +510,7 @@ function BookingsTab({ isOwn }: { isOwn: boolean }) {
         Upcoming Bookings
       </h3>
       <PremiumLock
-        locked={!isOwn}
+        locked={!isOwn && !isPremium}
         message="Upgrade to Pro to view booking history on friend profiles"
       >
         {content}
@@ -532,26 +527,98 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; access: 'public' 
   { id: 'friends',    label: 'Friends',    icon: <Users size={14} />,     access: 'public' },
   { id: 'interests',  label: 'Interests',  icon: <Tag size={14} />,       access: 'public' },
   { id: 'bookings',   label: 'Bookings',   icon: <Clock size={14} />,     access: 'premium' },
+  { id: 'posts',      label: 'Posts',      icon: <Star size={14} />,      access: 'public' },
 ];
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function ProfilePage() {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
-  const [friendAdded, setFriendAdded] = useState(false);
-  const [following, setFollowing] = useState(false);
+  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
-  // For now, check if own profile by comparing to hardcoded username
-  const isOwnProfile = username === PROFILE_USER.username;
+  const { user: me } = useAuthStore();
+  const isOwnProfile = username === me?.username;
+  const viewerIsPremium = !!me?.is_premium;
+  const postsApi = usePostsApi();
+  const friendsApi = useFriendsApi();
+  const qc = useQueryClient();
+  const [showPostModal, setShowPostModal] = useState(false);
 
-  function handleAddFriend() {
-    setFriendAdded(prev => !prev);
+  const createPost = useMutation({
+    mutationFn: (data: Parameters<typeof postsApi.create>[0]) => postsApi.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['posts', username] });
+      setShowPostModal(false);
+    },
+  });
+
+  // Real friend request mutation
+  const sendRequest = useMutation({
+    mutationFn: () => friendsApi.sendRequest(profileUser!._id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['friends'] }),
+  });
+
+  // Check existing friendship status
+  const { data: friends = [] } = useQuery({
+    queryKey: ['friends'],
+    queryFn: () => friendsApi.getFriends(),
+    enabled: !isOwnProfile,
+    staleTime: 30_000,
+  });
+  const { data: requests = [] } = useQuery({
+    queryKey: ['friend-requests'],
+    queryFn: () => friendsApi.getRequests(),
+    enabled: !isOwnProfile,
+    staleTime: 30_000,
+  });
+
+  const isFriend = friends.some(f => f.friend.username === username);
+  const hasPendingRequest = requests.some(r =>
+    (r.requester_id.username === me?.username && r.recipient_id.username === username) ||
+    (r.recipient_id.username === me?.username && r.requester_id.username === username)
+  );
+
+  useEffect(() => {
+    if (!username) return;
+    if (isOwnProfile && me) {
+      setProfileUser(me);
+      setLoadingProfile(false);
+      return;
+    }
+    api.get<User>(`/users/${username}`)
+      .then(u => setProfileUser(u))
+      .catch(() => setProfileUser(null))
+      .finally(() => setLoadingProfile(false));
+  }, [username, isOwnProfile, me]);
+
+  if (loadingProfile) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center min-h-96">
+          <div className="h-8 w-8 rounded-full border-4 animate-spin"
+            style={{ borderColor: 'var(--color-tertiary)', borderTopColor: 'var(--color-primary)' }} />
+        </div>
+      </AppShell>
+    );
   }
 
-  function handleFollow() {
-    setFollowing(prev => !prev);
+  if (!profileUser) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center min-h-96 gap-3">
+          <p className="text-lg font-bold" style={{ color: 'var(--text-h)' }}>User not found</p>
+          <p className="text-sm" style={{ color: 'var(--text)' }}>@{username} doesn't exist.</p>
+        </div>
+      </AppShell>
+    );
   }
+
+  const displayName = profileUser.display_name || profileUser.username;
+  const avatarUrl = profileUser.avatar_url || `https://i.pravatar.cc/150?u=${profileUser.username}`;
+  const interests = (profileUser as User & { interests?: string[] }).interests ?? [];
 
   return (
     <AppShell>
@@ -572,7 +639,7 @@ export function ProfilePage() {
               background: 'linear-gradient(135deg, var(--color-primary) 0%, #c084fc 60%, var(--color-secondary) 100%)',
             }}
             role="img"
-            aria-label={`${PROFILE_USER.displayName}'s profile banner`}
+            aria-label={`${displayName}'s profile banner`}
           >
             {/* Subtle pattern overlay */}
             <div
@@ -601,8 +668,8 @@ export function ProfilePage() {
             <div className="flex items-end justify-between -mt-10 mb-4">
               <div className="relative">
                 <img
-                  src={PROFILE_USER.avatarUrl}
-                  alt={`${PROFILE_USER.displayName}'s avatar`}
+                  src={avatarUrl}
+                  alt={`${displayName}'s avatar`}
                   className="h-20 w-20 rounded-full object-cover"
                   width={80}
                   height={80}
@@ -611,7 +678,7 @@ export function ProfilePage() {
                     boxShadow: '0 4px 16px rgba(74,62,78,0.18)',
                   }}
                 />
-                {PROFILE_USER.isPremium && (
+                {profileUser.is_premium && (
                   <span
                     className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full"
                     title="Premium member"
@@ -626,39 +693,38 @@ export function ProfilePage() {
               {/* Action buttons */}
               {!isOwnProfile && (
                 <div className="flex items-center gap-2 mt-12">
+                  {!isFriend && (
+                    <button
+                      type="button"
+                      onClick={() => sendRequest.mutate()}
+                      disabled={hasPendingRequest || sendRequest.isPending}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60"
+                      style={{
+                        backgroundColor: hasPendingRequest ? 'var(--color-secondary)' : 'var(--color-primary)',
+                        boxShadow: '0 2px 10px rgba(247,127,129,0.35)',
+                      }}
+                    >
+                      <UserPlus size={14} />
+                      {sendRequest.isPending ? 'Sending…' : hasPendingRequest ? 'Request Sent' : 'Add Friend'}
+                    </button>
+                  )}
+                  {isFriend && (
+                    <span
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold"
+                      style={{ background: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1px solid var(--accent-border)' }}
+                    >
+                      <Users size={14} />
+                      Friends
+                    </span>
+                  )}
                   <button
                     type="button"
-                    onClick={handleAddFriend}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50"
-                    style={{
-                      backgroundColor: friendAdded ? 'var(--color-secondary)' : 'var(--color-primary)',
-                      boxShadow: '0 2px 10px rgba(247,127,129,0.35)',
-                    }}
-                    aria-pressed={friendAdded}
-                  >
-                    <UserPlus size={14} />
-                    {friendAdded ? 'Request Sent' : 'Add Friend'}
-                  </button>
-                  <button
-                    type="button"
+                    onClick={() => navigate('/chat')}
                     className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:opacity-80 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
                     style={{ backgroundColor: 'var(--color-tertiary)', border: '1.5px solid var(--border)' }}
                     aria-label="Send message"
                   >
                     <MessageCircle size={15} style={{ color: 'var(--color-primary)' }} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleFollow}
-                    className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:opacity-80 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
-                    style={{
-                      backgroundColor: following ? 'var(--accent-bg)' : 'var(--color-tertiary)',
-                      border: following ? '1.5px solid var(--color-primary)' : '1.5px solid var(--border)',
-                    }}
-                    aria-pressed={following}
-                    aria-label={following ? 'Unfollow' : 'Follow'}
-                  >
-                    <Bell size={15} style={{ color: following ? 'var(--color-primary)' : 'var(--text)' }} />
                   </button>
                 </div>
               )}
@@ -680,9 +746,9 @@ export function ProfilePage() {
             <div className="mb-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-black" style={{ color: 'var(--text-h)', margin: 0 }}>
-                  {PROFILE_USER.displayName}
+                  {displayName}
                 </h1>
-                {PROFILE_USER.isPremium && (
+                {profileUser.is_premium && (
                   <span
                     className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1px solid var(--color-primary)' }}
@@ -692,11 +758,13 @@ export function ProfilePage() {
                 )}
               </div>
               <p className="text-sm mt-0.5 mb-2" style={{ color: 'var(--text)' }}>
-                @{PROFILE_USER.username}
+                @{profileUser.username}
               </p>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-h)' }}>
-                {PROFILE_USER.bio}
-              </p>
+              {(profileUser as User & { bio?: string }).bio && (
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-h)' }}>
+                  {(profileUser as User & { bio?: string }).bio}
+                </p>
+              )}
             </div>
 
             {/* Stats row */}
@@ -707,9 +775,9 @@ export function ProfilePage() {
               aria-label="Profile statistics"
             >
               {[
-                { value: PROFILE_USER.friendsCount, label: 'Friends',  icon: <Users size={14} /> },
-                { value: PROFILE_USER.meetupsCount,  label: 'Meetups',  icon: <Calendar size={14} /> },
-                { value: PROFILE_USER.photosCount,   label: 'Photos',   icon: <Camera size={14} /> },
+                { value: FAKE_COUNTS.friendsCount, label: 'Friends',  icon: <Users size={14} /> },
+                { value: FAKE_COUNTS.meetupsCount,  label: 'Meetups',  icon: <Calendar size={14} /> },
+                { value: FAKE_COUNTS.photosCount,   label: 'Photos',   icon: <Camera size={14} /> },
               ].map((stat, idx) => (
                 <div
                   key={stat.label}
@@ -746,7 +814,7 @@ export function ProfilePage() {
           >
             {TABS.map((tab, idx) => {
               const isActive = activeTab === tab.id;
-              const isPremiumLocked = tab.access === 'premium' && !isOwnProfile;
+              const isPremiumLocked = tab.access === 'premium' && !isOwnProfile && !viewerIsPremium;
               return (
                 <button
                   key={tab.id}
@@ -811,11 +879,35 @@ export function ProfilePage() {
             {activeTab === 'overview'  && <OverviewTab />}
             {activeTab === 'meetups'   && <MeetupsTab />}
             {activeTab === 'friends'   && <FriendsTab />}
-            {activeTab === 'interests' && <InterestsTab />}
-            {activeTab === 'bookings'  && <BookingsTab isOwn={isOwnProfile} />}
+            {activeTab === 'interests' && <InterestsTab interests={interests} />}
+            {activeTab === 'bookings'  && <BookingsTab isOwn={isOwnProfile} isPremium={viewerIsPremium} />}
+            {activeTab === 'posts' && (
+              <div className="flex flex-col gap-4">
+                {isOwnProfile && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setShowPostModal(true)}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold"
+                      style={{ background: 'var(--color-primary)', color: '#fff' }}
+                    >
+                      + New Post
+                    </button>
+                  </div>
+                )}
+                <PostFeed username={username!} isOwn={isOwnProfile} myId={me?._id} />
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {showPostModal && (
+        <NewPostModal
+          onClose={() => setShowPostModal(false)}
+          onSubmit={data => createPost.mutate(data)}
+          submitting={createPost.isPending}
+        />
+      )}
     </AppShell>
   );
 }

@@ -1,11 +1,15 @@
 export interface User {
-  id: string;
+  _id?: string;
   username: string;
-  displayName: string;
-  avatarUrl: string;
-  bannerUrl?: string;
+  display_name: string;
+  avatar_url?: string;
+  banner_url?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
   theme?: string;
-  isPremium?: boolean;
+  is_premium?: boolean;
+  clerk_id?: string;
 }
 
 export type DayStatus = 'available' | 'blocked' | 'accepted' | 'pending';

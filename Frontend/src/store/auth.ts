@@ -1,32 +1,33 @@
-/**
- * Zustand auth store placeholder.
- * Install zustand, then replace this with:
- *
- *   import { create } from 'zustand';
- *   export const useAuthStore = create<AuthStore>((set) => ({ ... }));
- */
-
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { User } from '../types/index.ts';
 
-interface AuthStore {
+interface AuthState {
   user: User | null;
-  setUser: (user: User | null) => void;
+  accessToken: string | null;
+  _hasHydrated: boolean;
+  setAuth: (user: User, accessToken: string) => void;
+  updateUser: (patch: Partial<User>) => void;
+  clearAuth: () => void;
+  setHasHydrated: (v: boolean) => void;
 }
 
-// Minimal in-memory store until Zustand is installed
-let _state: AuthStore = {
-  user: null,
-  setUser: (user: User | null) => {
-    _state = { ..._state, user };
-    listeners.forEach((fn) => fn(_state));
-  },
-};
-
-const listeners = new Set<(state: AuthStore) => void>();
-
-export function useAuthStore(): AuthStore;
-export function useAuthStore<T>(selector: (state: AuthStore) => T): T;
-export function useAuthStore<T>(selector?: (state: AuthStore) => T): AuthStore | T {
-  if (selector) return selector(_state);
-  return _state;
-}
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      accessToken: null,
+      _hasHydrated: false,
+      setAuth: (user, accessToken) => set({ user, accessToken }),
+      updateUser: (patch) => set((s) => ({ user: s.user ? { ...s.user, ...patch } : null })),
+      clearAuth: () => set({ user: null, accessToken: null }),
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
+    }),
+    {
+      name: 'friendiary-auth',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
+  )
+);
