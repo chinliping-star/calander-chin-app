@@ -1,6 +1,10 @@
 ﻿import { useState } from 'react';
-import { Check, Zap, Star, Crown } from 'lucide-react';
+import { Check, Zap, Star, Crown, X, CreditCard, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
+import { useApi } from '../../../lib/api.ts';
+import { useAuthStore } from '../../../store/auth.ts';
 
 type Billing = 'monthly' | 'yearly';
 
@@ -89,12 +93,152 @@ const FAQS = [
   { q: 'Do you offer team plans?',       a: 'Group plans are coming in V6. Join the waitlist!' },
 ];
 
+// ── Dummy Checkout Modal ──────────────────────────────────────────────────────
+
+function CheckoutModal({ planName, price, onClose }: { planName: string; price: number; onClose: () => void }) {
+  const api = useApi();
+  const { updateUser } = useAuthStore();
+  const [step, setStep] = useState<'form' | 'success'>('form');
+  const [form, setForm] = useState({ firstName: '', lastName: '', address: '', card: '', expiry: '', cvv: '' });
+  const [errors, setErrors] = useState<Partial<typeof form>>({});
+
+  const { mutate: subscribe, isPending } = useMutation({
+    mutationFn: () => api.patch<{ is_premium: boolean }>('/users/me', { is_premium: true }),
+    onSuccess: () => {
+      updateUser({ is_premium: true });
+      setStep('success');
+    },
+  });
+
+  function formatCard(val: string) {
+    return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+  }
+  function formatExpiry(val: string) {
+    const d = val.replace(/\D/g, '').slice(0, 4);
+    return d.length >= 3 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+  }
+
+  function validate() {
+    const e: Partial<typeof form> = {};
+    if (!form.firstName.trim()) e.firstName = 'Required';
+    if (!form.lastName.trim()) e.lastName = 'Required';
+    if (!form.address.trim()) e.address = 'Required';
+    if (form.card.replace(/\s/g, '').length < 16) e.card = 'Enter valid 16-digit card number';
+    if (form.expiry.length < 5) e.expiry = 'Enter MM/YY';
+    if (form.cvv.length < 3) e.cvv = 'Enter 3-digit CVV';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (validate()) subscribe();
+  }
+
+  const field = (key: keyof typeof form, label: string, placeholder: string, extra?: Partial<React.InputHTMLAttributes<HTMLInputElement>>) => (
+    <div>
+      <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-h)' }}>{label}</label>
+      <input
+        {...extra}
+        value={form[key]}
+        onChange={e => {
+          let v = e.target.value;
+          if (key === 'card') v = formatCard(v);
+          if (key === 'expiry') v = formatExpiry(v);
+          if (key === 'cvv') v = v.replace(/\D/g, '').slice(0, 4);
+          setForm(f => ({ ...f, [key]: v }));
+          if (errors[key]) setErrors(er => ({ ...er, [key]: undefined }));
+        }}
+        placeholder={placeholder}
+        className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
+        style={{ backgroundColor: 'var(--color-neutral)', border: `1px solid ${errors[key] ? '#e11d48' : 'var(--border)'}`, color: 'var(--text-h)' }}
+      />
+      {errors[key] && <p className="text-xs mt-1" style={{ color: '#e11d48' }}>{errors[key]}</p>}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
+
+        {step === 'success' ? (
+          <div className="flex flex-col items-center gap-4 p-10 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: 'var(--color-tertiary)' }}>
+              <CheckCircle2 size={32} style={{ color: 'var(--color-primary)' }} />
+            </div>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--text-h)' }}>You're Premium!</h2>
+            <p className="text-sm" style={{ color: 'var(--text)' }}>
+              Welcome to {planName}. All premium features are now unlocked.
+            </p>
+            <button type="button" onClick={onClose} className="mt-2 px-8 py-2.5 rounded-full text-sm font-bold text-white" style={{ backgroundColor: 'var(--color-primary)' }}>
+              Start Exploring
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+              <div>
+                <h2 className="font-bold text-base" style={{ color: 'var(--text-h)' }}>Subscribe to {planName}</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>${price}/mo · Cancel anytime</p>
+              </div>
+              <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full hover:opacity-70" style={{ color: 'var(--text)' }}><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-3">
+                {field('firstName', 'First Name', 'John')}
+                {field('lastName', 'Last Name', 'Doe')}
+              </div>
+              {field('address', 'Billing Address', '123 Main St, City')}
+
+              <div className="pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <CreditCard size={15} style={{ color: 'var(--color-primary)' }} />
+                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Payment Details</span>
+                </div>
+                {field('card', 'Card Number', '1234 5678 9012 3456')}
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  {field('expiry', 'Expiry', 'MM/YY')}
+                  {field('cvv', 'CVV', '123')}
+                </div>
+              </div>
+
+              <p className="text-[11px] text-center" style={{ color: 'var(--text)' }}>
+                🔒 Demo only — no real payment processed
+              </p>
+
+              <button
+                type="submit"
+                disabled={isPending}
+                className="w-full py-3 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+              >
+                {isPending ? 'Processing…' : `Subscribe · $${price}/mo`}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Pricing Page ──────────────────────────────────────────────────────────────
+
 export function PricingPage() {
   const [billing, setBilling] = useState<Billing>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
 
   return (
     <AppShell>
+      {checkoutPlan && (
+        <CheckoutModal
+          planName={checkoutPlan.name}
+          price={checkoutPlan.price[billing]}
+          onClose={() => setCheckoutPlan(null)}
+        />
+      )}
       <div className="max-w-5xl mx-auto pb-20">
 
         {/* Hero */}
@@ -228,6 +372,7 @@ export function PricingPage() {
                 {/* CTA */}
                 <button
                   type="button"
+                  onClick={() => plan.key !== 'free' && setCheckoutPlan(plan)}
                   className="w-full py-3 rounded-full text-sm font-bold transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none"
                   style={plan.highlighted
                     ? { backgroundColor: plan.color, color: '#ffffff', boxShadow: `0 4px 14px ${plan.color}60` }
@@ -251,13 +396,13 @@ export function PricingPage() {
               Start free — upgrade anytime. No credit card required.
             </p>
           </div>
-          <button
-            type="button"
+          <Link
+            to="/register"
             className="px-6 py-2.5 rounded-full text-sm font-bold transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none shrink-0"
-            style={{ backgroundColor: 'var(--bg)', color: 'var(--color-primary)' }}
+            style={{ backgroundColor: 'var(--bg)', color: 'var(--color-primary)', textDecoration: 'none' }}
           >
             Start for Free →
-          </button>
+          </Link>
         </div>
 
         {/* FAQ */}

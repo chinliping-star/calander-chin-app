@@ -1,7 +1,7 @@
-﻿import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays } from 'lucide-react';
+﻿import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays, Crown } from 'lucide-react';
 import { cn } from '../../../lib/utils.ts';
 
-export type SettingsSection = 'profile' | 'appearance' | 'calendar' | 'privacy' | 'notifications' | 'account' | 'help';
+export type SettingsSection = 'profile' | 'appearance' | 'calendar' | 'privacy' | 'notifications' | 'account' | 'subscription' | 'help';
 
 interface SettingsSidebarProps {
   active: SettingsSection;
@@ -15,6 +15,7 @@ const NAV_ITEMS: { key: SettingsSection; label: string; icon: React.FC<{ size?: 
   { key: 'privacy',       label: 'Privacy',       icon: Lock },
   { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'account',       label: 'Account',       icon: Settings },
+  { key: 'subscription',  label: 'Subscription',  icon: Crown },
   { key: 'help',          label: 'Help Center',   icon: HelpCircle },
 ];
 
