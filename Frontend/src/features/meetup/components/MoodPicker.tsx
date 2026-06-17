@@ -20,7 +20,7 @@ export function MoodPicker({ value, onChange }: MoodPickerProps) {
         Mood &amp; Theme
       </p>
       <div
-        className="grid grid-cols-2 gap-2"
+        className="grid grid-cols-4 gap-1.5"
         role="radiogroup"
         aria-label="Select meetup mood or theme"
       >
@@ -34,19 +34,15 @@ export function MoodPicker({ value, onChange }: MoodPickerProps) {
               aria-checked={isActive}
               onClick={() => onChange(mood.key)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2',
+                'flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[11px] font-semibold transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2',
               )}
               style={
                 isActive
                   ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', border: 'none' }
-                  : {
-                      backgroundColor: 'transparent',
-                      color: 'var(--text-h)',
-                      border: '1px solid var(--border)',
-                    }
+                  : { backgroundColor: 'transparent', color: 'var(--text-h)', border: '1px solid var(--border)' }
               }
             >
-              <span aria-hidden="true">{mood.emoji}</span>
+              <span aria-hidden="true" className="text-base">{mood.emoji}</span>
               {mood.label}
             </button>
           );
