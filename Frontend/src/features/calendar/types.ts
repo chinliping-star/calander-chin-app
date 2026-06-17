@@ -5,6 +5,7 @@ export interface CalendarDayData {
   date: string; // YYYY-MM-DD, empty string for padding cells
   status: DayStatus;
   eventLabel?: string;
+  stickers?: string[];
   isCurrentMonth: boolean;
 }
 

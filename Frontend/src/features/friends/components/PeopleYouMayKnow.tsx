@@ -1,40 +1,65 @@
-import type { SuggestedPerson } from '../types.ts';
-
-const SUGGESTED: SuggestedPerson[] = [
-  {
-    id: '1',
-    displayName: 'Elena Ruiz',
-    username: 'elena.ruiz',
-    avatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
-    mutualContext: 'AI Multi Partners',
-  },
-  {
-    id: '2',
-    displayName: 'Marcus Thorne',
-    username: 'marcus.thorne',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
-    mutualContext: 'In your NGO group',
-  },
-  {
-    id: '3',
-    displayName: 'Maya Patel',
-    username: 'maya.patel',
-    avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg',
-    mutualContext: 'BlueAI Partners',
-  },
-  {
-    id: '4',
-    displayName: 'Daniel Kim',
-    username: 'daniel.kim',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
-    mutualContext: 'Recommended by connections',
-  },
-];
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { useFriendsApi, type ApiFriendUser } from '../api/friends.api.ts';
+import { useAuthStore } from '../../../store/auth.ts';
 
 export function PeopleYouMayKnow() {
+  const [localSent, setLocalSent] = useState<Set<string>>(new Set());
+  const qc = useQueryClient();
+  const friendsApi = useFriendsApi();
+  const { user: me } = useAuthStore();
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users', 'search', ''],
+    queryFn: () => friendsApi.searchUsers('a'),
+    staleTime: 60_000,
+  });
+
+  const { data: friends = [] } = useQuery({
+    queryKey: ['friends'],
+    queryFn: () => friendsApi.getFriends(),
+    staleTime: 30_000,
+  });
+
+  const { data: outgoing = [] } = useQuery({
+    queryKey: ['friends', 'outgoing'],
+    queryFn: () => friendsApi.getOutgoing(),
+    staleTime: 30_000,
+  });
+
+  const friendIds = new Set(friends.map(f => f.friend._id));
+  const friendUsernames = new Set(friends.map(f => f.friend.username));
+  const outgoingIds = new Set(outgoing.map(r => (r.recipient_id as unknown as { _id: string })._id ?? String(r.recipient_id)));
+  const sentIds = new Set([...outgoingIds, ...localSent]);
+
+  const suggestions = allUsers
+    .filter(u =>
+      u.username !== me?.username &&
+      u._id !== me?._id &&
+      !friendUsernames.has(u.username) &&
+      !friendIds.has(u._id)
+    )
+    .slice(0, 4);
+
+  const sendReq = useMutation({
+    mutationFn: (userId: string) => friendsApi.sendRequest(userId),
+    onSuccess: (_, userId) => {
+      setLocalSent(s => new Set([...s, userId]));
+      void qc.invalidateQueries({ queryKey: ['friends', 'outgoing'] });
+    },
+    onError: (err: unknown, userId) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? '';
+      if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('pending')) {
+        setLocalSent(s => new Set([...s, userId]));
+      }
+    },
+  });
+
+  if (suggestions.length === 0) return null;
+
   return (
     <section aria-labelledby="people-heading">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h2
           id="people-heading"
@@ -43,26 +68,23 @@ export function PeopleYouMayKnow() {
         >
           People you may know
         </h2>
-        <button
-          type="button"
-          className="text-xs font-semibold transition-opacity hover:opacity-70 focus-visible:outline-none"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          View All
-        </button>
       </div>
 
-      {/* Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {SUGGESTED.map((person) => (
-          <PersonCard key={person.id} person={person} />
+        {suggestions.map((person) => (
+          <PersonCard
+            key={person._id}
+            person={person}
+            sent={sentIds.has(person._id)}
+            onConnect={() => sendReq.mutate(person._id)}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function PersonCard({ person }: { person: SuggestedPerson }) {
+function PersonCard({ person, sent, onConnect }: { person: ApiFriendUser; sent: boolean; onConnect: () => void }) {
   return (
     <div
       className="group flex flex-col rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-1"
@@ -71,64 +93,71 @@ function PersonCard({ person }: { person: SuggestedPerson }) {
         border: '1px solid var(--border)',
         boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
       }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
-      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}
     >
-      {/* Square photo with padding + rounded */}
-      <div className="w-full p-4 pt-5 flex items-center justify-center" style={{ backgroundColor: 'var(--color-neutral)' }}>
-        <div className="w-full aspect-square overflow-hidden rounded-xl">
-          <img
-            src={person.avatarUrl}
-            alt={person.displayName}
-            className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
+      <Link
+        to={`/${person.username}`}
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded-t-xl"
+        style={{ textDecoration: 'none' }}
+        aria-label={`View ${person.display_name}'s profile`}
+      >
+        <div className="w-full flex items-center justify-center pt-4" style={{ backgroundColor: 'var(--color-neutral)' }}>
+          <div className="w-16 h-16 overflow-hidden rounded-full">
+            <img
+              src={person.avatar_url || `https://i.pravatar.cc/150?u=${person.username}`}
+              alt={person.display_name}
+              className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+          </div>
         </div>
-      </div>
+      </Link>
 
-      {/* Body */}
       <div className="flex flex-col gap-3 p-3.5">
-        <div>
-          <p className="text-sm font-bold leading-snug" style={{ color: 'var(--text-h)' }}>
-            {person.displayName}
+        <Link
+          to={`/${person.username}`}
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded"
+          style={{ textDecoration: 'none' }}
+          aria-label={`View ${person.display_name}'s profile`}
+        >
+          <p className="text-sm font-bold leading-snug hover:underline" style={{ color: 'var(--text-h)' }}>
+            {person.display_name}
           </p>
           <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--text)' }}>
-            {person.mutualContext}
+            @{person.username}
           </p>
-        </div>
+        </Link>
 
-        <ConnectButton />
+        <button
+          type="button"
+          onClick={onConnect}
+          disabled={sent}
+          className="w-full py-1.5 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
+          style={{
+            backgroundColor: sent ? 'var(--color-tertiary)' : 'transparent',
+            border: '1.5px solid var(--color-primary)',
+            color: sent ? 'var(--color-primary)' : 'var(--color-primary)',
+            opacity: sent ? 0.7 : 1,
+          }}
+          onMouseEnter={(e) => {
+            if (!sent) {
+              const btn = e.currentTarget;
+              btn.style.backgroundColor = 'var(--color-primary)';
+              btn.style.color = '#ffffff';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!sent) {
+              const btn = e.currentTarget;
+              btn.style.backgroundColor = 'transparent';
+              btn.style.color = 'var(--color-primary)';
+            }
+          }}
+        >
+          {sent ? 'Request Sent' : 'Connect'}
+        </button>
       </div>
     </div>
-  );
-}
-
-function ConnectButton() {
-  return (
-    <button
-      type="button"
-      className="w-full py-1.5 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400"
-      style={{
-        backgroundColor: 'transparent',
-        border: '1.5px solid var(--color-primary)',
-        color: 'var(--color-primary)',
-      }}
-      onMouseEnter={(e) => {
-        const btn = e.currentTarget;
-        btn.style.backgroundColor = 'var(--color-primary)';
-        btn.style.color = '#ffffff';
-      }}
-      onMouseLeave={(e) => {
-        const btn = e.currentTarget;
-        btn.style.backgroundColor = 'transparent';
-        btn.style.color = 'var(--color-primary)';
-      }}
-    >
-      Connect
-    </button>
   );
 }
