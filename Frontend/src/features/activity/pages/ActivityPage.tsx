@@ -22,7 +22,7 @@ export default function ActivityPage() {
 
         <div
           className="rounded-2xl divide-y"
-          style={{ background: 'var(--bg)', border: '1px solid var(--border)', divideColor: 'var(--border)' }}
+          style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}
         >
           {isLoading ? (
             <div className="flex justify-center py-10">

@@ -16,8 +16,6 @@ import { PricingPage } from '../features/pricing/pages/PricingPage.tsx';
 import { DiaryPage } from '../features/diary/pages/DiaryPage.tsx';
 import { MemoryPage } from '../features/memory/pages/MemoryPage.tsx';
 import { ChatPage } from '../features/chat/pages/ChatPage.tsx';
-import { CommunitiesPage } from '../features/communities/pages/CommunitiesPage.tsx';
-import { CommunityPage } from '../features/communities/pages/CommunityPage.tsx';
 import AnalyticsPage from '../features/analytics/pages/AnalyticsPage.tsx';
 import ActivityPage from '../features/activity/pages/ActivityPage.tsx';
 

@@ -10,9 +10,7 @@ import { ActivityBarChart } from '../components/ActivityBarChart.tsx';
 export default function AnalyticsPage() {
   const api = useAnalyticsApi();
   const { user } = useAuthStore();
-  const isPremium = !!user?.is_premium;
-
-  const { data: overview, isLoading } = useQuery({
+const { data: overview, isLoading } = useQuery({
     queryKey: ['analytics-overview'],
     queryFn: () => api.getOverview(),
     staleTime: 60_000,

@@ -10,8 +10,6 @@ interface Props {
 }
 
 export function CommunityCard({ community, onJoin, joining, isMember }: Props) {
-  const owner = typeof community.owner_id === 'object' ? community.owner_id : null;
-
   return (
     <div
       className="rounded-2xl overflow-hidden flex flex-col"

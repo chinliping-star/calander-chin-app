@@ -1,5 +1,4 @@
 import { useAuth } from '@clerk/clerk-react';
-import { api as publicApi } from '../../../lib/api';
 import { useApi } from '../../../lib/api';
 import type { Post } from '../types';
 
