@@ -45,7 +45,7 @@ export const router = createBrowserRouter([
       { path: '/activity',          element: <ActivityPage /> },
       { path: '/meetups/new',        element: <NewMeetupPage /> },
       { path: '/meetups/propose',    element: <ProposeMeetupPage /> },
-      { path: '/meetups/saved',      element: <SavedDraftsPage /> },
+      { path: '/meetups/propose/saved', element: <SavedDraftsPage /> },
       { path: '/:username',          element: <ProfilePage /> },
       { path: '/:username/calendar', element: <CalendarPage /> },
     ],
