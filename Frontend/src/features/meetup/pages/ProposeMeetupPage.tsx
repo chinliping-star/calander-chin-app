@@ -1,13 +1,12 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Send, BookmarkPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Send, BookmarkPlus, BookOpen } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { MoodPicker } from '../components/MoodPicker.tsx';
 import { FriendSelector } from '../components/FriendSelector.tsx';
 import { ProposedSlot, useProposedSlots } from '../components/ProposedSlot.tsx';
 import type { MoodTheme } from '../types.ts';
-
-const LOCATION_IMAGE = 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400';
+import { useAuthStore } from '../../../store/auth.ts';
 
 const inputStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
@@ -29,23 +28,74 @@ const labelStyle: React.CSSProperties = {
   marginBottom: '6px',
 };
 
+function loadDraftById(id: string) {
+  try {
+    const raw = localStorage.getItem('friendiary-drafts');
+    if (!raw) return null;
+    const drafts = JSON.parse(raw) as Array<{
+      id: string; title: string; intent: string; mood: MoodTheme | null;
+      slots: { id: string; date: string; time: string; location: string }[];
+      friendIds: string[];
+    }>;
+    return drafts.find(d => d.id === id) ?? null;
+  } catch { return null; }
+}
+
 export function ProposeMeetupPage() {
   const navigate = useNavigate();
-  const [title, setTitle] = useState('Coffee & Catch-up');
-  const [intent, setIntent] = useState(
-    "Let's grab a latte and talk about the upcoming weekend plans...",
+  const [searchParams] = useSearchParams();
+  const prefillDate = searchParams.get('date') ?? '';
+  const draftId = searchParams.get('draft') ?? '';
+
+  const draft = draftId ? loadDraftById(draftId) : null;
+
+  const [title, setTitle] = useState(draft?.title ?? '');
+  const [intent, setIntent] = useState(draft?.intent ?? '');
+  const [mood, setMood] = useState<MoodTheme | null>(draft?.mood ?? null);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>(draft?.friendIds ?? []);
+  const [toast, setToast] = useState<{ msg: string; type: 'error' | 'success' } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+  const { user } = useAuthStore();
+
+  const { slots, addSlot, removeSlot, updateSlot } = useProposedSlots(
+    draft?.slots?.[0]?.date || prefillDate,
+    draft?.slots,
   );
-  const [mood, setMood] = useState<MoodTheme | null>('chill');
-  const [selectedFriends, setSelectedFriends] = useState<string[]>(['1', '2']);
-
-  const { slots, addSlot, updateSlot } = useProposedSlots();
-
-  const firstSlot = slots[0];
-  const locationName = firstSlot?.location ?? '';
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    alert(`Proposal for "${title}" sent!`);
+    if (!title.trim()) { setToast({ msg: 'Please add a title before sending.', type: 'error' }); return; }
+    setToast({ msg: `Proposal "${title}" sent! 🎉`, type: 'success' });
+  }
+
+  function handleSaveDraft() {
+    const hasContent = title.trim() || intent.trim() || slots.some(s => s.date || s.time || s.location);
+    if (!hasContent) {
+      setToast({ msg: 'Add a title or at least one slot before saving.', type: 'error' });
+      return;
+    }
+    const updatedDraft = {
+      id: draftId || String(Date.now()),
+      title: title.trim() || 'Untitled Proposal',
+      intent,
+      mood,
+      slots,
+      location: slots[0]?.location ?? '',
+      friendIds: selectedFriends,
+      savedAt: new Date().toISOString(),
+      savedBy: user?.username ?? '',
+    };
+    const existing = JSON.parse(localStorage.getItem('friendiary-drafts') ?? '[]') as typeof updatedDraft[];
+    const updated = draftId
+      ? existing.map(d => d.id === draftId ? updatedDraft : d)
+      : [updatedDraft, ...existing];
+    localStorage.setItem('friendiary-drafts', JSON.stringify(updated));
+    navigate('/meetups/propose/saved');
   }
 
   return (
@@ -107,56 +157,65 @@ export function ProposeMeetupPage() {
           {/* ── RIGHT COLUMN ────────────────────────────────────────────── */}
           <div className="lg:w-80 xl:w-96 flex-shrink-0 flex flex-col gap-6">
             {/* Proposed Slots */}
-            <ProposedSlot slots={slots} onAdd={addSlot} onUpdate={updateSlot} />
+            <ProposedSlot slots={slots} onAdd={addSlot} onRemove={removeSlot} onUpdate={updateSlot} />
 
-            {/* Location Preview card */}
-            <section aria-label="Location preview">
-              <div
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  backgroundColor: 'var(--bg)',
-                  border: '1px solid var(--border)',
-                  boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
-                }}
-              >
-                <div className="relative h-44">
-                  <img
-                    src={LOCATION_IMAGE}
-                    alt="Coffee shop location preview"
-                    className="h-full w-full object-cover"
-                    width={400}
-                    height={176}
-                    loading="lazy"
-                  />
-                  {/* Overlay */}
-                  <div
-                    className="absolute inset-0 flex flex-col justify-end p-4"
-                    style={{
-                      background: 'linear-gradient(to top, rgba(74,62,78,0.8) 0%, transparent 60%)',
-                    }}
-                    aria-hidden="true"
-                  >
-                    <p className="text-sm font-bold text-white leading-tight">
-                      {locationName || 'The Daily Grind Cafe'}
-                    </p>
-                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                      134 Boutique St, Downtown
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <p className="text-xs font-semibold" style={{ color: 'var(--text-h)' }}>
-                    Location Preview
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text)' }}>
-                    {locationName || 'The Daily Grind Cafe'} · 134 Boutique St, Downtown
-                  </p>
-                </div>
-              </div>
-            </section>
           </div>
         </div>
       </form>
+
+      {/* ── Error modal (centered) ───────────────────────────────────────── */}
+      {toast && toast.type === 'error' && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(74,62,78,0.35)', backdropFilter: 'blur(3px)' }}
+          onClick={() => setToast(null)}
+        >
+          <div
+            className="flex flex-col items-center gap-4 rounded-2xl px-8 py-7 text-center"
+            style={{
+              backgroundColor: 'var(--bg)',
+              border: '1.5px solid var(--color-primary-light)',
+              boxShadow: '0 16px 48px rgba(255,127,177,0.25)',
+              maxWidth: '360px',
+              width: '100%',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <span style={{ fontSize: '36px' }}>⚠️</span>
+            <div>
+              <p className="font-bold text-base" style={{ color: 'var(--text-h)', margin: '0 0 6px' }}>
+                Missing Details
+              </p>
+              <p className="text-sm" style={{ color: 'var(--text)' }}>{toast.msg}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="px-6 py-2 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Success toast (bottom) ───────────────────────────────────────── */}
+      {toast && toast.type === 'success' && (
+        <div
+          className="fixed bottom-24 left-1/2 z-[9999] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg"
+          style={{
+            transform: 'translateX(-50%)',
+            backgroundColor: 'var(--color-tertiary)',
+            border: '1.5px solid var(--color-primary-light)',
+            color: 'var(--color-primary-dark)',
+            boxShadow: '0 8px 32px rgba(255,127,177,0.2)',
+          }}
+        >
+          <span className="text-base">✅</span>
+          <p className="text-sm font-semibold">{toast.msg}</p>
+        </div>
+      )}
 
       {/* ── Sticky bottom bar ─────────────────────────────────────────────── */}
       <div
@@ -177,19 +236,34 @@ export function ProposeMeetupPage() {
           <Send size={15} />
           Send Proposal
         </button>
-        <button
-          type="button"
-          onClick={() => navigate('/meetups/saved')}
-          className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
-          style={{
-            border: '1px solid var(--border)',
-            color: 'var(--text-h)',
-            backgroundColor: 'transparent',
-          }}
-        >
-          <BookmarkPlus size={15} />
-          Save for Later
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+            style={{
+              border: '1px solid var(--border)',
+              color: 'var(--text-h)',
+              backgroundColor: 'transparent',
+            }}
+          >
+            <BookmarkPlus size={15} />
+            Save for Later
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/meetups/propose/saved')}
+            className="flex items-center gap-2 px-4 py-3 rounded-full text-sm font-semibold transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+            style={{
+              border: '1px solid var(--border)',
+              color: 'var(--color-primary)',
+              backgroundColor: 'transparent',
+            }}
+          >
+            <BookOpen size={15} />
+            Saved Drafts
+          </button>
+        </div>
       </div>
     </AppShell>
   );
