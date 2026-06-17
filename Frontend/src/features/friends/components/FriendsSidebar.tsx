@@ -1,27 +1,52 @@
 ﻿import { Users, Mail, Calendar, Archive, HelpCircle, LogOut, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useClerk } from '@clerk/clerk-react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../../lib/utils.ts';
+import { useAuthStore } from '../../../store/auth.ts';
+import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
 import type { SidebarSection } from '../types.ts';
 
 interface FriendsSidebarProps {
   active: SidebarSection;
   onSelect: (section: SidebarSection) => void;
+  onAddFriend?: () => void;
 }
 
-const NAV_ITEMS: {
-  key: SidebarSection;
-  label: string;
-  icon: React.FC<{ size?: number; className?: string }>;
-  badge?: number;
-}[] = [
-  { key: 'all', label: 'All Friends', icon: Users },
-  { key: 'invites', label: 'Invites', icon: Mail, badge: 7 },
-  { key: 'past', label: 'Past Meetups', icon: Calendar },
-  { key: 'archived', label: 'Archived', icon: Archive },
-];
-
-export function FriendsSidebar({ active, onSelect }: FriendsSidebarProps) {
+export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebarProps) {
   const navigate = useNavigate();
+  const { signOut } = useClerk();
+  const { user, clearAuth } = useAuthStore();
+  const meetupsApi = useMeetupsApi();
+
+  const { data: meetups = [] } = useQuery({
+    queryKey: ['meetups'],
+    queryFn: () => meetupsApi.getMeetups(),
+    staleTime: 30_000,
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+  const upcomingCount = meetups.filter(m => m.date >= today && m.status === 'accepted').length;
+  const pendingCount = meetups.filter(m => m.status === 'pending').length;
+
+  const NAV_ITEMS: {
+    key: SidebarSection;
+    label: string;
+    icon: React.FC<{ size?: number; className?: string }>;
+    badge?: number;
+  }[] = [
+    { key: 'all',      label: 'All Friends',  icon: Users },
+    { key: 'invites',  label: 'Invites',       icon: Mail, badge: pendingCount || undefined },
+    { key: 'past',     label: 'Past Meetups',  icon: Calendar },
+    { key: 'archived', label: 'Archived',      icon: Archive },
+  ];
+
+  async function handleLogout() {
+    clearAuth();
+    await signOut();
+    navigate('/login');
+  }
+
   return (
     <aside
       className="flex flex-col h-full rounded-2xl p-5 gap-2"
@@ -35,11 +60,11 @@ export function FriendsSidebar({ active, onSelect }: FriendsSidebarProps) {
     >
       {/* Profile header */}
       <div className="mb-4">
-        <p className="font-bold text-base" style={{ color: 'var(--text-h)' }}>
-          Alex Johnson
+        <p className="font-bold text-base truncate" style={{ color: 'var(--text-h)' }}>
+          {user?.display_name ?? user?.username ?? '—'}
         </p>
         <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-primary)' }}>
-          12 Upcoming Meetups
+          {upcomingCount} Upcoming Meetup{upcomingCount !== 1 ? 's' : ''}
         </p>
       </div>
 
@@ -68,7 +93,7 @@ export function FriendsSidebar({ active, onSelect }: FriendsSidebarProps) {
                     <Icon size={16} />
                     {label}
                   </span>
-                  {badge !== undefined && (
+                  {badge !== undefined && badge > 0 && (
                     <span
                       className="text-xs font-bold tabular-nums"
                       style={{ color: 'var(--color-primary)' }}
@@ -100,6 +125,7 @@ export function FriendsSidebar({ active, onSelect }: FriendsSidebarProps) {
         </button>
         <button
           type="button"
+          onClick={handleLogout}
           className="flex items-center gap-2.5 px-3 py-2 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
           style={{ color: 'var(--color-primary)' }}
         >
@@ -107,9 +133,9 @@ export function FriendsSidebar({ active, onSelect }: FriendsSidebarProps) {
           Logout
         </button>
 
-        {/* Add friend button — below divider */}
         <button
           type="button"
+          onClick={() => onAddFriend ? onAddFriend() : navigate('/friends?discover=true')}
           className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
           style={{ backgroundColor: 'var(--color-primary)' }}
         >

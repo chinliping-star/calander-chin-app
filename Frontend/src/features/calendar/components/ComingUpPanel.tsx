@@ -1,57 +1,16 @@
-import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell } from '../../../components/ui/Icon.tsx';
-import type { MeetupRequest } from '../../../types/index.ts';
-
-interface UpcomingEvent {
-  id: string;
-  day: string;
-  title: string;
-  description: string;
-}
+import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
+import { useAuthStore } from '../../../store/auth.ts';
 
 const BADGE_COLORS = [
-  'var(--color-primary)',       // pink
-  'var(--color-secondary)',     // dark plum
-  'var(--color-primary)',       // pink
-  '#c084fc',                   // purple (pending accent)
-  'var(--color-secondary)',     // dark plum
-];
-
-const UPCOMING_EVENTS: UpcomingEvent[] = [
-  { id: '1', day: '14', title: "Valentine's",    description: 'All day celebration' },
-  { id: '2', day: '17', title: 'CNY Day 1',      description: 'Family reunion' },
-  { id: '3', day: '20', title: 'Movie Marathon',  description: 'Starts at 7 PM' },
-  { id: '4', day: '22', title: "Tom's Gig",       description: 'Live at The Lounge' },
-  { id: '5', day: '28', title: 'End of Feb Party', description: 'Rooftop vibes' },
-];
-
-const INITIAL_REQUESTS: MeetupRequest[] = [
-  {
-    id: 'r1',
-    proposer: {
-      id: '1',
-      displayName: 'Mia',
-      username: '@mia.bloom',
-      avatarUrl: 'https://i.pravatar.cc/150?img=5',
-    },
-    title: 'Bubble tea run? 🧋',
-    date: 'Feb 20',
-    status: 'pending',
-  },
-  {
-    id: 'r2',
-    proposer: {
-      id: '3',
-      displayName: 'Jake',
-      username: '@jakegames',
-      avatarUrl: 'https://i.pravatar.cc/150?img=12',
-    },
-    title: 'Game night at mine! 🎮',
-    date: 'Feb 22',
-    status: 'pending',
-  },
+  'var(--color-primary)',
+  'var(--color-secondary)',
+  'var(--color-primary)',
+  '#c084fc',
+  'var(--color-secondary)',
 ];
 
 const CARD_STYLE: CSSProperties = {
@@ -62,21 +21,44 @@ const CARD_STYLE: CSSProperties = {
 
 export function ComingUpPanel() {
   const navigate = useNavigate();
-  const [requests, setRequests] = useState<MeetupRequest[]>(INITIAL_REQUESTS);
+  const qc = useQueryClient();
+  const meetupsApi = useMeetupsApi();
+  const { user } = useAuthStore();
 
-  function handleAccept(id: string) {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'accepted' } : r)),
-    );
-  }
+  const { data: meetups = [] } = useQuery({
+    queryKey: ['meetups'],
+    queryFn: () => meetupsApi.getMeetups(),
+    staleTime: 30_000,
+  });
 
-  function handleDecline(id: string) {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'declined' } : r)),
-    );
-  }
+  const today = new Date().toISOString().split('T')[0];
 
-  const pendingRequests = requests.filter((r) => r.status === 'pending');
+  const upcoming = meetups
+    .filter(m => m.date >= today && (m.status === 'accepted' || m.status === 'pending'))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5);
+
+  // Only show requests where current user is the RECEIVER (owner), not the proposer
+  const pendingRequests = meetups.filter(m =>
+    m.status === 'pending' &&
+    m.date >= today &&
+    m.proposer_id._id !== user?._id
+  );
+
+  const accept = useMutation({
+    mutationFn: (id: string) => meetupsApi.acceptMeetup(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['meetups'] });
+      void qc.invalidateQueries({ queryKey: ['calendar'] });
+    },
+  });
+
+  const decline = useMutation({
+    mutationFn: (id: string) => meetupsApi.declineMeetup(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['meetups'] });
+    },
+  });
 
   return (
     <aside
@@ -96,34 +78,38 @@ export function ComingUpPanel() {
         >
           Coming Up 🗓️
         </h2>
-        <ol className="flex flex-col gap-3" aria-label="Upcoming events list">
-          {UPCOMING_EVENTS.map((event, i) => (
-            <li key={event.id} className="flex items-center gap-3">
-              {/* Day badge — alternates between primary/secondary/purple */}
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white"
-                style={{ backgroundColor: BADGE_COLORS[i % BADGE_COLORS.length] }}
-                aria-hidden="true"
-              >
-                {event.day}
-              </span>
-              <div className="min-w-0">
-                <p
-                  className="text-xs font-semibold truncate"
-                  style={{ color: 'var(--text-h)' }}
-                >
-                  {event.title}
-                </p>
-                <p
-                  className="text-[10px] truncate"
-                  style={{ color: 'var(--text)' }}
-                >
-                  {event.description}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ol>
+
+        {upcoming.length === 0 ? (
+          <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>
+            Nothing planned yet — create a meetup!
+          </p>
+        ) : (
+          <ol className="flex flex-col gap-3" aria-label="Upcoming events list">
+            {upcoming.map((m, i) => {
+              const day = parseInt(m.date.split('-')[2], 10);
+              return (
+                <li key={m._id} className="flex items-center gap-3">
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white"
+                    style={{ backgroundColor: BADGE_COLORS[i % BADGE_COLORS.length] }}
+                    aria-hidden="true"
+                  >
+                    {day}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-h)' }}>
+                      {m.title}
+                    </p>
+                    <p className="text-[10px] truncate" style={{ color: 'var(--text)' }}>
+                      {m.time ? `${m.time}` : m.date}
+                      {m.location ? ` · ${m.location}` : ''}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
       </section>
 
       {/* Requests card */}
@@ -160,74 +146,50 @@ export function ComingUpPanel() {
           <ul className="flex flex-col gap-3" role="list">
             {pendingRequests.map((req) => (
               <li
-                key={req.id}
+                key={req._id}
                 className="flex flex-col gap-3 rounded-xl p-3"
-                style={{
-                  backgroundColor: 'var(--color-neutral)',
-                  border: '1px solid var(--border)',
-                }}
+                style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)' }}
               >
-                {/* Proposer + quote */}
                 <div className="flex items-center gap-2.5">
                   <img
-                    src={req.proposer.avatarUrl}
+                    src={req.proposer_id.avatar_url || `https://i.pravatar.cc/150?u=${req.proposer_id.username}`}
                     alt=""
                     aria-hidden="true"
                     className="h-10 w-10 shrink-0 rounded-full object-cover"
-                    width={40}
-                    height={40}
+                    width={40} height={40}
                     loading="lazy"
                   />
                   <div className="min-w-0 flex-1">
-                    <p
-                      className="text-xs font-bold truncate"
-                      style={{ color: 'var(--text-h)' }}
-                    >
-                      {req.proposer.displayName}
+                    <p className="text-xs font-bold truncate" style={{ color: 'var(--text-h)' }}>
+                      {req.proposer_id.display_name}
                     </p>
-                    <p
-                      className="text-[11px] italic truncate"
-                      style={{ color: 'var(--text-h)' }}
-                    >
+                    <p className="text-[11px] italic truncate" style={{ color: 'var(--text-h)' }}>
                       "{req.title}"
                     </p>
                   </div>
                 </div>
 
-                {/* Date */}
-                <p
-                  className="flex items-center gap-1 text-[10px]"
-                  style={{ color: 'var(--text)' }}
-                >
+                <p className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text)' }}>
                   <span aria-hidden="true">📅</span>
-                  {req.date}
+                  {req.date}{req.time ? ` · ${req.time}` : ''}
                 </p>
 
-                {/* Action buttons */}
-                <div
-                  className="flex gap-2"
-                  role="group"
-                  aria-label={`Respond to ${req.proposer.displayName}'s request`}
-                >
+                <div className="flex gap-2" role="group" aria-label={`Respond to ${req.proposer_id.display_name}'s request`}>
                   <button
                     type="button"
-                    onClick={() => handleAccept(req.id)}
-                    className="flex-1 rounded-full py-1.5 text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+                    onClick={() => accept.mutate(req._id)}
+                    disabled={accept.isPending}
+                    className="flex-1 rounded-full py-1.5 text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50"
                     style={{ backgroundColor: 'var(--color-primary)' }}
-                    aria-label={`Accept ${req.proposer.displayName}'s meetup: ${req.title}`}
                   >
                     Accept
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDecline(req.id)}
-                    className="flex-1 rounded-full border py-1.5 text-[11px] font-semibold transition-all hover:opacity-80 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
-                    style={{
-                      borderColor: 'var(--color-secondary)',
-                      color: 'var(--color-secondary)',
-                      backgroundColor: 'var(--bg)',
-                    }}
-                    aria-label={`Decline ${req.proposer.displayName}'s meetup: ${req.title}`}
+                    onClick={() => decline.mutate(req._id)}
+                    disabled={decline.isPending}
+                    className="flex-1 rounded-full border py-1.5 text-[11px] font-semibold transition-all hover:opacity-80 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50"
+                    style={{ borderColor: 'var(--color-secondary)', color: 'var(--color-secondary)', backgroundColor: 'var(--bg)' }}
                   >
                     Decline
                   </button>

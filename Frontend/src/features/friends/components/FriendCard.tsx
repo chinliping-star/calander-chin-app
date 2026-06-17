@@ -1,5 +1,8 @@
-﻿import { MoreHorizontal, Calendar, Clock, Coffee } from 'lucide-react';
+﻿import { MoreHorizontal, Calendar, Clock, Coffee, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useFriendsApi } from '../api/friends.api.ts';
 import type { FriendProfile } from '../types.ts';
 
 interface FriendCardProps {
@@ -27,6 +30,17 @@ function ActivityIcon({ label }: { label: string }) {
 
 export function FriendCard({ friend }: FriendCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const friendsApi = useFriendsApi();
+
+  const removeFriend = useMutation({
+    mutationFn: () => friendsApi.removeFriend(friend.id),
+    onSuccess: () => {
+      setMenuOpen(false);
+      void qc.invalidateQueries({ queryKey: ['friends'] });
+    },
+  });
 
   return (
     <article
@@ -61,41 +75,67 @@ export function FriendCard({ friend }: FriendCardProps) {
             }}
             role="menu"
           >
-            {['View Profile', 'Propose Meetup', 'Remove Friend'].map((item) => (
-              <button
-                key={item}
-                type="button"
-                role="menuitem"
-                className="w-full text-left px-3.5 py-2 text-xs hover:opacity-70 focus-visible:outline-none transition-opacity"
-                style={{ color: item === 'Remove Friend' ? '#e11d48' : 'var(--text-h)' }}
-                onClick={() => setMenuOpen(false)}
-              >
-                {item}
-              </button>
-            ))}
+            <button
+              key="View Profile"
+              type="button"
+              role="menuitem"
+              className="w-full text-left px-3.5 py-2 text-xs hover:opacity-70 focus-visible:outline-none transition-opacity"
+              style={{ color: 'var(--text-h)' }}
+              onClick={() => { setMenuOpen(false); navigate(`/${friend.username}`); }}
+            >
+              View Profile
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full text-left px-3.5 py-2 text-xs hover:opacity-70 focus-visible:outline-none transition-opacity"
+              style={{ color: 'var(--text-h)' }}
+              onClick={() => { setMenuOpen(false); navigate(`/meetups/propose?friendId=${friend.id}`); }}
+            >
+              Propose Meetup
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full text-left px-3.5 py-2 text-xs hover:opacity-70 focus-visible:outline-none transition-opacity flex items-center gap-1.5"
+              style={{ color: '#e11d48' }}
+              disabled={removeFriend.isPending}
+              onClick={() => removeFriend.mutate()}
+            >
+              {removeFriend.isPending && <Loader2 size={11} className="animate-spin" />}
+              Remove Friend
+            </button>
           </div>
         )}
       </div>
 
-      {/* Circular avatar with online dot */}
-      <div className="relative w-12 h-12 mb-3 shrink-0">
-        <img
-          src={friend.avatarUrl}
-          alt={friend.displayName}
-          className="w-full h-full rounded-full object-cover object-top"
-          loading="lazy"
-        />
-        <span
-          className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white"
-          style={{ backgroundColor: '#22c55e' }}
-          aria-hidden="true"
-        />
-      </div>
+      {/* Circular avatar + name — navigate to profile on click */}
+      <Link
+        to={`/${friend.username}`}
+        className="flex flex-col gap-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded-xl"
+        style={{ textDecoration: 'none' }}
+        aria-label={`View ${friend.displayName}'s profile`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative w-12 h-12 mb-3 shrink-0">
+          <img
+            src={friend.avatarUrl}
+            alt={friend.displayName}
+            className="w-full h-full rounded-full object-cover object-top"
+            loading="lazy"
+          />
+          <span
+            className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white"
+            style={{ backgroundColor: '#22c55e' }}
+            aria-hidden="true"
+          />
+        </div>
 
-      {/* Name */}
-      <p className="text-sm font-bold leading-tight mb-1 pr-6" style={{ color: 'var(--text-h)' }}>
-        {friend.displayName}
-      </p>
+        {/* Name */}
+        <p className="text-sm font-bold leading-tight mb-1 pr-6 hover:underline" style={{ color: 'var(--text-h)' }}>
+          {friend.displayName}
+        </p>
+      </Link>
 
       {/* Activity line */}
       {friend.nextMeetup && (
