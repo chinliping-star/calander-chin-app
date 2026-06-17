@@ -38,9 +38,9 @@ async function bootstrap() {
     }),
   );
 
-  const port = configService.get<number>('PORT', 3000);
-  await app.listen(port);
-  console.log(`HelloXXX Backend running on http://localhost:${port}/api`);
+  const port = Number(process.env.PORT) || configService.get<number>('PORT', 3000);
+  await app.listen(port, '0.0.0.0');
+  console.log(`HelloXXX Backend running on port ${port}/api`);
 }
 
 bootstrap();
