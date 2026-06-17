@@ -1,12 +1,5 @@
-﻿import { X } from 'lucide-react';
-import type { InvitableFriend } from '../types.ts';
-
-const ALL_FRIENDS: InvitableFriend[] = [
-  { id: '1', displayName: 'Alex Rivera', username: 'alex.r', avatarUrl: 'https://i.pravatar.cc/150?img=3' },
-  { id: '2', displayName: 'Sarah Chen', username: 'sarah.chen', avatarUrl: 'https://i.pravatar.cc/150?img=5' },
-  { id: '3', displayName: 'Jordan Smith', username: 'jord.smith', avatarUrl: 'https://i.pravatar.cc/150?img=8' },
-  { id: '4', displayName: 'Elena Rodriguez', username: 'elena_rod', avatarUrl: 'https://i.pravatar.cc/150?img=25' },
-];
+import { useQuery } from '@tanstack/react-query';
+import { useFriendsApi } from '../../friends/api/friends.api.ts';
 
 interface FriendSelectorProps {
   selected: string[];
@@ -14,12 +7,23 @@ interface FriendSelectorProps {
 }
 
 export function FriendSelector({ selected, onChange }: FriendSelectorProps) {
-  const selectedFriends = ALL_FRIENDS.filter((f) => selected.includes(f.id));
-  const unselectedFriends = ALL_FRIENDS.filter((f) => !selected.includes(f.id));
+  const friendsApi = useFriendsApi();
+  const { data: apiFriends = [], isLoading } = useQuery({
+    queryKey: ['friends'],
+    queryFn: () => friendsApi.getFriends(),
+    staleTime: 60_000,
+  });
+
+  const friends = apiFriends.map(f => ({
+    id: f.friend._id,
+    displayName: f.friend.display_name || f.friend.username,
+    username: f.friend.username,
+    avatarUrl: f.friend.avatar_url || `https://i.pravatar.cc/150?u=${f.friend.username}`,
+  }));
 
   function toggle(id: string) {
     if (selected.includes(id)) {
-      onChange(selected.filter((s) => s !== id));
+      onChange(selected.filter(s => s !== id));
     } else {
       onChange([...selected, id]);
     }
@@ -30,102 +34,90 @@ export function FriendSelector({ selected, onChange }: FriendSelectorProps) {
       <div
         className="rounded-2xl p-5"
         style={{
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg)',
           border: '1px solid var(--border)',
           boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
         }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 id="with-whom-heading" className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>
             👥 With Whom?
           </h3>
-          {selectedFriends.length > 0 && (
+          {selected.length > 0 && (
             <span
               className="text-xs font-bold px-2 py-0.5 rounded-full"
               style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}
-              aria-live="polite"
-              aria-label={`${selectedFriends.length} friends selected`}
             >
-              {selectedFriends.length} Selected
+              {selected.length} selected
             </span>
           )}
         </div>
 
-        {/* Selected pills */}
-        {selectedFriends.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4" aria-label="Selected friends">
-            {selectedFriends.map((friend) => (
-              <span
-                key={friend.id}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
-                style={{
-                  backgroundColor: 'var(--accent-bg)',
-                  color: 'var(--color-primary)',
-                  border: '1px solid var(--accent-border)',
-                }}
-              >
-                <img
-                  src={friend.avatarUrl}
-                  alt=""
-                  className="h-4 w-4 rounded-full object-cover"
-                  width={16}
-                  height={16}
-                  aria-hidden="true"
-                />
-                {friend.displayName}
-                <button
-                  type="button"
-                  aria-label={`Remove ${friend.displayName}`}
-                  onClick={() => toggle(friend.id)}
-                  className="hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 rounded-full"
-                >
-                  <X size={11} />
-                </button>
-              </span>
+        {isLoading ? (
+          <div className="flex flex-col gap-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center gap-3 px-2 py-2.5 animate-pulse">
+                <div className="h-9 w-9 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--color-neutral)' }} />
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <div className="h-3 rounded" style={{ backgroundColor: 'var(--color-neutral)', width: '60%' }} />
+                  <div className="h-2.5 rounded" style={{ backgroundColor: 'var(--color-neutral)', width: '40%' }} />
+                </div>
+              </div>
             ))}
           </div>
-        )}
-
-        {/* Unselected list */}
-        {unselectedFriends.length > 0 && (
-          <ul className="flex flex-col gap-1" role="list" aria-label="Friends you can invite">
-            {unselectedFriends.map((friend) => (
-              <li key={friend.id}>
-                <button
-                  type="button"
-                  onClick={() => toggle(friend.id)}
-                  aria-label={`Add ${friend.displayName}`}
-                  className="w-full flex items-center justify-between gap-3 px-2 py-2.5 rounded-xl hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={friend.avatarUrl}
-                      alt=""
-                      className="h-9 w-9 rounded-full object-cover flex-shrink-0"
-                      width={36}
-                      height={36}
-                      loading="lazy"
-                      aria-hidden="true"
-                    />
-                    <div className="text-left">
-                      <p className="text-sm font-semibold" style={{ color: 'var(--text-h)' }}>
-                        {friend.displayName}
-                      </p>
-                      <p className="text-xs" style={{ color: 'var(--text)' }}>
-                        @{friend.username}
-                      </p>
+        ) : friends.length === 0 ? (
+          <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>Add friends first to invite them.</p>
+        ) : (
+          <ul className="flex flex-col gap-1" role="list">
+            {friends.map(friend => {
+              const isSelected = selected.includes(friend.id);
+              return (
+                <li key={friend.id}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(friend.id)}
+                    aria-label={isSelected ? `Remove ${friend.displayName}` : `Add ${friend.displayName}`}
+                    aria-pressed={isSelected}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2"
+                    style={{
+                      backgroundColor: isSelected ? 'var(--accent-bg)' : 'transparent',
+                      border: isSelected ? '1.5px solid var(--color-primary-light)' : '1.5px solid transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={friend.avatarUrl}
+                        alt=""
+                        className="h-9 w-9 rounded-full object-cover flex-shrink-0"
+                        width={36} height={36}
+                        loading="lazy"
+                        aria-hidden="true"
+                      />
+                      <div className="text-left">
+                        <p className="text-sm font-semibold" style={{ color: 'var(--text-h)' }}>{friend.displayName}</p>
+                        <p className="text-xs" style={{ color: 'var(--text)' }}>@{friend.username}</p>
+                      </div>
                     </div>
-                  </div>
-                  {/* Circle checkbox */}
-                  <span
-                    className="h-5 w-5 rounded-full flex-shrink-0 border-2"
-                    style={{ borderColor: 'var(--border)' }}
-                    aria-hidden="true"
-                  />
-                </button>
-              </li>
-            ))}
+                    {/* Checkbox */}
+                    <span
+                      className="h-5 w-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
+                      style={isSelected
+                        ? { backgroundColor: 'var(--color-primary)', border: '2px solid var(--color-primary)' }
+                        : { backgroundColor: 'transparent', border: '2px solid var(--border)' }
+                      }
+                      aria-hidden="true"
+                    >
+                      {isSelected && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
