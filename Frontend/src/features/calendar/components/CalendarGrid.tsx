@@ -1,66 +1,238 @@
-﻿import { useState } from 'react';
-import { Clock, MapPin, LayoutGrid, AlignJustify, Calendar } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Clock, MapPin, LayoutGrid, AlignJustify, Calendar, X } from 'lucide-react';
+import { Skeleton } from '../../../components/ui/Skeleton.tsx';
 import { ChevronLeft, ChevronRight } from '../../../components/ui/Icon.tsx';
 import { DayCell } from './DayCell.tsx';
+import { useCalendarApi, type ApiMeetup, type ApiCalendarDay } from '../api/calendar.api.ts';
+import { useAuthStore } from '../../../store/auth.ts';
+import { usePreferences } from '../../../lib/preferences.ts';
 import type { CalendarDayData } from '../types.ts';
 import type { DayStatus } from '../../../types/index.ts';
 
-// ── Shared data ───────────────────────────────────────────────────────────────
+// Week day labels in Mon-first and Sun-first orders
+const WEEK_DAYS_MON = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+const WEEK_DAYS_SUN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
-interface DayOverride { status: DayStatus; eventLabel?: string; }
-
-const JUNE_2026_OVERRIDES: Record<number, DayOverride> = {
-  3:  { status: 'accepted', eventLabel: '☕ Coffee w/ Mia' },
-  5:  { status: 'blocked',  eventLabel: 'Busy' },
-  7:  { status: 'blocked',  eventLabel: "🎂 Jake's Bday" },
-  10: { status: 'accepted', eventLabel: '📚 Study Session' },
-  12: { status: 'accepted', eventLabel: '🍽️ Dinner w/ All' },
-  13: { status: 'accepted', eventLabel: '❤️' },
-  14: { status: 'accepted', eventLabel: "💕 Valentine's" },
-  17: { status: 'accepted', eventLabel: '🎉 CNY Day 1' },
-  18: { status: 'accepted', eventLabel: '🎉 CNY Day 2' },
-  20: { status: 'pending',  eventLabel: '🎬 Movie Marathon' },
-  21: { status: 'blocked',  eventLabel: 'Busy' },
-  22: { status: 'blocked',  eventLabel: "🎸 Tom's Gig" },
-  25: { status: 'accepted', eventLabel: '🌿 Brunch' },
-  28: { status: 'blocked',  eventLabel: '🎉 End of Feb Party' },
-};
-
-interface MeetupItem {
-  day: number; label: string; time: string;
-  location: string; status: 'accepted' | 'pending'; with: string;
-}
-
-const JUNE_MEETUPS: MeetupItem[] = [
-  { day: 3,  label: '☕ Coffee w/ Mia',  time: '10:00 AM', location: 'The Daily Grind Cafe', status: 'accepted', with: 'Mia' },
-  { day: 10, label: '📚 Study Session',  time: '2:00 PM',  location: 'Central Library',      status: 'accepted', with: 'Sara, Jake' },
-  { day: 12, label: '🍽️ Dinner w/ All', time: '7:30 PM',  location: 'Bella Napoli',         status: 'accepted', with: 'Mia, Sara, Jake, Lily' },
-  { day: 14, label: "💕 Valentine's",    time: '6:00 PM',  location: 'Rooftop Lounge',       status: 'accepted', with: 'Lily' },
-  { day: 17, label: '🎉 CNY Day 1',      time: '12:00 PM', location: 'Family Home',          status: 'accepted', with: 'Everyone' },
-  { day: 18, label: '🎉 CNY Day 2',      time: '11:00 AM', location: 'Chinatown',            status: 'accepted', with: 'Mia, Tom' },
-  { day: 20, label: '🎬 Movie Marathon', time: '4:00 PM',  location: 'CinePlex Downtown',    status: 'pending',  with: 'Jake' },
-  { day: 25, label: '🌿 Brunch',         time: '11:00 AM', location: 'The Green Spot',       status: 'accepted', with: 'Sara' },
-];
-
-const WEEK_DAYS_SHORT = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
 const HOURS = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM'];
-
-// June 2026 week 2: Jun 8–14 (includes today Jun 14)
-const WEEK_DAYS_DATA = [8,9,10,11,12,13,14];
 
 type ViewMode = 'monthly' | 'weekly' | 'daily';
 
-// ── Meetup list (shared bottom) ───────────────────────────────────────────────
+// Map preferences view value → internal ViewMode
+const PREF_VIEW_MAP: Record<string, ViewMode> = {
+  month: 'monthly',
+  week:  'weekly',
+  day:   'daily',
+};
 
-function MeetupList({ meetups }: { meetups: MeetupItem[] }) {
+interface DayOverride { status: DayStatus; eventLabel?: string; stickers?: string[]; meetupId?: string; }
+
+interface MeetupItem {
+  id: string;
+  day: number; label: string; time: string;
+  location: string; status: 'accepted' | 'pending'; with: string;
+  date: string; description?: string;
+}
+
+interface MeetupDetailInfo {
+  date: string;
+  eventLabel: string;
+  status: string;
+}
+
+// ── Format time string per preference ────────────────────────────────────────
+
+function formatTime(time: string, format: '12h' | '24h'): string {
+  if (!time) return '';
+  // Accept "HH:MM", "H:MM AM/PM", plain hour strings like "9 AM"
+  // Normalise to a Date object then re-format
+  const cleaned = time.trim();
+  // Already has AM/PM marker — parse directly
+  const ampmMatch = cleaned.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (ampmMatch) {
+    let h = parseInt(ampmMatch[1], 10);
+    const m = parseInt(ampmMatch[2] ?? '0', 10);
+    const period = ampmMatch[3].toUpperCase();
+    if (period === 'PM' && h !== 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    if (format === '24h') {
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    const displayH = h % 12 === 0 ? 12 : h % 12;
+    const displayPeriod = h < 12 ? 'AM' : 'PM';
+    return m === 0 ? `${displayH} ${displayPeriod}` : `${displayH}:${String(m).padStart(2,'0')} ${displayPeriod}`;
+  }
+  // "HH:MM" 24h format
+  const colonMatch = cleaned.match(/^(\d{1,2}):(\d{2})$/);
+  if (colonMatch) {
+    const h = parseInt(colonMatch[1], 10);
+    const m = parseInt(colonMatch[2], 10);
+    if (format === '24h') return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    const displayH = h % 12 === 0 ? 12 : h % 12;
+    const displayPeriod = h < 12 ? 'AM' : 'PM';
+    return m === 0 ? `${displayH} ${displayPeriod}` : `${displayH}:${String(m).padStart(2,'0')} ${displayPeriod}`;
+  }
+  // Unrecognised — return as-is
+  return cleaned;
+}
+
+// ── Build override maps from API data ─────────────────────────────────────────
+
+function buildOverrides(days: ApiCalendarDay[], meetups: ApiMeetup[]): Record<string, DayOverride> {
+  const map: Record<string, DayOverride> = {};
+  for (const d of days) {
+    map[d.date] = { status: d.status as DayStatus, stickers: d.stickers };
+  }
+  for (const m of meetups) {
+    const status: DayStatus = m.status === 'accepted' ? 'accepted' : 'pending';
+    if (!map[m.date]) {
+      map[m.date] = { status, eventLabel: m.title, meetupId: m._id };
+    } else if (map[m.date].status === 'available') {
+      map[m.date] = { ...map[m.date], status, eventLabel: m.title, meetupId: m._id };
+    }
+  }
+  return map;
+}
+
+function buildMeetupList(meetups: ApiMeetup[], timeFormat: '12h' | '24h'): MeetupItem[] {
+  return meetups
+    .filter(m => m.status === 'accepted' || m.status === 'pending')
+    .map(m => ({
+      id: m._id,
+      day: parseInt(m.date.split('-')[2], 10),
+      label: m.title,
+      time: formatTime(m.time ?? '', timeFormat),
+      location: m.location ?? '',
+      status: m.status === 'accepted' ? 'accepted' : 'pending',
+      with: m.participants.map(p => p.display_name).join(', ') || 'You',
+      date: m.date,
+      description: m.description,
+    }));
+}
+
+// ── Meetup detail modal ────────────────────────────────────────────────────────
+
+function MeetupDetailModal({
+  info, meetups, onClose,
+}: {
+  info: MeetupDetailInfo;
+  meetups: MeetupItem[];
+  onClose: () => void;
+}) {
+  // Find the full meetup entry that matches this date + label
+  const meetup = meetups.find(m => m.date === info.date && m.label === info.eventLabel)
+    ?? meetups.find(m => m.date === info.date);
+
+  const isPending = (meetup?.status ?? info.status) === 'pending';
+
+  return createPortal(
+    // Backdrop
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(15,10,20,0.5)' }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Meetup details"
+    >
+      {/* Panel */}
+      <div
+        className="relative w-full max-w-sm rounded-3xl p-7 flex flex-col gap-4"
+        style={{
+          backgroundColor: 'var(--bg)',
+          border: '1.5px solid var(--border)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.10)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          type="button"
+          aria-label="Close meetup details"
+          onClick={onClose}
+          className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full transition-all hover:opacity-80"
+          style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--text-h)' }}
+        >
+          <X size={14} />
+        </button>
+
+        {/* Status badge + title */}
+        <div className="flex flex-col gap-2">
+          <span
+            className="self-start text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
+            style={isPending
+              ? { backgroundColor: '#ede9fe', color: '#7c3aed' }
+              : { backgroundColor: 'var(--color-primary)', color: '#ffffff' }}
+          >
+            {isPending ? 'Pending' : 'Confirmed'}
+          </span>
+          <h3 className="text-base font-bold leading-snug" style={{ color: 'var(--text-h)' }}>
+            {meetup?.label ?? info.eventLabel}
+          </h3>
+        </div>
+
+        {/* Details */}
+        <div className="flex flex-col gap-2">
+          {/* Date */}
+          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
+            <Calendar size={13} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+            <span>{info.date}</span>
+          </div>
+
+          {/* Time */}
+          {meetup?.time && (
+            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
+              <Clock size={13} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+              <span>{meetup.time}</span>
+            </div>
+          )}
+
+          {/* Location */}
+          {meetup?.location && (
+            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
+              <MapPin size={13} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+              <span>{meetup.location}</span>
+            </div>
+          )}
+
+          {/* Participants */}
+          {meetup?.with && meetup.with !== 'You' && (
+            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
+              <span style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: '13px' }}>👥</span>
+              <span>with {meetup.with}</span>
+            </div>
+          )}
+
+          {/* Description */}
+          {meetup?.description && (
+            <p className="text-xs leading-relaxed mt-1 px-1 py-2 rounded-xl"
+              style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--text)' }}>
+              {meetup.description}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── Meetup list ───────────────────────────────────────────────────────────────
+
+function MeetupList({ meetups, onMeetupClick }: { meetups: MeetupItem[]; onMeetupClick?: (info: MeetupDetailInfo) => void }) {
   if (meetups.length === 0) return (
     <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>No meetups</p>
   );
   return (
     <div className="flex flex-col gap-2">
       {meetups.map((m) => (
-        <div key={`${m.day}-${m.label}`}
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:shadow-sm cursor-pointer"
+        <button
+          key={`${m.day}-${m.label}`}
+          type="button"
+          onClick={() => onMeetupClick?.({ date: m.date, eventLabel: m.label, status: m.status })}
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:shadow-sm hover:opacity-80 w-full text-left"
           style={{
             backgroundColor: m.status === 'pending' ? '#faf5ff' : 'var(--color-tertiary)',
             border: m.status === 'pending' ? '1px dashed #c084fc' : '1px solid var(--color-primary-light)',
@@ -72,12 +244,16 @@ function MeetupList({ meetups }: { meetups: MeetupItem[] }) {
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-h)' }}>{m.label}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text)' }}>
-                <Clock size={9} />{m.time}
-              </span>
-              <span className="flex items-center gap-1 text-[10px] truncate" style={{ color: 'var(--text)' }}>
-                <MapPin size={9} />{m.location}
-              </span>
+              {m.time && (
+                <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text)' }}>
+                  <Clock size={9} />{m.time}
+                </span>
+              )}
+              {m.location && (
+                <span className="flex items-center gap-1 text-[10px] truncate" style={{ color: 'var(--text)' }}>
+                  <MapPin size={9} />{m.location}
+                </span>
+              )}
             </div>
           </div>
           <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0"
@@ -86,7 +262,7 @@ function MeetupList({ meetups }: { meetups: MeetupItem[] }) {
               : { backgroundColor: 'var(--color-primary)', color: '#ffffff' }}>
             {m.status === 'pending' ? 'Pending' : 'Planned'}
           </span>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -94,11 +270,43 @@ function MeetupList({ meetups }: { meetups: MeetupItem[] }) {
 
 // ── Monthly view ──────────────────────────────────────────────────────────────
 
-function MonthlyView() {
+function MonthlyView({
+  year, month, today, overrides, meetups, isOwn, weekStartsOnMonday,
+  onNewMeetup, onToggleAvailability, onDayClick, onMeetupClick,
+}: {
+  year: number; month: number; today: Date;
+  overrides: Record<string, DayOverride>; meetups: MeetupItem[];
+  isOwn: boolean;
+  weekStartsOnMonday: boolean;
+  onNewMeetup?: (date: string) => void;
+  onToggleAvailability?: (date: string, current: 'available' | 'blocked') => void;
+  onDayClick?: (date: string, currentStatus: DayStatus) => void;
+  onMeetupClick?: (info: MeetupDetailInfo) => void;
+}) {
+  const WEEK_DAYS = weekStartsOnMonday ? WEEK_DAYS_MON : WEEK_DAYS_SUN;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayJS = new Date(year, month, 1).getDay(); // 0=Sun
+  // startPad: how many empty cells before day 1
+  const startPad = weekStartsOnMonday
+    ? (firstDayJS === 0 ? 6 : firstDayJS - 1)  // Mon-first: Sun→6, Mon→0, Tue→1...
+    : firstDayJS;                                // Sun-first: Sun→0, Mon→1...
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Count meetups per date for the 3-per-day limit
+  const meetupCountByDate: Record<string, number> = {};
+  meetups.forEach(m => {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(m.day).padStart(2,'0')}`;
+    meetupCountByDate[dateStr] = (meetupCountByDate[dateStr] ?? 0) + 1;
+  });
+
   const cells: CalendarDayData[] = [];
-  for (let d = 1; d <= 30; d++) {
-    const override = JUNE_2026_OVERRIDES[d];
-    cells.push({ day: d, date: `2026-06-${String(d).padStart(2,'0')}`, status: override?.status ?? 'available', eventLabel: override?.eventLabel, isCurrentMonth: true });
+  for (let i = 0; i < startPad; i++)
+    cells.push({ day: 0, date: '', status: 'available', isCurrentMonth: false });
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const override = overrides[dateStr];
+    cells.push({ day: d, date: dateStr, status: override?.status ?? 'available', eventLabel: override?.eventLabel, stickers: override?.stickers, isCurrentMonth: true });
   }
   const remainder = cells.length % 7;
   if (remainder !== 0) for (let i = 0; i < 7 - remainder; i++)
@@ -106,22 +314,30 @@ function MonthlyView() {
 
   return (
     <div className="flex flex-col gap-2 flex-1">
-      {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-1">
-        {WEEK_DAYS_SHORT.map(d => (
+        {WEEK_DAYS.map(d => (
           <div key={d} className="py-1.5 text-center text-[10px] font-bold uppercase tracking-widest rounded-lg"
             style={{ color: 'var(--color-primary)', backgroundColor: 'var(--color-tertiary)' }}>
             {d}
           </div>
         ))}
       </div>
-      {/* Day grid */}
-      <div className="grid grid-cols-7 gap-1 flex-1" role="grid" style={{ gridAutoRows: '1fr' }}>
+      <div ref={gridRef} className="relative grid grid-cols-7 gap-1 flex-1" role="grid" style={{ gridAutoRows: '1fr' }}>
         {cells.map((day, idx) => (
-          <DayCell key={day.date || `pad-${idx}`} data={day} isToday={day.date === '2026-06-14'} />
+          <div key={day.date || `pad-${idx}`} className="relative">
+            <DayCell
+              data={day}
+              isToday={day.date === todayStr}
+              isOwn={isOwn}
+              meetupCount={meetupCountByDate[day.date] ?? 0}
+              onNewMeetup={onNewMeetup}
+              onToggleAvailability={onToggleAvailability}
+              onClick={!isOwn ? (d) => onDayClick?.(d.date, d.status) : undefined}
+              onMeetupClick={onMeetupClick}
+            />
+          </div>
         ))}
       </div>
-      {/* Legend */}
       <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
         {[
           { label: 'Available', bg: 'var(--bg)', border: '1px solid #f0e6ec', text: 'var(--text)' },
@@ -135,12 +351,11 @@ function MonthlyView() {
           </div>
         ))}
       </div>
-      {/* Meetup list */}
       <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--color-primary)' }}>
           This Month's Meetups
         </p>
-        <MeetupList meetups={JUNE_MEETUPS} />
+        <MeetupList meetups={meetups} onMeetupClick={onMeetupClick} />
       </div>
     </div>
   );
@@ -148,26 +363,64 @@ function MonthlyView() {
 
 // ── Weekly view ───────────────────────────────────────────────────────────────
 
-function WeeklyView() {
+function WeeklyView({
+  year, month, today, overrides, meetups, weekStartsOnMonday, timeFormat,
+  isOwn, onNewMeetup, onToggleAvailability, onMeetupClick,
+}: {
+  year: number; month: number; today: Date;
+  overrides: Record<string, DayOverride>; meetups: MeetupItem[];
+  weekStartsOnMonday: boolean;
+  timeFormat: '12h' | '24h';
+  isOwn?: boolean;
+  onNewMeetup?: (date: string) => void;
+  onToggleAvailability?: (date: string, current: 'available' | 'blocked') => void;
+  onMeetupClick?: (info: MeetupDetailInfo) => void;
+}) {
+  const WEEK_DAYS = weekStartsOnMonday ? WEEK_DAYS_MON : WEEK_DAYS_SUN;
   const meetupsByDay: Record<number, MeetupItem[]> = {};
-  JUNE_MEETUPS.forEach(m => {
+  meetups.forEach(m => {
     if (!meetupsByDay[m.day]) meetupsByDay[m.day] = [];
     meetupsByDay[m.day].push(m);
   });
 
+  const refDay = (year === today.getFullYear() && month === today.getMonth()) ? today.getDate() : 1;
+  const refDate = new Date(year, month, refDay);
+  const dow = refDate.getDay(); // 0=Sun
+
+  let weekStartOffset: number;
+  if (weekStartsOnMonday) {
+    // Find Monday of current week: Mon=1→0, Tue=2→-1, ..., Sun=0→-6
+    weekStartOffset = dow === 0 ? -6 : 1 - dow;
+  } else {
+    // Find Sunday of current week: Sun=0→0, Mon=1→-1, ..., Sat=6→-5
+    weekStartOffset = -dow;
+  }
+
+  const weekStart = new Date(year, month, refDay + weekStartOffset);
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  });
+
+  const weekLabel = weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+    ' – ' + weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
   return (
     <div className="flex flex-col gap-3 flex-1">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-center" style={{ color: 'var(--text)' }}>
-        Week of Jun 8 – Jun 14, 2026
+        Week of {weekLabel}
       </p>
       <div className="grid grid-cols-7 gap-1.5 flex-1">
-        {WEEK_DAYS_DATA.map((day, i) => {
-          const isToday = day === 14;
-          const override = JUNE_2026_OVERRIDES[day];
-          const dayMeetups = meetupsByDay[day] ?? [];
+        {weekDays.map((date, i) => {
+          const day = date.getDate();
+          const sameMonth = date.getMonth() === month && date.getFullYear() === year;
+          const isToday = date.toDateString() === today.toDateString();
+          const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          const override = sameMonth ? overrides[dateStr] : undefined;
+          const dayMeetups = sameMonth ? (meetupsByDay[day] ?? []) : [];
           return (
-            <div key={day} className="flex flex-col gap-1.5">
-              {/* Day header */}
+            <div key={dateStr} className="flex flex-col gap-1.5">
               <div className="flex flex-col items-center py-2 rounded-xl"
                 style={{
                   backgroundColor: isToday ? 'var(--color-primary)' : 'var(--color-tertiary)',
@@ -175,7 +428,7 @@ function WeeklyView() {
                 }}>
                 <span className="text-[9px] font-bold uppercase tracking-widest"
                   style={{ color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--color-primary)' }}>
-                  {WEEK_DAYS_SHORT[i]}
+                  {WEEK_DAYS[i]}
                 </span>
                 <span className="text-base font-bold leading-none"
                   style={{ color: isToday ? 'var(--bg)' : 'var(--text-h)' }}>
@@ -183,9 +436,7 @@ function WeeklyView() {
                 </span>
                 {isToday && <span className="text-[8px] text-white opacity-80">Today</span>}
               </div>
-
-              {/* Day body */}
-              <div className="flex-1 rounded-xl p-1.5 flex flex-col gap-1 min-h-[160px]"
+              <div className="relative flex-1 rounded-xl p-1.5 flex flex-col gap-1 min-h-[160px] group/day"
                 style={{
                   backgroundColor: override?.status === 'blocked' ? '#f3f4f6'
                     : override?.status === 'pending' ? '#faf5ff'
@@ -203,27 +454,63 @@ function WeeklyView() {
                   </span>
                 )}
                 {dayMeetups.map(m => (
-                  <div key={m.label} className="rounded-lg px-1.5 py-1"
-                    style={{ backgroundColor: m.status === 'pending' ? '#ede9fe' : '#fff0f6' }}>
+                  <button
+                    key={m.label}
+                    type="button"
+                    onClick={() => onMeetupClick?.({ date: m.date, eventLabel: m.label, status: m.status })}
+                    className="w-full text-left rounded-lg px-1.5 py-1 transition-opacity hover:opacity-75"
+                    style={{ backgroundColor: m.status === 'pending' ? '#ede9fe' : '#fff0f6' }}
+                  >
                     <p className="text-[9px] font-bold truncate"
                       style={{ color: m.status === 'pending' ? '#7c3aed' : 'var(--color-primary-dark)' }}>
                       {m.label}
                     </p>
-                    <p className="text-[8px]" style={{ color: 'var(--text)' }}>{m.time}</p>
-                  </div>
+                    <p className="text-[8px]" style={{ color: 'var(--text)' }}>
+                      {formatTime(m.time, timeFormat)}
+                    </p>
+                  </button>
                 ))}
+
+                {/* + new meetup button — centered overlay on hover */}
+                {isOwn && sameMonth && override?.status !== 'blocked' && (
+                  <button
+                    type="button"
+                    aria-label="New meetup"
+                    onClick={() => onNewMeetup?.(dateStr)}
+                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/day:opacity-100 transition-opacity z-10 rounded-xl"
+                    style={{ background: 'rgba(255,127,177,0.08)' }}
+                  >
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full shadow-sm" style={{ background: 'var(--color-primary)', color: '#fff', fontSize: '16px', lineHeight: 1 }}>
+                      +
+                    </span>
+                  </button>
+                )}
+
+                {/* busy/free toggle */}
+                {isOwn && sameMonth && (
+                  <button
+                    type="button"
+                    aria-label={override?.status === 'blocked' ? 'Mark as free' : 'Mark as busy'}
+                    onClick={() => onToggleAvailability?.(dateStr, override?.status === 'blocked' ? 'blocked' : 'available')}
+                    className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 rounded-md py-0.5 text-[8px] font-bold opacity-0 group-hover/day:opacity-100 transition-opacity z-10"
+                    style={override?.status === 'blocked'
+                      ? { background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }
+                      : { background: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db' }
+                    }
+                  >
+                    {override?.status === 'blocked' ? '✓ Mark Free' : '⊘ Mark Busy'}
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
-
-      {/* Meetup list */}
       <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--color-primary)' }}>
           This Week's Meetups
         </p>
-        <MeetupList meetups={JUNE_MEETUPS.filter(m => WEEK_DAYS_DATA.includes(m.day))} />
+        <MeetupList meetups={meetups.filter(m => weekDays.some(d => d.getMonth() === month && d.getDate() === m.day))} onMeetupClick={onMeetupClick} />
       </div>
     </div>
   );
@@ -231,35 +518,84 @@ function WeeklyView() {
 
 // ── Daily view ────────────────────────────────────────────────────────────────
 
-const HOUR_MEETUPS: Record<string, MeetupItem> = {
-  '6:00 PM': JUNE_MEETUPS.find(m => m.day === 14)!,
-};
+function DailyView({
+  today, meetups, timeFormat, isOwn, onNewMeetup, overrides, onToggleAvailability, onMeetupClick,
+}: {
+  today: Date; meetups: MeetupItem[]; timeFormat: '12h' | '24h';
+  isOwn?: boolean;
+  onNewMeetup?: (date: string) => void;
+  overrides?: Record<string, DayOverride>;
+  onToggleAvailability?: (date: string, current: 'available' | 'blocked') => void;
+  onMeetupClick?: (info: MeetupDetailInfo) => void;
+}) {
+  const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
+  const monthLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const todayMeetups = meetups.filter(m => m.day === today.getDate());
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const todayOverride = overrides?.[todayStr];
+  const isTodayBlocked = todayOverride?.status === 'blocked';
 
-function DailyView() {
+  // Build hour slots formatted per preference
+  const hourSlots = HOURS.map(h => formatTime(h, timeFormat));
+
   return (
     <div className="flex flex-col gap-3 flex-1">
-      {/* Day header */}
-      <div className="flex items-center justify-center gap-3 py-3 rounded-2xl"
+      <div className="relative flex items-center justify-between gap-3 px-4 py-3 rounded-2xl"
         style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)', boxShadow: '0 4px 12px var(--accent-border)' }}>
+        <div className="w-20" />
         <div className="text-center">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>Sunday</p>
-          <p className="text-3xl font-bold text-white leading-none">14</p>
-          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>June 2026 · Today</p>
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>{dayName}</p>
+          <p className="text-3xl font-bold text-white leading-none">{today.getDate()}</p>
+          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>{monthLabel} · Today</p>
+        </div>
+        <div className="w-20 flex flex-col items-end gap-1.5">
+          {isOwn && (
+            <button
+              type="button"
+              onClick={() => onNewMeetup?.(todayStr)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all hover:scale-105"
+              style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)' }}
+            >
+              + New
+            </button>
+          )}
+          {isOwn && (
+            <button
+              type="button"
+              onClick={() => onToggleAvailability?.(todayStr, isTodayBlocked ? 'blocked' : 'available')}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold transition-all hover:scale-105"
+              style={isTodayBlocked
+                ? { background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }
+                : { background: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db' }
+              }
+            >
+              {isTodayBlocked ? '✓ Mark Free' : '⊘ Mark Busy'}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Hour slots */}
-      <div className="flex flex-col gap-0 overflow-y-auto flex-1" style={{ maxHeight: '420px' }}>
-        {HOURS.map((hour) => {
-          const meetup = HOUR_MEETUPS[hour];
+      {isTodayBlocked && (
+        <div className="flex items-center justify-center gap-2 py-3 rounded-xl"
+          style={{ background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+          <span className="text-sm">⊘</span>
+          <p className="text-sm font-semibold" style={{ color: '#6b7280' }}>This day is marked as busy</p>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-0 overflow-y-auto flex-1" style={{ maxHeight: '420px', opacity: isTodayBlocked ? 0.4 : 1, pointerEvents: isTodayBlocked ? 'none' : 'auto' }}>
+        {hourSlots.map((hourLabel, idx) => {
+          const rawHour = HOURS[idx];
+          const meetup = todayMeetups.find(m =>
+            m.time === rawHour || m.time === hourLabel ||
+            m.time.startsWith(rawHour.replace(' AM','').replace(' PM',''))
+          ) ?? null;
           return (
-            <div key={hour} className="flex gap-3 items-start py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-              {/* Time label */}
-              <span className="text-[10px] font-semibold w-12 shrink-0 pt-0.5 text-right"
+            <div key={rawHour} className="flex gap-3 items-start py-2 border-b" style={{ borderColor: 'var(--border)' }}>
+              <span className="text-[10px] font-semibold w-14 shrink-0 pt-0.5 text-right"
                 style={{ color: 'var(--text)' }}>
-                {hour}
+                {hourLabel}
               </span>
-              {/* Slot */}
               {meetup ? (
                 <div className="flex-1 rounded-xl px-3 py-2"
                   style={{
@@ -269,28 +605,43 @@ function DailyView() {
                   <p className="text-xs font-bold" style={{ color: meetup.status === 'pending' ? '#7c3aed' : 'var(--color-primary-dark)' }}>
                     {meetup.label}
                   </p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text)' }}>
-                      <MapPin size={9} />{meetup.location}
-                    </span>
-                  </div>
+                  {meetup.location && (
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text)' }}>
+                        <MapPin size={9} />{meetup.location}
+                      </span>
+                    </div>
+                  )}
                   <p className="text-[10px] mt-0.5" style={{ color: 'var(--text)' }}>with {meetup.with}</p>
                 </div>
               ) : (
-                <div className="flex-1 h-8 rounded-lg cursor-pointer transition-colors hover:bg-pink-50"
-                  style={{ border: '1px dashed transparent' }} />
+                <div
+                  onClick={() => isOwn && !isTodayBlocked && onNewMeetup?.(todayStr)}
+                  className="group/slot flex-1 h-8 rounded-lg transition-all flex items-center gap-1.5 px-2"
+                  style={{
+                    cursor: isOwn && !isTodayBlocked ? 'pointer' : 'default',
+                    border: '1px dashed transparent',
+                  }}
+                  onMouseEnter={e => { if (isOwn && !isTodayBlocked) { (e.currentTarget as HTMLDivElement).style.border = '1px dashed var(--color-primary-light)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--color-tertiary)'; } }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.border = '1px dashed transparent'; (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                >
+                  {isOwn && !isTodayBlocked && (
+                    <span className="opacity-0 group-hover/slot:opacity-100 transition-opacity text-[9px] font-bold flex items-center gap-1" style={{ color: 'var(--color-primary)' }}>
+                      <span className="text-sm leading-none">+</span> Add meetup
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Meetup list */}
       <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--color-primary)' }}>
           Today's Meetups
         </p>
-        <MeetupList meetups={JUNE_MEETUPS.filter(m => m.day === 14)} />
+        <MeetupList meetups={todayMeetups} onMeetupClick={onMeetupClick} />
       </div>
     </div>
   );
@@ -304,18 +655,89 @@ const VIEW_OPTIONS: { key: ViewMode; label: string; icon: React.FC<{ size?: numb
   { key: 'monthly', label: 'Month', icon: LayoutGrid },
 ];
 
-export function CalendarGrid() {
-  const [view, setView] = useState<ViewMode>('monthly');
-  const YEAR = 2026;
-  const MONTH = 5;
-  const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(YEAR, MONTH, 1));
+export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
+  // Bug 10.1: read preferences
+  const { weekStart, defaultView, timeFormat } = usePreferences();
+  const weekStartsOnMonday = weekStart === 'monday';
+
+  // Bug 10.1: default view comes from saved preference
+  const [view, setView] = useState<ViewMode>(() => PREF_VIEW_MAP[defaultView] ?? 'monthly');
+  const today = new Date();
+  const [currentDate, setCurrentDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const navigate = useNavigate();
+
+  // Bug 11.4: meetup detail modal state
+  const [activeMeetup, setActiveMeetup] = useState<MeetupDetailInfo | null>(null);
+
+  const qc = useQueryClient();
+  const { user } = useAuthStore();
+  const calendarApi = useCalendarApi();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(currentDate);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['calendar', user?.username, monthStr],
+    queryFn: () => calendarApi.getMonth(user!.username, monthStr),
+    enabled: !!user?.username,
+    staleTime: 60_000,
+    placeholderData: { days: [], meetups: [], user: { _id: '', username: '', display_name: '' } },
+  });
+
+  const overrides = data ? buildOverrides(data.days, data.meetups) : {};
+  // Bug 10.1: pass timeFormat to buildMeetupList so times are pre-formatted
+  const meetupList = data ? buildMeetupList(data.meetups, timeFormat) : [];
+
+  const markDay = useMutation({
+    mutationFn: ({ date, status }: { date: string; status: DayStatus }) =>
+      calendarApi.markDay(date, status),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['calendar', user?.username, monthStr] });
+    },
+  });
+
+  // Toggle available ↔ blocked
+  const handleToggleAvailability = useCallback((date: string, current: 'available' | 'blocked') => {
+    const next: DayStatus = current === 'blocked' ? 'available' : 'blocked';
+    markDay.mutate({ date, status: next });
+  }, [markDay]);
+
+  // Friend's day click — navigate to propose meetup
+  function handleDayClick(date: string, currentStatus: DayStatus) {
+    if (currentStatus !== 'blocked') {
+      navigate(`/meetups/propose?date=${date}`);
+    }
+  }
+
+  // + button click on own calendar — navigate to new meetup
+  const handleNewMeetup = useCallback((date: string) => {
+    navigate(`/meetups/new?date=${date}`);
+  }, [navigate]);
+
+  // Bug 11.4: open meetup detail modal
+  const handleMeetupClick = useCallback((info: MeetupDetailInfo) => {
+    setActiveMeetup(info);
+  }, []);
+
+  const prevMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
   return (
-    <section className="flex flex-col gap-4 flex-1 h-full" aria-label={`Calendar for ${monthName} ${YEAR}`}>
+    <section className="flex flex-col gap-4 flex-1 h-full" aria-label={`Calendar for ${monthName} ${year}`}>
+
+      {/* Bug 11.4: meetup detail modal (rendered at top level to avoid overflow clipping) */}
+      {activeMeetup && (
+        <MeetupDetailModal
+          info={activeMeetup}
+          meetups={meetupList}
+          onClose={() => setActiveMeetup(null)}
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
-        <button type="button" aria-label="Previous"
+        <button type="button" aria-label="Previous month" onClick={prevMonth}
           className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:scale-110 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2"
           style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)', border: '1px solid var(--border)' }}>
           <ChevronLeft size={16} />
@@ -324,16 +746,16 @@ export function CalendarGrid() {
         <div className="text-center flex-1">
           <div className="flex items-baseline justify-center gap-2">
             <h2 className="font-bold leading-none tracking-tight" style={{ color: 'var(--text-h)', fontSize: '26px', margin: 0 }}>
-              {view === 'daily' ? 'June 14' : monthName}
+              {view === 'daily' ? `${monthName} ${today.getDate()}` : monthName}
             </h2>
-            <span className="font-semibold" style={{ color: 'var(--color-primary)', fontSize: '16px' }}>{YEAR}</span>
+            <span className="font-semibold" style={{ color: 'var(--color-primary)', fontSize: '16px' }}>{year}</span>
           </div>
           <p className="mt-1 text-[10px] tracking-wide" style={{ color: 'var(--text)' }}>
             your personal calendar ✨
           </p>
         </div>
 
-        <button type="button" aria-label="Next"
+        <button type="button" aria-label="Next month" onClick={nextMonth}
           className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:scale-110 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2"
           style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)', border: '1px solid var(--border)' }}>
           <ChevronRight size={16} />
@@ -359,16 +781,60 @@ export function CalendarGrid() {
         </div>
       </div>
 
-      {/* View content — key triggers remount → smooth slide-in */}
-      <div
-        key={view}
-        className="flex flex-col flex-1 gap-4"
-        style={{ animation: 'calendarViewIn 0.45s cubic-bezier(0.16,1,0.3,1) forwards' }}
-      >
-        {view === 'monthly' && <MonthlyView />}
-        {view === 'weekly'  && <WeeklyView />}
-        {view === 'daily'   && <DailyView />}
-      </div>
+      {/* Loading state — skeleton grid */}
+      {isLoading && (
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: 35 }).map((_, i) => (
+              <Skeleton key={i} height={72} rounded="xl" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* View content */}
+      {!isLoading && (
+        <div
+          key={`${view}-${year}-${month}`}
+          className="flex flex-col flex-1 gap-4"
+          style={{ animation: 'calendarViewIn 0.45s cubic-bezier(0.16,1,0.3,1) forwards' }}
+        >
+          {view === 'monthly' && (
+            <MonthlyView
+              year={year} month={month} today={today}
+              overrides={overrides} meetups={meetupList}
+              isOwn={isOwn}
+              weekStartsOnMonday={weekStartsOnMonday}
+              onNewMeetup={handleNewMeetup}
+              onToggleAvailability={handleToggleAvailability}
+              onDayClick={handleDayClick}
+              onMeetupClick={handleMeetupClick}
+            />
+          )}
+          {view === 'weekly' && (
+            <WeeklyView
+              year={year} month={month} today={today}
+              overrides={overrides} meetups={meetupList}
+              weekStartsOnMonday={weekStartsOnMonday}
+              timeFormat={timeFormat}
+              isOwn={isOwn}
+              onNewMeetup={handleNewMeetup}
+              onToggleAvailability={handleToggleAvailability}
+              onMeetupClick={handleMeetupClick}
+            />
+          )}
+          {view === 'daily' && (
+            <DailyView
+              today={today} meetups={meetupList} timeFormat={timeFormat}
+              isOwn={isOwn}
+              onNewMeetup={handleNewMeetup}
+              overrides={overrides}
+              onToggleAvailability={handleToggleAvailability}
+              onMeetupClick={handleMeetupClick}
+            />
+          )}
+        </div>
+      )}
     </section>
   );
 }
