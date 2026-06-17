@@ -4,13 +4,13 @@ import type { User } from '../../../types/index.ts';
 
 function normalizeUser(raw: AuthResponse['user']): User {
   return {
-    id: raw._id,
+    _id: raw._id,
     username: raw.username,
-    displayName: raw.display_name,
-    avatarUrl: raw.avatar_url ?? '',
-    bannerUrl: raw.banner_url,
+    display_name: raw.display_name,
+    avatar_url: raw.avatar_url ?? '',
+    banner_url: raw.banner_url,
     theme: raw.theme,
-    isPremium: raw.is_premium,
+    is_premium: raw.is_premium,
   };
 }
 

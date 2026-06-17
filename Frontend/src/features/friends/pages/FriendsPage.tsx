@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { LayoutGrid, Activity, Search, Clock, Archive, CheckCircle, XCircle, Inbox, Star, Loader2, X } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/Skeleton.tsx';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
@@ -378,7 +378,6 @@ export function FriendsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showAddFriend, setShowAddFriend] = useState(false);
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const discoverRef = useRef<HTMLDivElement>(null);
 

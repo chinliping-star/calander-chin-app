@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Camera, Lock, ImageIcon, Upload, X,
+  Camera, Lock, ImageIcon, X,
   Plus, Loader2, Sparkles,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';

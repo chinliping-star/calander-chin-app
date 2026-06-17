@@ -8,7 +8,6 @@ import { usePostsApi } from '../../posts/api/posts.api.ts';
 import {
   UserPlus,
   MessageCircle,
-  Bell,
   Lock,
   MapPin,
   Clock,
@@ -557,7 +556,7 @@ export function ProfilePage() {
 
   // Real friend request mutation
   const sendRequest = useMutation({
-    mutationFn: () => friendsApi.sendRequest(profileUser!._id),
+    mutationFn: () => friendsApi.sendRequest(profileUser!._id!),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['friends'] }),
   });
 

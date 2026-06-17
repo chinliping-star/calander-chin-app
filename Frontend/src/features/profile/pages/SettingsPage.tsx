@@ -1,9 +1,8 @@
 import { useState, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Pencil, ChevronRight, MessageCircle, FileText, Shield, Mail, Phone, ExternalLink, Check, Crown, AlertTriangle } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser, useAuth } from '@clerk/clerk-react';
-import { useSubscriptionsApi } from '../../premium/api/subscriptions.api.ts';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { SettingsSidebar } from '../components/SettingsSidebar.tsx';
 import { ToggleSwitch } from '../components/ToggleSwitch.tsx';
@@ -608,7 +607,7 @@ function AccountSection() {
   // Detect Google OAuth: Clerk exposes externalAccounts on the user object
   const isGoogleUser =
     clerkUser?.externalAccounts?.some(
-      (acc) => acc.provider === 'google' || acc.provider === 'oauth_google',
+      (acc) => acc.provider === 'google',
     ) ?? false;
 
   function handlePwSave(e: React.FormEvent) {
