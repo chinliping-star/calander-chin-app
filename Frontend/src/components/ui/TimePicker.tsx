@@ -1,16 +1,17 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock } from 'lucide-react';
 import { cn } from '../../lib/utils.ts';
 
 interface TimePickerProps {
-  value: string; // HH:MM (24h)
+  value: string;
   onChange: (time: string) => void;
   placeholder?: string;
   error?: boolean;
   id?: string;
 }
 
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 1); // 1–12
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = ['00', '15', '30', '45'];
 
 function formatDisplay(value: string) {
@@ -43,7 +44,9 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
   const [selHour, setSelHour] = useState(parsed.hour);
   const [selMinute, setSelMinute] = useState(parsed.minute);
   const [selPeriod, setSelPeriod] = useState<'AM' | 'PM'>(parsed.period);
-  const ref = useRef<HTMLDivElement>(null);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const p = parseValue(value);
@@ -54,11 +57,24 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        dropRef.current && !dropRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) setOpen(false);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  function openPicker() {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const dropW = 240;
+      const left = Math.min(rect.left + window.scrollX, window.innerWidth - dropW - 8);
+      setDropPos({ top: rect.bottom + window.scrollY + 6, left: Math.max(8, left) });
+    }
+    setOpen(o => !o);
+  }
 
   function confirm(hour: number, minute: string, period: 'AM' | 'PM') {
     onChange(toValue(hour, minute, period));
@@ -81,15 +97,15 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
   }
 
   return (
-    <div ref={ref} className="relative w-full">
-      {/* Trigger */}
+    <div className="relative w-full">
       <button
+        ref={triggerRef}
         type="button"
         id={id}
-        onClick={() => setOpen(o => !o)}
+        onClick={openPicker}
         className="w-full flex items-center justify-between gap-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7FB1]"
         style={{
-          border: error ? '1.5px solid var(--color-primary)' : open ? '1.5px solid var(--color-primary)' : '1px solid var(--border)',
+          border: error || open ? '1.5px solid var(--color-primary)' : '1px solid var(--border)',
           borderRadius: '12px',
           padding: '10px 14px',
           fontSize: '14px',
@@ -105,15 +121,19 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
         <Clock size={15} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
       </button>
 
-      {/* Dropdown */}
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute z-50 mt-2 rounded-2xl p-4 select-none"
+          ref={dropRef}
+          className="rounded-2xl p-4 select-none"
           style={{
+            position: 'absolute',
+            top: dropPos.top,
+            left: dropPos.left,
+            width: '240px',
+            zIndex: 9999,
             backgroundColor: 'var(--bg)',
             border: '1px solid var(--border)',
             boxShadow: '0 8px 32px rgba(74,62,78,0.16)',
-            width: '240px',
           }}
           role="dialog"
           aria-label="Time picker"
@@ -141,7 +161,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
           </div>
 
           <div className="flex gap-3">
-            {/* Hours */}
+            {/* Hours grid */}
             <div className="flex-1">
               <p className="text-[10px] font-bold uppercase tracking-widest mb-2 text-center" style={{ color: 'var(--color-primary)' }}>
                 Hour
@@ -152,9 +172,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
                     key={h}
                     type="button"
                     onClick={() => handleHour(h)}
-                    className={cn(
-                      'h-8 rounded-xl text-xs font-semibold transition-all hover:scale-105 focus-visible:outline-none',
-                    )}
+                    className={cn('h-8 rounded-xl text-xs font-semibold transition-all hover:scale-105 focus-visible:outline-none')}
                     style={
                       selHour === h
                         ? { backgroundColor: 'var(--color-primary)', color: '#ffffff', boxShadow: '0 2px 6px var(--accent-border)' }
@@ -167,7 +185,6 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
               </div>
             </div>
 
-            {/* Divider */}
             <div style={{ width: '1px', backgroundColor: 'var(--border)' }} />
 
             {/* Minutes */}
@@ -195,7 +212,7 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
             </div>
           </div>
 
-          {/* Selected preview + confirm */}
+          {/* Preview + confirm */}
           <div className="mt-4 flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border)' }}>
             <span className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>
               {selHour}:{selMinute} {selPeriod}
@@ -209,7 +226,8 @@ export function TimePicker({ value, onChange, placeholder = 'Pick a time', error
               Set Time
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

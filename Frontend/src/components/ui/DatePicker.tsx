@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { cn } from '../../lib/utils.ts';
 
@@ -39,16 +40,30 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', error
   const [open, setOpen] = useState(false);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const ref = useRef<HTMLDivElement>(null);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        dropRef.current && !dropRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) setOpen(false);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  function openPicker() {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const dropW = 288;
+      const left = Math.min(rect.left + window.scrollX, window.innerWidth - dropW - 8);
+      setDropPos({ top: rect.bottom + window.scrollY + 6, left: Math.max(8, left) });
+    }
+    setOpen(o => !o);
+  }
 
   function prevMonth() {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
@@ -70,12 +85,13 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', error
   const todayStr = toDateString(today.getFullYear(), today.getMonth(), today.getDate());
 
   return (
-    <div ref={ref} className="relative w-full">
+    <div className="relative w-full">
       {/* Trigger */}
       <button
+        ref={triggerRef}
         type="button"
         id={id}
-        onClick={() => setOpen(o => !o)}
+        onClick={openPicker}
         className={cn(
           'w-full flex items-center justify-between gap-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF7FB1]',
         )}
@@ -96,11 +112,17 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', error
         <Calendar size={15} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
       </button>
 
-      {/* Dropdown calendar */}
-      {open && (
+      {/* Dropdown calendar — portaled to body to escape overflow clipping */}
+      {open && createPortal(
         <div
-          className="absolute z-50 mt-2 w-72 rounded-2xl p-4 select-none"
+          ref={dropRef}
+          className="rounded-2xl p-4 select-none"
           style={{
+            position: 'absolute',
+            top: dropPos.top,
+            left: dropPos.left,
+            width: '288px',
+            zIndex: 9999,
             backgroundColor: 'var(--bg)',
             border: '1px solid var(--border)',
             boxShadow: '0 8px 32px rgba(74,62,78,0.16)',
@@ -202,7 +224,8 @@ export function DatePicker({ value, onChange, placeholder = 'Pick a date', error
               Today
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

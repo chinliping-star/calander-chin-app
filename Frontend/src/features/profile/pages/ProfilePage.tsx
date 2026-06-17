@@ -777,13 +777,12 @@ export function ProfilePage() {
               {[
                 { value: FAKE_COUNTS.friendsCount, label: 'Friends',  icon: <Users size={14} /> },
                 { value: FAKE_COUNTS.meetupsCount,  label: 'Meetups',  icon: <Calendar size={14} /> },
-                { value: FAKE_COUNTS.photosCount,   label: 'Photos',   icon: <Camera size={14} /> },
               ].map((stat, idx) => (
                 <div
                   key={stat.label}
                   className="flex-1 flex flex-col items-center gap-0.5 py-3 px-2"
                   style={{
-                    borderRight: idx < 2 ? '1px solid var(--border)' : 'none',
+                    borderRight: idx < 1 ? '1px solid var(--border)' : 'none',
                   }}
                   role="listitem"
                 >

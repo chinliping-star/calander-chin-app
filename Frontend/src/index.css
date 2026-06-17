@@ -281,6 +281,37 @@
 [data-cursor="sparkle"]   { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E✨%3C/text%3E%3C/svg%3E") 8 8, auto !important; }
 
 
+/* ── Themed scrollbar ───────────────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary-light) var(--color-tertiary);
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--color-tertiary);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-primary-light);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 #root {
   min-height: 100svh;
   display: flex;
@@ -293,29 +324,31 @@ body {
   margin: 0;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+@layer base {
+  h1,
+  h2 {
+    font-family: var(--heading);
+    font-weight: 500;
+    color: var(--text-h);
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+  h1 {
+    font-size: 56px;
+    letter-spacing: -1.68px;
+    margin: 32px 0;
+    @media (max-width: 1024px) {
+      font-size: 36px;
+      margin: 20px 0;
+    }
+  }
+  h2 {
+    font-size: 24px;
+    line-height: 118%;
+    letter-spacing: -0.24px;
+    margin: 0 0 8px;
+    @media (max-width: 1024px) {
+      font-size: 20px;
+    }
   }
 }
 p {
@@ -468,3 +501,13 @@ section:nth-child(1) { animation-delay: 0.0s; }
 section:nth-child(2) { animation-delay: 0.08s; }
 section:nth-child(3) { animation-delay: 0.16s; }
 section:nth-child(4) { animation-delay: 0.24s; }
+
+/* ── Recharts — remove default SVG border ───────────────────────────────── */
+.recharts-wrapper svg {
+  border: none !important;
+  outline: none !important;
+}
+.recharts-surface {
+  border: none !important;
+  outline: none !important;
+}
