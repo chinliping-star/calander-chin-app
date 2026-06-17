@@ -1,11 +1,16 @@
 import { useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Pencil, ChevronRight, MessageCircle, FileText, Shield, Mail, Phone, ExternalLink, Check } from 'lucide-react';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { Pencil, ChevronRight, MessageCircle, FileText, Shield, Mail, Phone, ExternalLink, Check, Crown, AlertTriangle } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useUser, useAuth } from '@clerk/clerk-react';
+import { useSubscriptionsApi } from '../../premium/api/subscriptions.api.ts';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { SettingsSidebar } from '../components/SettingsSidebar.tsx';
 import { ToggleSwitch } from '../components/ToggleSwitch.tsx';
 import { useThemeStore, THEMES } from '../../../lib/theme.ts';
 import { usePreferences, CURSORS } from '../../../lib/preferences.ts';
+import { useAuthStore } from '../../../store/auth.ts';
+import { useApi } from '../../../lib/api.ts';
 import type { SettingsSection } from '../components/SettingsSidebar.tsx';
 
 const inputStyle: React.CSSProperties = {
@@ -55,17 +60,70 @@ function SectionHeading({ id, children }: { id: string; children: React.ReactNod
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
 function ProfileSection() {
-  const [displayName, setDisplayName] = useState('Chin');
-  const [username, setUsername] = useState('@chin.star');
-  const [bio, setBio] = useState("Social enthusiast and diary keeper. Let's make every meetup count!");
-  const [saved, setSaved] = useState(false);
+  const { user: storeUser, updateUser } = useAuthStore();
+  const api = useApi();
+  const qc = useQueryClient();
+  const { getToken } = useAuth();
+
+  const [displayName, setDisplayName] = useState(storeUser?.display_name ?? '');
+  const [username, setUsername] = useState(storeUser?.username ?? '');
+  const [bio, setBio] = useState(storeUser?.bio ?? '');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const { mutate: saveProfile, isPending: isSaving, isSuccess: isSaved } = useMutation({
+    mutationFn: async () => {
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append('avatar', avatarFile);
+        const token = await getToken();
+        const BASE_URL = (import.meta.env as Record<string, string>)['VITE_API_URL'] ?? 'http://localhost:3000/api';
+        const res = await fetch(`${BASE_URL}/users/me/avatar`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: formData,
+        });
+        if (!res.ok) throw new Error('Avatar upload failed');
+      }
+      return api.patch<{ display_name: string; username: string; bio?: string; avatar_url?: string }>('/users/me', {
+        display_name: displayName.trim(),
+        username: username.trim(),
+        ...(bio.trim() && { bio: bio.trim() }),
+      });
+    },
+    onSuccess: (updated) => {
+      updateUser(updated);
+      qc.invalidateQueries({ queryKey: ['profile'] });
+      setSaveError(null);
+      setAvatarFile(null);
+    },
+    onError: (err: Error) => {
+      setSaveError(err.message);
+    },
+  });
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaveError(null);
+    saveProfile();
   }
+
+  const avatarSrc = avatarPreview ?? storeUser?.avatar_url ?? undefined;
+  const initials = (storeUser?.display_name ?? storeUser?.username ?? '?')
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <section aria-labelledby="profile-heading">
@@ -74,43 +132,104 @@ function ProfileSection() {
         <form onSubmit={handleSave} className="flex flex-col gap-5">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
-              <img src="https://i.pravatar.cc/150?img=47" alt="Your avatar"
-                className="h-[72px] w-[72px] rounded-full object-cover" width={72} height={72} />
-              <button type="button" aria-label="Edit photo" onClick={() => fileRef.current?.click()}
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt="Your avatar"
+                  className="h-[72px] w-[72px] rounded-full object-cover"
+                  width={72}
+                  height={72}
+                />
+              ) : (
+                <div
+                  className="h-[72px] w-[72px] rounded-full flex items-center justify-center text-white text-2xl font-bold select-none"
+                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  aria-label="Your avatar"
+                >
+                  {initials}
+                </div>
+              )}
+              <button
+                type="button"
+                aria-label="Edit photo"
+                onClick={() => fileRef.current?.click()}
                 className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm focus-visible:outline-none hover:opacity-90"
-                style={{ backgroundColor: 'var(--color-primary)' }}>
+                style={{ backgroundColor: 'var(--color-primary)' }}
+              >
                 <Pencil size={11} />
               </button>
-              <input ref={fileRef} type="file" accept="image/*" className="sr-only" aria-label="Upload photo" />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                aria-label="Upload photo"
+                onChange={handleAvatarChange}
+              />
             </div>
             <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-h)' }}>{displayName}</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>{username}</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-h)' }}>
+                {displayName || storeUser?.display_name}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>
+                @{username || storeUser?.username}
+              </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="display-name" style={smallLabel}>Display Name</label>
-              <input id="display-name" type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} style={inputStyle} />
+              <input
+                id="display-name"
+                type="text"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                style={inputStyle}
+                autoComplete="name"
+                required
+              />
             </div>
             <div>
               <label htmlFor="username" style={smallLabel}>Username</label>
-              <input id="username" type="text" value={username} onChange={e => setUsername(e.target.value)} style={inputStyle} />
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                style={inputStyle}
+                autoComplete="username"
+                required
+              />
             </div>
           </div>
 
           <div>
             <label htmlFor="bio" style={smallLabel}>Bio</label>
-            <textarea id="bio" rows={3} value={bio} onChange={e => setBio(e.target.value)}
-              style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.6' }} />
+            <textarea
+              id="bio"
+              rows={3}
+              value={bio}
+              onChange={e => setBio(e.target.value)}
+              placeholder="Tell your friends a little about yourself..."
+              style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.6' }}
+            />
           </div>
 
+          {saveError && (
+            <p className="text-sm" role="alert" style={{ color: '#dc2626' }}>
+              {saveError}
+            </p>
+          )}
+
           <div className="flex justify-end">
-            <button type="submit"
-              className="px-6 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
-              style={{ backgroundColor: 'var(--color-primary)' }}>
-              {saved ? '✓ Saved!' : 'Save Profile Changes'}
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-6 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+            >
+              {isSaving ? 'Saving…' : isSaved ? '✓ Saved!' : 'Save Profile Changes'}
             </button>
           </div>
         </form>
@@ -457,18 +576,76 @@ function NotificationsSection() {
 
 // ─── Account ──────────────────────────────────────────────────────────────────
 
+const DELETE_REASONS = [
+  "I don't find it useful",
+  'I have privacy concerns',
+  'Too many bugs',
+  'I found a better alternative',
+  'Other',
+] as const;
+
+type DeleteReason = (typeof DELETE_REASONS)[number];
+
 function AccountSection() {
+  const { user: clerkUser } = useUser();
+  const { clearAuth } = useAuthStore();
+  const api = useApi();
+  const navigate = useNavigate();
+
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
-  const [twoFA, setTwoFA] = useState(false);
   const [pwSaved, setPwSaved] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+
+  // Delete account panel state
+  const [showDeletePanel, setShowDeletePanel] = useState(false);
+  const [deleteReason, setDeleteReason] = useState<DeleteReason | null>(null);
+  const [otherReason, setOtherReason] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+
+  // Detect Google OAuth: Clerk exposes externalAccounts on the user object
+  const isGoogleUser =
+    clerkUser?.externalAccounts?.some(
+      (acc) => acc.provider === 'google' || acc.provider === 'oauth_google',
+    ) ?? false;
 
   function handlePwSave(e: React.FormEvent) {
     e.preventDefault();
+    setPwError(null);
+    if (newPw !== confirmPw) {
+      setPwError('New passwords do not match.');
+      return;
+    }
+    if (newPw.length < 8) {
+      setPwError('Password must be at least 8 characters.');
+      return;
+    }
     setPwSaved(true);
     setTimeout(() => setPwSaved(false), 2000);
-    setCurrentPw(''); setNewPw(''); setConfirmPw('');
+    setCurrentPw('');
+    setNewPw('');
+    setConfirmPw('');
+  }
+
+  const { mutate: deleteAccount, isPending: isDeleting } = useMutation({
+    mutationFn: () => api.delete<void>('/users/me'),
+    onSuccess: () => {
+      clearAuth();
+      setDeleteSuccess(true);
+      setTimeout(() => navigate('/'), 3000);
+    },
+    onError: (err: Error) => {
+      setDeleteError(err.message);
+    },
+  });
+
+  function handleDeleteSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setDeleteError(null);
+    if (!deleteReason) return;
+    deleteAccount();
   }
 
   return (
@@ -476,67 +653,194 @@ function AccountSection() {
       <SectionCard>
         <SectionHeading id="account-heading">Account</SectionHeading>
 
-        {/* Change password */}
-        <form onSubmit={handlePwSave} className="flex flex-col gap-4 mb-6">
-          <p style={{ ...smallLabel, marginBottom: 0 }}>Change Password</p>
-          <input type="password" placeholder="Current password" value={currentPw}
-            onChange={e => setCurrentPw(e.target.value)} style={inputStyle} aria-label="Current password" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input type="password" placeholder="New password" value={newPw}
-              onChange={e => setNewPw(e.target.value)} style={inputStyle} aria-label="New password" />
-            <input type="password" placeholder="Confirm new password" value={confirmPw}
-              onChange={e => setConfirmPw(e.target.value)} style={inputStyle} aria-label="Confirm password" />
+        {/* ── Change Password ── */}
+        {isGoogleUser ? (
+          <div
+            className="flex items-start gap-3 rounded-xl px-4 py-3 mb-6"
+            style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)' }}
+            role="note"
+          >
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--color-primary)' }} />
+            <p className="text-sm" style={{ color: 'var(--text)' }}>
+              You signed in with Google — manage your password at{' '}
+              <a
+                href="https://myaccount.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline focus-visible:outline-none"
+                style={{ color: 'var(--color-primary)' }}
+              >
+                myaccount.google.com
+              </a>
+              .
+            </p>
           </div>
-          <div className="flex justify-end">
-            <button type="submit"
-              className="px-5 py-2 rounded-full text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none"
-              style={{ backgroundColor: 'var(--color-primary)' }}>
-              {pwSaved ? '✓ Updated!' : 'Update Password'}
-            </button>
-          </div>
-        </form>
+        ) : (
+          <form onSubmit={handlePwSave} className="flex flex-col gap-4 mb-6">
+            <p style={{ ...smallLabel, marginBottom: 0 }}>Change Password</p>
+            <input
+              type="password"
+              placeholder="Current password"
+              value={currentPw}
+              onChange={e => setCurrentPw(e.target.value)}
+              style={inputStyle}
+              aria-label="Current password"
+              autoComplete="current-password"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="password"
+                placeholder="New password"
+                value={newPw}
+                onChange={e => setNewPw(e.target.value)}
+                style={inputStyle}
+                aria-label="New password"
+                autoComplete="new-password"
+              />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPw}
+                onChange={e => setConfirmPw(e.target.value)}
+                style={inputStyle}
+                aria-label="Confirm password"
+                autoComplete="new-password"
+              />
+            </div>
+            {pwError && (
+              <p className="text-sm" role="alert" style={{ color: '#dc2626' }}>
+                {pwError}
+              </p>
+            )}
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-full text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+              >
+                {pwSaved ? '✓ Updated!' : 'Update Password'}
+              </button>
+            </div>
+          </form>
+        )}
 
-        {/* 2FA */}
-        <div className="py-4 border-t border-b" style={{ borderColor: 'var(--border)' }}>
-          <ToggleSwitch id="two-fa" checked={twoFA} onChange={setTwoFA}
-            label="Two-Factor Authentication"
-            description="Add an extra layer of security to your account." />
-        </div>
+        {/* ── Danger Zone ── */}
+        <div className="pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+          {deleteSuccess ? (
+            <div
+              className="rounded-xl px-4 py-4 text-center"
+              style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)' }}
+              role="status"
+              aria-live="polite"
+            >
+              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-h)' }}>
+                Your account has been deleted.
+              </p>
+              <p className="text-sm" style={{ color: 'var(--text)' }}>
+                If you wish to recover your account, please contact our support team. Redirecting you in 3 seconds…
+              </p>
+            </div>
+          ) : !showDeletePanel ? (
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#dc2626' }}>
+                  Danger Zone
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>
+                  This action is permanent and cannot be undone.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeletePanel(true)}
+                className="px-5 py-2 rounded-full text-xs font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none"
+                style={{ border: '1px solid #dc2626', color: '#dc2626', backgroundColor: 'transparent' }}
+              >
+                Delete Account
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleDeleteSubmit} className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} style={{ color: '#dc2626' }} />
+                <h3 className="text-sm font-bold" style={{ color: '#dc2626' }}>
+                  Delete Account
+                </h3>
+              </div>
+              <p className="text-sm" style={{ color: 'var(--text)' }}>
+                We're sorry to see you go. Please let us know why you're leaving — your feedback helps us improve.
+              </p>
 
-        {/* Connected accounts */}
-        <div className="pt-4 mb-6">
-          <p style={{ ...smallLabel, marginBottom: '12px' }}>Connected Accounts</p>
-          <div className="flex flex-col gap-2">
-            {[
-              { name: 'Google',   connected: true,  color: '#ea4335' },
-              { name: 'Apple',    connected: false, color: '#000000' },
-            ].map(acc => (
-              <div key={acc.name} className="flex items-center justify-between rounded-xl px-4 py-3"
-                style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)' }}>
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-h)' }}>{acc.name}</span>
-                <button type="button"
-                  className="text-xs font-semibold px-3 py-1 rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none"
-                  style={acc.connected
-                    ? { backgroundColor: '#fee2e2', color: '#dc2626' }
-                    : { backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)' }}>
-                  {acc.connected ? 'Disconnect' : 'Connect'}
+              <fieldset>
+                <legend className="sr-only">Reason for leaving</legend>
+                <div className="flex flex-col gap-2.5">
+                  {DELETE_REASONS.map(reason => (
+                    <label
+                      key={reason}
+                      className="flex items-center gap-3 cursor-pointer group"
+                    >
+                      <input
+                        type="radio"
+                        name="delete-reason"
+                        value={reason}
+                        checked={deleteReason === reason}
+                        onChange={() => setDeleteReason(reason)}
+                        className="h-4 w-4 focus-visible:outline-none cursor-pointer"
+                        style={{ accentColor: '#dc2626' }}
+                        required
+                      />
+                      <span
+                        className="text-sm group-hover:opacity-80 transition-opacity"
+                        style={{ color: 'var(--text-h)' }}
+                      >
+                        {reason}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {deleteReason === 'Other' && (
+                <textarea
+                  rows={2}
+                  placeholder="Tell us more..."
+                  value={otherReason}
+                  onChange={e => setOtherReason(e.target.value)}
+                  style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.6' }}
+                  aria-label="Custom reason for leaving"
+                />
+              )}
+
+              {deleteError && (
+                <p className="text-sm" role="alert" style={{ color: '#dc2626' }}>
+                  {deleteError}
+                </p>
+              )}
+
+              <div className="flex gap-3 justify-end flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => { setShowDeletePanel(false); setDeleteReason(null); setOtherReason(''); setDeleteError(null); }}
+                  className="px-5 py-2 rounded-full text-sm font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none"
+                  style={{
+                    backgroundColor: 'var(--color-neutral)',
+                    color: 'var(--text-h)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isDeleting || !deleteReason}
+                  className="px-5 py-2 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-80 focus-visible:outline-none disabled:opacity-50"
+                  style={{ backgroundColor: '#dc2626' }}
+                >
+                  {isDeleting ? 'Deleting…' : 'Delete My Account'}
                 </button>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Danger zone */}
-        <div className="pt-4 border-t flex items-center justify-between flex-wrap gap-3" style={{ borderColor: 'var(--border)' }}>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#dc2626' }}>Danger Zone</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>This action is permanent and cannot be undone.</p>
-          </div>
-          <button type="button"
-            className="px-5 py-2 rounded-full text-xs font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none"
-            style={{ border: '1px solid #dc2626', color: '#dc2626', backgroundColor: 'transparent' }}>
-            Delete Account
-          </button>
+            </form>
+          )}
         </div>
       </SectionCard>
     </section>
@@ -626,6 +930,85 @@ function HelpSection() {
   );
 }
 
+// ─── Subscription ─────────────────────────────────────────────────────────────
+
+function SubscriptionSection() {
+  const { user, updateUser } = useAuthStore();
+  const api = useApi();
+  const isPremium = !!user?.is_premium;
+
+  const { mutate: cancelSub, isPending: cancelPending } = useMutation({
+    mutationFn: () => api.patch<{ is_premium: boolean }>('/users/me', { is_premium: false }),
+    onSuccess: () => updateUser({ is_premium: false }),
+  });
+
+  return (
+    <section aria-labelledby="sub-heading">
+      <SectionCard>
+        <SectionHeading id="sub-heading">Subscription</SectionHeading>
+
+        {isPremium ? (
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-3 p-4 rounded-2xl" style={{ background: 'linear-gradient(135deg, var(--accent-bg), #f5f3ff)', border: '1px solid var(--accent-border)' }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-primary)' }}>
+                <Crown size={18} color="#fff" />
+              </div>
+              <div>
+                <p className="font-bold text-sm" style={{ color: 'var(--text-h)' }}>Premium — Active</p>
+                <p className="text-xs" style={{ color: 'var(--text)' }}>All premium features unlocked</p>
+              </div>
+            </div>
+            <div>
+              <p style={{ ...smallLabel, marginBottom: 8 }}>Manage</p>
+              <button
+                type="button"
+                onClick={() => cancelSub()}
+                disabled={cancelPending}
+                className="px-5 py-2 rounded-full text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ border: '1px solid #dc2626', color: '#dc2626' }}
+              >
+                {cancelPending ? 'Cancelling…' : 'Cancel Subscription'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm" style={{ color: 'var(--text)' }}>
+              You're on the free plan. Upgrade to unlock premium features.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                to="/pricing"
+                className="relative flex flex-col items-center gap-1 py-4 rounded-2xl font-semibold transition-all hover:opacity-90"
+                style={{ background: 'var(--color-tertiary)', color: 'var(--color-primary)', border: '2px solid var(--color-primary-light)', textDecoration: 'none' }}
+              >
+                <Crown size={18} />
+                <span className="text-sm">$7 / month</span>
+                <span className="text-xs opacity-70">Billed monthly</span>
+              </Link>
+              <Link
+                to="/pricing"
+                className="relative flex flex-col items-center gap-1 py-4 rounded-2xl font-semibold transition-all hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)', color: '#fff', textDecoration: 'none' }}
+              >
+                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: '#fff', color: 'var(--color-primary)' }}>
+                  BEST VALUE
+                </span>
+                <Crown size={18} />
+                <span className="text-sm">$5 / month</span>
+                <span className="text-xs opacity-80">Billed yearly · save 30%</span>
+              </Link>
+            </div>
+            <Link to="/pricing" className="text-xs text-center" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
+              See all plan features →
+            </Link>
+          </div>
+        )}
+      </SectionCard>
+    </section>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const SECTION_MAP: Record<SettingsSection, React.ReactNode> = {
@@ -635,10 +1018,11 @@ const SECTION_MAP: Record<SettingsSection, React.ReactNode> = {
   privacy:       <PrivacySection />,
   notifications: <NotificationsSection />,
   account:       <AccountSection />,
+  subscription:  <SubscriptionSection />,
   help:          <HelpSection />,
 };
 
-const VALID_SECTIONS: SettingsSection[] = ['profile', 'appearance', 'calendar', 'privacy', 'notifications', 'account', 'help'];
+const VALID_SECTIONS: SettingsSection[] = ['profile', 'appearance', 'calendar', 'privacy', 'notifications', 'account', 'subscription', 'help'];
 
 export function SettingsPage() {
   const [searchParams] = useSearchParams();
