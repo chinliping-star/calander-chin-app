@@ -9,11 +9,11 @@ interface DraftMeetup {
   title: string;
   intent: string;
   mood: MoodTheme | null;
-  date: string;
-  time: string;
+  slots: { id: string; date: string; time: string; location: string }[];
   location: string;
-  friends: { id: string; displayName: string; avatarUrl: string }[];
+  friendIds: string[];
   savedAt: string;
+  savedBy: string;
 }
 
 const MOOD_META: Record<MoodTheme, { emoji: string; label: string; bg: string; text: string }> = {
@@ -23,50 +23,23 @@ const MOOD_META: Record<MoodTheme, { emoji: string; label: string; bg: string; t
   dining:      { emoji: '🍽️', label: 'Dining',      bg: '#fff7ed', text: '#ea580c' },
 };
 
-const MOCK_DRAFTS: DraftMeetup[] = [
-  {
-    id: '1',
-    title: 'Coffee & Catch-up',
-    intent: "Let's grab a latte and talk about the upcoming weekend plans...",
-    mood: 'chill',
-    date: '2026-07-05',
-    time: '10:00',
-    location: 'The Daily Grind Cafe',
-    friends: [
-      { id: '1', displayName: 'Mia', avatarUrl: 'https://i.pravatar.cc/150?img=5' },
-      { id: '2', displayName: 'Sara', avatarUrl: 'https://i.pravatar.cc/150?img=10' },
-    ],
-    savedAt: '2 hours ago',
-  },
-  {
-    id: '2',
-    title: 'Team Brainstorm Session',
-    intent: 'Plan the new project roadmap together over lunch.',
-    mood: 'productive',
-    date: '2026-07-10',
-    time: '13:00',
-    location: 'WeWork Downtown',
-    friends: [
-      { id: '3', displayName: 'Jake', avatarUrl: 'https://i.pravatar.cc/150?img=12' },
-    ],
-    savedAt: 'Yesterday',
-  },
-  {
-    id: '3',
-    title: "Lily's Birthday Dinner",
-    intent: 'Surprise dinner at her favourite Italian place!',
-    mood: 'celebration',
-    date: '2026-07-18',
-    time: '19:30',
-    location: 'Bella Napoli Restaurant',
-    friends: [
-      { id: '1', displayName: 'Mia', avatarUrl: 'https://i.pravatar.cc/150?img=5' },
-      { id: '2', displayName: 'Sara', avatarUrl: 'https://i.pravatar.cc/150?img=10' },
-      { id: '3', displayName: 'Jake', avatarUrl: 'https://i.pravatar.cc/150?img=12' },
-    ],
-    savedAt: '3 days ago',
-  },
-];
+function loadDrafts(): DraftMeetup[] {
+  try {
+    const raw = localStorage.getItem('friendiary-drafts');
+    if (!raw) return [];
+    return JSON.parse(raw) as DraftMeetup[];
+  } catch {
+    return [];
+  }
+}
+
+function timeAgo(iso: string) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
 
 function formatDate(dateStr: string) {
   if (!dateStr) return '—';
@@ -84,10 +57,12 @@ function formatTime(t: string) {
 
 export function SavedDraftsPage() {
   const navigate = useNavigate();
-  const [drafts, setDrafts] = useState<DraftMeetup[]>(MOCK_DRAFTS);
+  const [drafts, setDrafts] = useState<DraftMeetup[]>(loadDrafts);
 
   function deleteDraft(id: string) {
-    setDrafts(prev => prev.filter(d => d.id !== id));
+    const updated = drafts.filter(d => d.id !== id);
+    setDrafts(updated);
+    localStorage.setItem('friendiary-drafts', JSON.stringify(updated));
   }
 
   return (
@@ -215,10 +190,13 @@ export function SavedDraftsPage() {
 
                   {/* Meta row */}
                   <div className="mt-3 flex flex-wrap items-center gap-4">
-                    <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text)' }}>
-                      <Clock size={12} style={{ color: 'var(--color-primary)' }} />
-                      {formatDate(draft.date)} · {formatTime(draft.time)}
-                    </span>
+                    {draft.slots?.[0]?.date && (
+                      <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text)' }}>
+                        <Clock size={12} style={{ color: 'var(--color-primary)' }} />
+                        {formatDate(draft.slots[0].date)}{draft.slots[0].time ? ` · ${formatTime(draft.slots[0].time)}` : ''}
+                        {draft.slots.length > 1 && ` +${draft.slots.length - 1} more`}
+                      </span>
+                    )}
                     {draft.location && (
                       <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text)' }}>
                         <MapPin size={12} style={{ color: 'var(--color-primary)' }} />
@@ -227,27 +205,15 @@ export function SavedDraftsPage() {
                     )}
                     <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text)' }}>
                       <Users size={12} style={{ color: 'var(--color-primary)' }} />
-                      {draft.friends.length} invited
+                      {draft.friendIds?.length ?? 0} invited
                     </span>
                   </div>
 
-                  {/* Friends avatars + saved time + send button */}
+                  {/* Saved time + send button */}
                   <div className="mt-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {draft.friends.map(f => (
-                          <img
-                            key={f.id}
-                            src={f.avatarUrl}
-                            alt={f.displayName}
-                            title={f.displayName}
-                            className="h-7 w-7 rounded-full object-cover border-2 border-white"
-                            loading="lazy"
-                          />
-                        ))}
-                      </div>
                       <span className="text-[11px]" style={{ color: 'var(--text)' }}>
-                        Saved {draft.savedAt}
+                        Saved {timeAgo(draft.savedAt)}
                       </span>
                     </div>
 
