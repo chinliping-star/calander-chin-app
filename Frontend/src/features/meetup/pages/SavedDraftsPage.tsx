@@ -160,7 +160,7 @@ export function SavedDraftsPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => navigate('/meetups/propose')}
+                        onClick={() => navigate(`/meetups/propose?draft=${draft.id}`)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:opacity-80 focus-visible:outline-none"
                         style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)' }}
                         aria-label={`Edit draft: ${draft.title}`}
@@ -219,7 +219,7 @@ export function SavedDraftsPage() {
 
                     <button
                       type="button"
-                      onClick={() => navigate('/meetups/propose')}
+                      onClick={() => navigate(`/meetups/propose?draft=${draft.id}`)}
                       className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none"
                       style={{ backgroundColor: 'var(--color-primary)' }}
                     >
