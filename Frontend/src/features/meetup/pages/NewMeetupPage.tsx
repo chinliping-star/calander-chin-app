@@ -1,9 +1,13 @@
 ﻿import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { MapPin, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { MapPin, ArrowLeft, Loader2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DatePicker } from '../../../components/ui/DatePicker.tsx';
 import { TimePicker } from '../../../components/ui/TimePicker.tsx';
 import { InviteFriendsPicker } from '../components/InviteFriendsPicker.tsx';
+import { useMeetupsApi } from '../api/meetups.api.ts';
+import { useAuthStore } from '../../../store/auth.ts';
 import type { NewMeetupFormValues } from '../types.ts';
 
 const INITIAL_VALUES: NewMeetupFormValues = {
@@ -16,8 +20,34 @@ const INITIAL_VALUES: NewMeetupFormValues = {
 };
 
 export function NewMeetupPage() {
-  const [values, setValues] = useState<NewMeetupFormValues>(INITIAL_VALUES);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const prefillDate = searchParams.get('date') ?? '';
+  const qc = useQueryClient();
+  const meetupsApi = useMeetupsApi();
+  const { user } = useAuthStore();
+  const [values, setValues] = useState<NewMeetupFormValues>({ ...INITIAL_VALUES, date: prefillDate });
+
+  // Check meetup count for selected date (max 3)
+  const { data: allMeetups = [] } = useQuery({
+    queryKey: ['meetups'],
+    queryFn: () => meetupsApi.getMeetups(),
+    staleTime: 30_000,
+  });
+  const meetupsOnDate = allMeetups.filter(m => m.date === values.date && (m.status === 'accepted' || m.status === 'pending')).length;
+  const atLimit = meetupsOnDate >= 3;
   const [errors, setErrors] = useState<Partial<Record<keyof NewMeetupFormValues, string>>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const createMeetup = useMutation({
+    mutationFn: meetupsApi.createMeetup,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['meetups'] });
+      void qc.invalidateQueries({ queryKey: ['calendar'] });
+      navigate(user ? `/${user.username}/calendar` : '/friends');
+    },
+    onError: (e: Error) => setSubmitError(e.message),
+  });
 
   function set<K extends keyof NewMeetupFormValues>(key: K, value: NewMeetupFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -29,15 +59,25 @@ export function NewMeetupPage() {
     if (!values.title.trim()) next.title = 'Please add a meetup title.';
     if (!values.date) next.date = 'Please pick a date.';
     if (!values.time) next.time = 'Please pick a time.';
+    if (values.invitedFriendIds.length === 0) next.invitedFriendIds = 'Invite at least one friend.';
     setErrors(next);
     return Object.keys(next).length === 0;
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitError(null);
     if (!validate()) return;
-    // Static mock — no API call
-    alert(`Meetup "${values.title}" created!`);
+    const [owner_id, ...rest] = values.invitedFriendIds;
+    createMeetup.mutate({
+      owner_id,
+      date: values.date,
+      time: values.time,
+      title: values.title.trim(),
+      description: values.details || undefined,
+      location: values.location || undefined,
+      participants: rest.length > 0 ? rest : undefined,
+    });
   }
 
   const inputStyle: React.CSSProperties = {
@@ -202,10 +242,17 @@ export function NewMeetupPage() {
             </div>
 
             {/* Invite Friends */}
-            <InviteFriendsPicker
-              selected={values.invitedFriendIds}
-              onChange={(ids) => set('invitedFriendIds', ids)}
-            />
+            <div>
+              <InviteFriendsPicker
+                selected={values.invitedFriendIds}
+                onChange={(ids) => set('invitedFriendIds', ids)}
+              />
+              {errors.invitedFriendIds && (
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--color-primary)' }} role="alert">
+                  {errors.invitedFriendIds}
+                </p>
+              )}
+            </div>
 
             {/* Details */}
             <div>
@@ -226,14 +273,25 @@ export function NewMeetupPage() {
               />
             </div>
 
+            {submitError && (
+              <p className="text-sm text-center" style={{ color: 'var(--color-primary)' }}>{submitError}</p>
+            )}
+
             {/* Buttons */}
             <div className="flex items-center gap-4">
+              {atLimit && values.date && (
+                <p className="text-xs font-semibold text-center w-full" style={{ color: '#dc2626' }}>
+                  Max 3 meetups per day reached for {values.date}
+                </p>
+              )}
               <button
                 type="submit"
-                className="flex-1 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
+                disabled={createMeetup.isPending || atLimit}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60"
                 style={{ backgroundColor: 'var(--color-primary)' }}
               >
-                Create Meetup
+                {createMeetup.isPending && <Loader2 size={14} className="animate-spin" />}
+                {createMeetup.isPending ? 'Creating...' : 'Create Meetup'}
               </button>
               <Link
                 to="/friends"
