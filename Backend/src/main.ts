@@ -14,11 +14,17 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  const rawOrigins = configService.get<string>('CLIENT_URL', 'http://localhost:5173');
+  const rawOrigins = process.env.CLIENT_URL ?? configService.get<string>('CLIENT_URL', 'http://localhost:5173');
   const allowedOrigins = rawOrigins.split(',').map(o => o.trim());
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   });
 

@@ -21,6 +21,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
