@@ -2,14 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Users, CalendarCheck, Star } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { useAnalyticsApi } from '../api/analytics.api';
-import { useAuthStore } from '../../../store/auth.ts';
 import { StatsCard } from '../components/StatsCard.tsx';
 import { AttendanceDonut } from '../components/AttendanceDonut.tsx';
 import { ActivityBarChart } from '../components/ActivityBarChart.tsx';
 
 export default function AnalyticsPage() {
   const api = useAnalyticsApi();
-  const { user } = useAuthStore();
 const { data: overview, isLoading } = useQuery({
     queryKey: ['analytics-overview'],
     queryFn: () => api.getOverview(),
