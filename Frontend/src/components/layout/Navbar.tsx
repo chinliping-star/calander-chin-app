@@ -103,9 +103,9 @@ export function Navbar() {
         className="sticky top-0 z-50 w-full border-b hidden md:block"
         style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}
       >
-        <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-4 md:px-6">
+        <div className="mx-auto flex  h-16 max-w-screen-xl items-center justify-between px-4 md:px-6">
           {/* Logo */}
-          <Logo to={user ? `/${user.username}/calendar` : '/login'} size={52} showText={false} />
+          <Logo className="mt-4" to={user ? `/${user.username}/calendar` : '/login'} size={90} showText={false} />
 
           {/* Center nav */}
           <nav aria-label="Main navigation">
