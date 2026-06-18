@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSignIn } from '@clerk/clerk-react';
 import { AuthAnimatedBg } from '../components/AuthAnimatedBg.tsx';
+import { Logo } from '../../../components/Logo.tsx';
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -107,7 +108,7 @@ export function LoginPage() {
       >
         {/* Header */}
         <div className="flex flex-col items-center gap-1 text-center">
-          <span className="text-3xl">🌸</span>
+          <Logo size={56} showText={false} />
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-h)', fontFamily: 'var(--heading)' }}>
             Welcome back
           </h1>

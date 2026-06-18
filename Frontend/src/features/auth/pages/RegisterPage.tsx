@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSignUp } from '@clerk/clerk-react';
 import { AuthAnimatedBg } from '../components/AuthAnimatedBg.tsx';
+import { Logo } from '../../../components/Logo.tsx';
 
 const LOADING_MESSAGES = [
   'Setting up your diary…',
@@ -252,7 +253,7 @@ export function RegisterPage() {
       >
         {/* Header */}
         <div className="flex flex-col items-center gap-1 text-center">
-          <span className="text-3xl">✨</span>
+          <Logo size={56} showText={false} />
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-h)', fontFamily: 'var(--heading)' }}>
             {step === 'form' ? 'Join Friendiary' : 'Check your email'}
           </h1>
