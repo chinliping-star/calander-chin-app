@@ -23,9 +23,28 @@ const HEARD_ABOUT = [
 
 export function OnboardingPage() {
   const { user: clerkUser } = useUser();
-  const { post } = useApi();
+  const { post, get } = useApi();
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+
+  // Guard: a returning user (already has a profile) must never see the setup
+  // form. Check the server first; if a profile exists, send them to the app.
+  const [checkingProfile, setCheckingProfile] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    get<User | null>('/users/me/profile')
+      .then(user => {
+        if (cancelled) return;
+        if (user) {
+          setAuth(user, '');
+          navigate(`/${user.username}/calendar`, { replace: true });
+        } else {
+          setCheckingProfile(false);
+        }
+      })
+      .catch(() => { if (!cancelled) setCheckingProfile(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -129,6 +148,18 @@ export function OnboardingPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // While verifying whether the user already has a profile, show a spinner
+  // instead of flashing the setup form to returning users.
+  if (checkingProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center"
+        style={{ background: 'linear-gradient(135deg, var(--color-tertiary) 0%, #fff 60%, #f0e6ff 100%)' }}>
+        <div className="h-8 w-8 rounded-full border-4 animate-spin"
+          style={{ borderColor: 'var(--color-tertiary)', borderTopColor: 'var(--color-primary)' }} />
+      </div>
+    );
   }
 
   return (
