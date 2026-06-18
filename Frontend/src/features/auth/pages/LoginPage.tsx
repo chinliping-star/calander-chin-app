@@ -61,7 +61,10 @@ export function LoginPage() {
     await signIn.authenticateWithRedirect({
       strategy: 'oauth_google',
       redirectUrl: '/sso-callback',
-      redirectUrlComplete: '/onboarding',
+      // Send to a protected route — AuthGuard fetches profile and routes
+      // existing users to the app, new users to /onboarding. Never hardcode
+      // /onboarding here or returning users get the setup form again.
+      redirectUrlComplete: '/friends',
     });
   }
 
