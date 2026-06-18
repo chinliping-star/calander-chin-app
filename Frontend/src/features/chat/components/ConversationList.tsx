@@ -1,11 +1,14 @@
 import type { Conversation, ChatUser } from '../types';
 import { useAuthStore } from '../../../store/auth';
 import { formatDistanceToNow } from 'date-fns';
+import { PresenceDot } from './PresenceDot';
+import { getPeer } from '../utils';
 
 interface Props {
   conversations: Conversation[];
   activeId?: string;
   onSelect: (conv: Conversation) => void;
+  onlineUsers?: Set<string>;
 }
 
 function getOtherParticipant(conv: Conversation, myMongoId?: string): ChatUser | undefined {
@@ -23,12 +26,12 @@ function getConvAvatar(conv: Conversation, myMongoId?: string): string | undefin
   return getOtherParticipant(conv, myMongoId)?.avatar_url;
 }
 
-export function ConversationList({ conversations, activeId, onSelect }: Props) {
+export function ConversationList({ conversations, activeId, onSelect, onlineUsers }: Props) {
   const user = useAuthStore(s => s.user);
   const myId = user?._id;
 
   return (
-    <div className="flex flex-col gap-0.5 overflow-y-auto">
+    <div className="flex flex-col gap-0.5 overflow-x-hidden">
       {conversations.length === 0 && (
         <p className="text-center text-sm py-8" style={{ color: 'var(--text)' }}>
           No conversations yet
@@ -39,25 +42,34 @@ export function ConversationList({ conversations, activeId, onSelect }: Props) {
         const avatar = getConvAvatar(conv, myId);
         const isActive = conv._id === activeId;
         const lastMsg = conv.last_message;
+        const peer = getPeer(conv, user);
+        const online = !!peer && !!onlineUsers?.has(peer._id);
 
         return (
           <button
             key={conv._id}
             onClick={() => onSelect(conv)}
-            className="flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors w-full"
+            className="relative flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors w-full"
             style={{
               background: isActive ? 'var(--accent-bg)' : 'transparent',
-              border: isActive ? '1px solid var(--accent-border)' : '1px solid transparent',
+              boxShadow: isActive ? 'inset 3px 0 0 0 var(--color-primary)' : 'none',
             }}
           >
             {/* Avatar */}
-            <div
-              className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-semibold overflow-hidden"
-              style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' }}
-            >
-              {avatar
-                ? <img src={avatar} alt={name} className="w-full h-full object-cover" />
-                : name.charAt(0).toUpperCase()}
+            <div className="relative flex-shrink-0">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden"
+                style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' }}
+              >
+                {avatar
+                  ? <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                  : name.charAt(0).toUpperCase()}
+              </div>
+              {peer && (
+                <span className="absolute -bottom-0.5 -right-0.5">
+                  <PresenceDot online={online} size={12} />
+                </span>
+              )}
             </div>
 
             {/* Text */}

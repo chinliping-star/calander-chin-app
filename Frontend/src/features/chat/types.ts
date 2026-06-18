@@ -3,6 +3,7 @@ export interface ChatUser {
   username: string;
   display_name: string;
   avatar_url?: string;
+  created_at?: string;
 }
 
 export interface LastMessage {

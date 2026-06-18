@@ -22,5 +22,6 @@ export function useMeetupsApi() {
     acceptMeetup: (id: string)                    => api.patch<ApiMeetup>(`/meetups/${id}/accept`),
     declineMeetup:(id: string)                    => api.patch<ApiMeetup>(`/meetups/${id}/decline`),
     cancelMeetup: (id: string)                    => api.patch<ApiMeetup>(`/meetups/${id}/cancel`),
+    deleteMeetup: (id: string)                    => api.delete<void>(`/meetups/${id}`),
   };
 }
