@@ -2,21 +2,45 @@ import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, MapPin, LayoutGrid, AlignJustify, Calendar, X } from 'lucide-react';
+import { Clock, MapPin, LayoutGrid, AlignJustify, Calendar, X, Trash2 } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/Skeleton.tsx';
 import { ChevronLeft, ChevronRight } from '../../../components/ui/Icon.tsx';
 import { DayCell } from './DayCell.tsx';
 import { useCalendarApi, type ApiMeetup, type ApiCalendarDay } from '../api/calendar.api.ts';
+import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
 import { useAuthStore } from '../../../store/auth.ts';
 import { usePreferences } from '../../../lib/preferences.ts';
 import type { CalendarDayData } from '../types.ts';
 import type { DayStatus } from '../../../types/index.ts';
+import { AttendanceMarker } from '../../analytics/components/AttendanceMarker.tsx';
+import { useAnalyticsApi } from '../../analytics/api/analytics.api.ts';
 
 // Week day labels in Mon-first and Sun-first orders
 const WEEK_DAYS_MON = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
 const WEEK_DAYS_SUN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
 const HOURS = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM'];
+
+// Attendance badge styles (override Planned/Pending once marked)
+const ATTENDANCE_BADGE: Record<'attended' | 'missed' | 'skipped', { label: string; bg: string; color: string }> = {
+  attended: { label: 'Attended', bg: '#22c55e', color: '#ffffff' },
+  missed:   { label: 'Missed',   bg: '#ef4444', color: '#ffffff' },
+  skipped:  { label: 'Skipped',  bg: '#f59e0b', color: '#ffffff' },
+};
+
+// Light block style for calendar event chips, by attendance/status
+const ATTENDANCE_BLOCK: Record<'attended' | 'missed' | 'skipped', { bg: string; border: string; text: string }> = {
+  attended: { bg: '#dcfce7', border: '1.5px solid #86efac', text: '#15803d' },
+  missed:   { bg: '#ffe4e6', border: '1.5px solid #fda4af', text: '#be123c' },
+  skipped:  { bg: '#fef3c7', border: '1.5px solid #fcd34d', text: '#b45309' },
+};
+
+function meetupBlockStyle(m: { status: 'accepted' | 'pending'; attendance?: 'attended' | 'missed' | 'skipped' }) {
+  if (m.attendance) return ATTENDANCE_BLOCK[m.attendance];
+  return m.status === 'pending'
+    ? { bg: '#ede9fe', border: '1.5px dashed #c084fc', text: '#7c3aed' }
+    : { bg: '#fff0f6', border: '1.5px solid var(--color-primary-light)', text: 'var(--color-primary-dark)' };
+}
 
 type ViewMode = 'monthly' | 'weekly' | 'daily';
 
@@ -34,6 +58,12 @@ interface MeetupItem {
   day: number; label: string; time: string;
   location: string; status: 'accepted' | 'pending'; with: string;
   date: string; description?: string;
+  attendance?: 'attended' | 'missed' | 'skipped';
+  proposerId: string;
+  ownerId: string;
+  arrangedBy: string;                                   // proposer display name
+  arrangedByAvatar?: string;
+  invited: { name: string; avatar?: string }[];         // everyone except the proposer
 }
 
 interface MeetupDetailInfo {
@@ -97,19 +127,50 @@ function buildOverrides(days: ApiCalendarDay[], meetups: ApiMeetup[]): Record<st
 }
 
 function buildMeetupList(meetups: ApiMeetup[], timeFormat: '12h' | '24h'): MeetupItem[] {
+  const nameOf = (u?: { display_name?: string; username?: string }) =>
+    u?.display_name || u?.username || 'Unknown';
+
   return meetups
     .filter(m => m.status === 'accepted' || m.status === 'pending')
-    .map(m => ({
-      id: m._id,
-      day: parseInt(m.date.split('-')[2], 10),
-      label: m.title,
-      time: formatTime(m.time ?? '', timeFormat),
-      location: m.location ?? '',
-      status: m.status === 'accepted' ? 'accepted' : 'pending',
-      with: m.participants.map(p => p.display_name).join(', ') || 'You',
-      date: m.date,
-      description: m.description,
-    }));
+    .map(m => {
+      const proposerId = m.proposer_id?._id ?? '';
+      // Everyone except the proposer = the invited people
+      const invited = (m.participants ?? [])
+        .filter(p => p._id !== proposerId)
+        .map(p => ({ name: nameOf(p), avatar: p.avatar_url }));
+      return {
+        id: m._id,
+        day: parseInt(m.date.split('-')[2], 10),
+        label: m.title,
+        time: formatTime(m.time ?? '', timeFormat),
+        location: m.location ?? '',
+        status: (m.status === 'accepted' ? 'accepted' : 'pending') as 'accepted' | 'pending',
+        with: invited.map(i => i.name).join(', ') || 'You',
+        date: m.date,
+        description: m.description,
+        proposerId,
+        ownerId: m.owner_id?._id ?? '',
+        arrangedBy: nameOf(m.proposer_id),
+        arrangedByAvatar: m.proposer_id?.avatar_url,
+        invited,
+      };
+    })
+    // Sort by date ascending so the list is chronological, not random
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Small round avatar — image if present, else initial
+function Avatar({ name, src }: { name: string; src?: string }) {
+  return (
+    <span
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full overflow-hidden text-[10px] font-bold"
+      style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' }}
+    >
+      {src
+        ? <img src={src} alt={name} className="w-full h-full object-cover" />
+        : name.charAt(0).toUpperCase()}
+    </span>
+  );
 }
 
 // ── Meetup detail modal ────────────────────────────────────────────────────────
@@ -126,6 +187,42 @@ function MeetupDetailModal({
     ?? meetups.find(m => m.date === info.date);
 
   const isPending = (meetup?.status ?? info.status) === 'pending';
+
+  // Past + accepted meetups can have attendance marked
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const canMarkAttendance = !!meetup && meetup.status === 'accepted' && meetup.date <= todayStr;
+
+  const analyticsApi = useAnalyticsApi();
+  const { data: myAttendance = [] } = useQuery({
+    queryKey: ['my-attendance'],
+    queryFn: () => analyticsApi.getMyAttendance(),
+    enabled: canMarkAttendance,
+  });
+  const currentStatus = myAttendance.find(a => a.meetup_id === meetup?.id)?.status as
+    | 'attended' | 'missed' | 'skipped' | undefined;
+
+  const me = useAuthStore(s => s.user);
+  // Only the person who planned it (proposer) may delete — not the owner,
+  // not invited participants.
+  const canDelete = !!meetup && !!me?._id && me._id === meetup.proposerId;
+
+  const meetupsApi = useMeetupsApi();
+  const qc = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => meetupsApi.deleteMeetup(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['calendar'] });
+      qc.invalidateQueries({ queryKey: ['meetups'] });
+      onClose();
+    },
+  });
+
+  function handleDelete() {
+    if (!meetup) return;
+    if (window.confirm('Delete this meetup? This cannot be undone.')) {
+      deleteMutation.mutate(meetup.id);
+    }
+  }
 
   return createPortal(
     // Backdrop
@@ -197,11 +294,30 @@ function MeetupDetailModal({
             </div>
           )}
 
-          {/* Participants */}
-          {meetup?.with && meetup.with !== 'You' && (
+          {/* Arranged by (proposer / host) */}
+          {meetup?.arrangedBy && (
             <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
-              <span style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: '13px' }}>👥</span>
-              <span>with {meetup.with}</span>
+              <Avatar name={meetup.arrangedBy} src={meetup.arrangedByAvatar} />
+              <span>Arranged by <strong style={{ color: 'var(--text-h)' }}>{meetup.arrangedBy}</strong></span>
+            </div>
+          )}
+
+          {/* Invited people */}
+          {meetup && meetup.invited.length > 0 && (
+            <div className="flex items-start gap-2 text-xs" style={{ color: 'var(--text)' }}>
+              <span className="mt-1" style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: '13px' }}>👥</span>
+              <div className="flex flex-col gap-1.5">
+                <span style={{ color: 'var(--text)' }}>Invited</span>
+                <div className="flex flex-wrap gap-2">
+                  {meetup.invited.map((p, i) => (
+                    <span key={i} className="flex items-center gap-1.5 rounded-full pl-0.5 pr-2.5 py-0.5"
+                      style={{ background: 'var(--color-tertiary)' }}>
+                      <Avatar name={p.name} src={p.avatar} />
+                      <span style={{ color: 'var(--text-h)' }}>{p.name}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -213,6 +329,33 @@ function MeetupDetailModal({
             </p>
           )}
         </div>
+
+        {/* Attendance — only for past, accepted meetups */}
+        {canMarkAttendance && meetup && (
+          <div className="flex flex-col gap-1.5">
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-h)' }}>How did it go?</p>
+            <AttendanceMarker
+              meetupId={meetup.id}
+              meetupTitle={meetup.label}
+              meetupDate={meetup.date}
+              currentStatus={currentStatus}
+            />
+          </div>
+        )}
+
+        {/* Delete — host/proposer only */}
+        {canDelete && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleteMutation.isPending}
+            className="mt-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-60"
+            style={{ background: 'rgba(239,68,68,0.10)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.3)' }}
+          >
+            <Trash2 size={15} />
+            {deleteMutation.isPending ? 'Deleting…' : 'Delete Meetup'}
+          </button>
+        )}
       </div>
     </div>,
     document.body
@@ -221,24 +364,63 @@ function MeetupDetailModal({
 
 // ── Meetup list ───────────────────────────────────────────────────────────────
 
+const MEETUP_FILTERS = [
+  { value: 'all',      label: 'All' },
+  { value: 'accepted', label: 'Confirmed' },
+  { value: 'pending',  label: 'Pending' },
+] as const;
+type MeetupFilter = typeof MEETUP_FILTERS[number]['value'];
+
 function MeetupList({ meetups, onMeetupClick }: { meetups: MeetupItem[]; onMeetupClick?: (info: MeetupDetailInfo) => void }) {
+  const [filter, setFilter] = useState<MeetupFilter>('all');
+
   if (meetups.length === 0) return (
     <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>No meetups</p>
   );
+
+  const shown = meetups.filter(m => filter === 'all' || m.status === filter);
+
   return (
     <div className="flex flex-col gap-2">
-      {meetups.map((m) => (
+      {/* Filter pills */}
+      <div className="flex gap-1.5 mb-1">
+        {MEETUP_FILTERS.map(f => {
+          const active = filter === f.value;
+          return (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setFilter(f.value)}
+              className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full transition-colors"
+              style={{
+                backgroundColor: active ? 'var(--color-primary)' : 'var(--color-tertiary)',
+                color: active ? '#ffffff' : 'var(--text)',
+              }}
+            >
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {shown.length === 0 && (
+        <p className="text-xs text-center py-3" style={{ color: 'var(--text)' }}>No {filter} meetups</p>
+      )}
+
+      {shown.map((m) => (
         <button
           key={`${m.day}-${m.label}`}
           type="button"
           onClick={() => onMeetupClick?.({ date: m.date, eventLabel: m.label, status: m.status })}
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:shadow-sm hover:opacity-80 w-full text-left"
           style={{
-            backgroundColor: m.status === 'pending' ? '#faf5ff' : 'var(--color-tertiary)',
-            border: m.status === 'pending' ? '1px dashed #c084fc' : '1px solid var(--color-primary-light)',
+            backgroundColor: meetupBlockStyle(m).bg,
+            border: meetupBlockStyle(m).border,
           }}>
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-            style={{ backgroundColor: m.status === 'pending' ? '#c084fc' : 'var(--color-primary)' }}>
+            style={{ backgroundColor: m.attendance
+              ? ATTENDANCE_BADGE[m.attendance].bg
+              : m.status === 'pending' ? '#c084fc' : 'var(--color-primary)' }}>
             {m.day}
           </span>
           <div className="flex-1 min-w-0">
@@ -256,12 +438,19 @@ function MeetupList({ meetups, onMeetupClick }: { meetups: MeetupItem[]; onMeetu
               )}
             </div>
           </div>
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0"
-            style={m.status === 'pending'
-              ? { backgroundColor: '#ede9fe', color: '#7c3aed' }
-              : { backgroundColor: 'var(--color-primary)', color: '#ffffff' }}>
-            {m.status === 'pending' ? 'Pending' : 'Planned'}
-          </span>
+          {(() => {
+            const badge = m.attendance
+              ? ATTENDANCE_BADGE[m.attendance]
+              : m.status === 'pending'
+                ? { label: 'Pending', bg: '#ede9fe', color: '#7c3aed' }
+                : { label: 'Planned', bg: 'var(--color-primary)', color: '#ffffff' };
+            return (
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0"
+                style={{ backgroundColor: badge.bg, color: badge.color }}>
+                {badge.label}
+              </span>
+            );
+          })()}
         </button>
       ))}
     </div>
@@ -453,23 +642,25 @@ function WeeklyView({
                     {override.eventLabel ?? 'Busy'}
                   </span>
                 )}
-                {dayMeetups.map(m => (
+                {dayMeetups.map(m => {
+                  const bs = meetupBlockStyle(m);
+                  return (
                   <button
                     key={m.label}
                     type="button"
                     onClick={() => onMeetupClick?.({ date: m.date, eventLabel: m.label, status: m.status })}
                     className="w-full text-left rounded-lg px-1.5 py-1 transition-opacity hover:opacity-75"
-                    style={{ backgroundColor: m.status === 'pending' ? '#ede9fe' : '#fff0f6' }}
+                    style={{ backgroundColor: bs.bg, border: bs.border }}
                   >
-                    <p className="text-[9px] font-bold truncate"
-                      style={{ color: m.status === 'pending' ? '#7c3aed' : 'var(--color-primary-dark)' }}>
+                    <p className="text-[9px] font-bold truncate" style={{ color: bs.text }}>
                       {m.label}
                     </p>
                     <p className="text-[8px]" style={{ color: 'var(--text)' }}>
                       {formatTime(m.time, timeFormat)}
                     </p>
                   </button>
-                ))}
+                  );
+                })}
 
                 {/* + new meetup button — centered overlay on hover */}
                 {isOwn && sameMonth && override?.status !== 'blocked' && (
@@ -599,10 +790,10 @@ function DailyView({
               {meetup ? (
                 <div className="flex-1 rounded-xl px-3 py-2"
                   style={{
-                    backgroundColor: meetup.status === 'pending' ? '#faf5ff' : 'var(--color-tertiary)',
-                    border: meetup.status === 'pending' ? '1.5px dashed #c084fc' : '1.5px solid var(--color-primary-light)',
+                    backgroundColor: meetupBlockStyle(meetup).bg,
+                    border: meetupBlockStyle(meetup).border,
                   }}>
-                  <p className="text-xs font-bold" style={{ color: meetup.status === 'pending' ? '#7c3aed' : 'var(--color-primary-dark)' }}>
+                  <p className="text-xs font-bold" style={{ color: meetupBlockStyle(meetup).text }}>
                     {meetup.label}
                   </p>
                   {meetup.location && (
@@ -685,9 +876,20 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     placeholderData: { days: [], meetups: [], user: { _id: '', username: '', display_name: '' } },
   });
 
+  const analyticsApi = useAnalyticsApi();
+  const { data: myAttendance = [] } = useQuery({
+    queryKey: ['my-attendance'],
+    queryFn: () => analyticsApi.getMyAttendance(),
+    enabled: !!user?.username,
+  });
+  const attendanceMap = new Map(myAttendance.map(a => [a.meetup_id, a.status]));
+
   const overrides = data ? buildOverrides(data.days, data.meetups) : {};
   // Bug 10.1: pass timeFormat to buildMeetupList so times are pre-formatted
-  const meetupList = data ? buildMeetupList(data.meetups, timeFormat) : [];
+  const meetupList = (data ? buildMeetupList(data.meetups, timeFormat) : []).map(m => ({
+    ...m,
+    attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
+  }));
 
   const markDay = useMutation({
     mutationFn: ({ date, status }: { date: string; status: DayStatus }) =>

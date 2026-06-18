@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Plus, Paperclip, FileText, Smile, Mic } from 'lucide-react';
 
 interface Props {
   onSend: (content: string) => void;
@@ -59,31 +59,58 @@ export function ChatInput({ onSend, onTyping, disabled, editValue, onCancelEdit 
           </button>
         </div>
       )}
-      <div className="flex items-end gap-2">
+      {/* Composer box */}
+      <div
+        className="rounded-2xl px-4 pt-3 pb-2.5 transition-all"
+        style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}
+      >
         <textarea
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
-          rows={1}
+          placeholder="Type a message…"
+          rows={2}
           disabled={disabled}
-          className="flex-1 resize-none rounded-xl px-4 py-3 text-sm outline-none transition-all"
-          style={{
-            background: 'var(--color-tertiary)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-h)',
-            minHeight: '44px',
-            maxHeight: '160px',
-          }}
+          className="w-full resize-none bg-transparent text-sm outline-none"
+          style={{ color: 'var(--text-h)', minHeight: '48px', maxHeight: '160px' }}
         />
-        <button
-          onClick={handleSend}
-          disabled={!value.trim() || disabled}
-          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-opacity disabled:opacity-40"
-          style={{ background: 'var(--color-primary)' }}
-        >
-          <Send size={16} color="#fff" />
-        </button>
+
+        {/* Toolbar */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-1" style={{ color: 'var(--text)' }}>
+            {[Plus, Paperclip, FileText, Smile].map((Icon, i) => (
+              <button
+                key={i}
+                type="button"
+                disabled
+                title="Coming soon"
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors opacity-70 hover:opacity-100"
+              >
+                <Icon size={18} strokeWidth={1.5} />
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled
+              title="Coming soon"
+              className="w-8 h-8 rounded-lg flex items-center justify-center opacity-70 hover:opacity-100"
+              style={{ color: 'var(--text)' }}
+            >
+              <Mic size={18} strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={!value.trim() || disabled}
+              className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold transition-opacity disabled:opacity-40"
+              style={{ background: 'var(--color-primary)', color: '#fff' }}
+            >
+              Send <Send size={15} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

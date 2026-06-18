@@ -1,9 +1,12 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Users, CalendarCheck, Star } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { useAnalyticsApi } from '../api/analytics.api';
+import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
 import { StatsCard } from '../components/StatsCard.tsx';
 import { AttendanceDonut } from '../components/AttendanceDonut.tsx';
+import { AttendanceMarker } from '../components/AttendanceMarker.tsx';
 import { ActivityBarChart } from '../components/ActivityBarChart.tsx';
 
 export default function AnalyticsPage() {
@@ -19,6 +22,27 @@ const { data: overview, isLoading } = useQuery({
     queryFn: () => api.getMyAttendanceStats(),
     staleTime: 60_000,
   });
+
+  const meetupsApi = useMeetupsApi();
+  const { data: meetups = [] } = useQuery({
+    queryKey: ['meetups'],
+    queryFn: () => meetupsApi.getMeetups(),
+  });
+  const { data: myAttendance = [] } = useQuery({
+    queryKey: ['my-attendance'],
+    queryFn: () => api.getMyAttendance(),
+  });
+
+  const pastMeetups = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return meetups
+      .filter(m => m.status === 'accepted' && m.date <= today)
+      .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+  }, [meetups]);
+
+  const statusOf = (meetupId: string) =>
+    myAttendance.find(a => a.meetup_id === meetupId)?.status as
+      | 'attended' | 'missed' | 'skipped' | undefined;
 
   if (isLoading) {
     return (
@@ -72,6 +96,26 @@ const { data: overview, isLoading } = useQuery({
         </div>
 
         <ActivityBarChart type="friends" title="Friend Requests" />
+
+        {/* Past meetups — mark attendance */}
+        <div className="flex flex-col gap-3">
+          <h2 className="text-lg font-bold" style={{ color: 'var(--text-h)' }}>Past Meetups</h2>
+          {pastMeetups.length === 0 ? (
+            <p className="text-sm" style={{ color: 'var(--text)' }}>No past meetups to mark yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {pastMeetups.map(m => (
+                <AttendanceMarker
+                  key={m._id}
+                  meetupId={m._id}
+                  meetupTitle={m.title}
+                  meetupDate={m.date}
+                  currentStatus={statusOf(m._id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
     </AppShell>
