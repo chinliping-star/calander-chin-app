@@ -49,6 +49,16 @@ export class AttendanceService {
     return record!;
   }
 
+  async getMyAttendance(clerkId: string): Promise<{ meetup_id: string; status: string }[]> {
+    const userId = await this.resolveMongoId(clerkId);
+    const records = await this.attendanceModel
+      .find({ user_id: userId })
+      .select('meetup_id status')
+      .lean()
+      .exec();
+    return records.map(r => ({ meetup_id: r.meetup_id.toString(), status: r.status }));
+  }
+
   async getForMeetup(meetupId: string): Promise<AttendanceDocument[]> {
     return this.attendanceModel
       .find({ meetup_id: new Types.ObjectId(meetupId) })

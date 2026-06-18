@@ -30,6 +30,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // clerkUserId → Set of socket ids
   private userSockets = new Map<string, Set<string>>();
+  // mongoUserId → Set of socket ids (drives online/offline presence)
+  private presence = new Map<string, Set<string>>();
 
   constructor(
     private readonly chatService: ChatService,
@@ -56,6 +58,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       this.userSockets.get(payload.sub)!.add(client.id);
 
+      // Resolve mongo id and track presence
+      try {
+        const mongoId = (await this.chatService.resolveMongoId(payload.sub)).toString();
+        client.mongoUserId = mongoId;
+
+        const wasOffline = !this.presence.has(mongoId) || this.presence.get(mongoId)!.size === 0;
+        if (!this.presence.has(mongoId)) this.presence.set(mongoId, new Set());
+        this.presence.get(mongoId)!.add(client.id);
+
+        // Send the current online roster to the freshly connected client
+        client.emit('presence:state', this.onlineUserIds());
+
+        // Announce this user came online (only on first socket)
+        if (wasOffline) {
+          this.server.emit('presence:online', { userId: mongoId });
+        }
+      } catch {
+        /* user profile not found — skip presence, keep chat working */
+      }
+
     } catch {
       client.disconnect();
     }
@@ -67,6 +89,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       sockets?.delete(client.id);
       if (sockets?.size === 0) this.userSockets.delete(client.clerkUserId);
     }
+
+    if (client.mongoUserId) {
+      const set = this.presence.get(client.mongoUserId);
+      set?.delete(client.id);
+      if (set && set.size === 0) {
+        this.presence.delete(client.mongoUserId);
+        this.server.emit('presence:offline', { userId: client.mongoUserId });
+      }
+    }
+  }
+
+  // Client can ask for the authoritative online roster at any time
+  // (on reconnect / window focus / poll) to self-heal missed events.
+  @SubscribeMessage('presence:get')
+  handlePresenceGet(@ConnectedSocket() client: AuthenticatedSocket) {
+    client.emit('presence:state', this.onlineUserIds());
+  }
+
+  private onlineUserIds(): string[] {
+    return [...this.presence.entries()]
+      .filter(([, sockets]) => sockets.size > 0)
+      .map(([userId]) => userId);
   }
 
   // Join a conversation room so messages broadcast to all participants

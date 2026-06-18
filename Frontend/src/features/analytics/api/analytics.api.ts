@@ -10,6 +10,7 @@ export function useAnalyticsApi() {
     getFriendRequests:    (p: Period)      => api.get<FriendRequestStats>(`/analytics/friend-requests?period=${p}`),
     getMeetupRequests:    (p: Period)      => api.get<FriendRequestStats>(`/analytics/meetup-requests?period=${p}`),
     getMyAttendanceStats: ()               => api.get<{ attended: number; missed: number; skipped: number; score: number }>('/attendance/me/stats'),
+    getMyAttendance:      ()               => api.get<{ meetup_id: string; status: string }[]>('/attendance/me'),
     markAttendance:       (meetupId: string, status: string) =>
       api.post<unknown>('/attendance', { meetupId, status }),
   };

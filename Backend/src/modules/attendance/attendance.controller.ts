@@ -14,14 +14,22 @@ export class AttendanceController {
     return this.attendanceService.mark(clerkId, dto);
   }
 
-  @Get(':meetupId')
-  getForMeetup(@Param('meetupId') meetupId: string) {
-    return this.attendanceService.getForMeetup(meetupId);
+  // NOTE: 'me' routes must be declared before ':meetupId' so they aren't
+  // swallowed by the param route.
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  myAttendance(@CurrentUser() clerkId: string) {
+    return this.attendanceService.getMyAttendance(clerkId);
   }
 
   @Get('me/stats')
   @UseGuards(JwtAuthGuard)
   myStats(@CurrentUser() clerkId: string) {
     return this.attendanceService.getUserStats(clerkId);
+  }
+
+  @Get(':meetupId')
+  getForMeetup(@Param('meetupId') meetupId: string) {
+    return this.attendanceService.getForMeetup(meetupId);
   }
 }

@@ -29,7 +29,7 @@ export class ChatService {
 
   private populateConv(query: ReturnType<Model<ConversationDocument>['findOne']>) {
     return query
-      .populate('participants', 'username display_name avatar_url _id')
+      .populate('participants', 'username display_name avatar_url _id created_at')
       .populate('owner_id', 'username display_name avatar_url _id')
       .populate('last_message.sender_id', 'username display_name avatar_url');
   }
@@ -40,7 +40,7 @@ export class ChatService {
     const userObjId = await this.resolveMongoId(clerkId);
     return this.convModel
       .find({ participants: userObjId })
-      .populate('participants', 'username display_name avatar_url _id')
+      .populate('participants', 'username display_name avatar_url _id created_at')
       .populate('last_message.sender_id', 'username display_name')
       .sort({ 'last_message.sent_at': -1, created_at: -1 })
       .exec();
@@ -138,6 +138,13 @@ export class ChatService {
       throw new ForbiddenException('Not a participant');
     }
 
+    // Opening a conversation marks its messages as seen for this user,
+    // so the unread badge clears.
+    await this.msgModel.updateMany(
+      { conversation_id: new Types.ObjectId(convId), seen_by: { $ne: userObjId } },
+      { $addToSet: { seen_by: userObjId } },
+    ).exec();
+
     const filter: Record<string, unknown> = { conversation_id: new Types.ObjectId(convId) };
     if (before) filter['_id'] = { $lt: new Types.ObjectId(before) };
 
@@ -220,10 +227,13 @@ export class ChatService {
     const userObjId = await this.resolveMongoId(clerkId);
     const convs = await this.convModel.find({ participants: userObjId }).select('_id').exec();
     const convIds = convs.map(c => c._id);
-    return this.msgModel.countDocuments({
+    // Count distinct conversations that have unread messages, not raw messages —
+    // 5 unread messages from one friend = 1, not 5.
+    const unreadConvs = await this.msgModel.distinct('conversation_id', {
       conversation_id: { $in: convIds },
       sender_id: { $ne: userObjId },
       seen_by: { $ne: userObjId },
     }).exec();
+    return unreadConvs.length;
   }
 }

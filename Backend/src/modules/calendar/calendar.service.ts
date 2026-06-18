@@ -43,12 +43,13 @@ export class CalendarService {
         .exec(),
       this.meetupModel
         .find({
-          $or: [{ proposer_id: user._id }, { owner_id: user._id }],
+          $or: [{ proposer_id: user._id }, { owner_id: user._id }, { participants: user._id }],
           date: { $gte: startDate, $lte: endDate },
           status: { $in: ['pending', 'accepted'] },
         })
         .populate('proposer_id', 'username display_name avatar_url')
         .populate('owner_id', 'username display_name avatar_url')
+        .populate('participants', 'username display_name avatar_url')
         .exec(),
     ]);
 

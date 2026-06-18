@@ -42,6 +42,15 @@ export class FriendshipsController {
     return this.friendshipsService.getOutgoingRequests(userId);
   }
 
+  @Get('mutual/:userId')
+  @HttpCode(HttpStatus.OK)
+  async getMutual(
+    @CurrentUser('sub') currentUserId: string,
+    @Param('userId') otherUserId: string,
+  ) {
+    return this.friendshipsService.getMutualFriends(currentUserId, otherUserId);
+  }
+
   @Post('request/:userId')
   @HttpCode(HttpStatus.CREATED)
   async sendRequest(
