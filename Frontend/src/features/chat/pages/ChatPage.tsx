@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MessageSquare, Plus, Search, Users } from 'lucide-react';
+import { MessageSquare, Search, Users, Calendar, CalendarClock, SquarePen } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useChatApi } from '../api/chat.api';
 import { useApi } from '../../../lib/api';
 import { useAuthStore } from '../../../store/auth';
 import type { Conversation } from '../types';
 import { ConversationList } from '../components/ConversationList';
 import { MessageThread } from '../components/MessageThread';
+import { ChatDetailsPanel } from '../components/ChatDetailsPanel';
+import { PresenceDot } from '../components/PresenceDot';
+import { usePresenceContext } from '../context/presence';
+import { getPeer } from '../utils';
 import { Navbar } from '../../../components/layout/Navbar.tsx';
 
 interface UserSearchResult {
@@ -22,7 +27,8 @@ export function ChatPage() {
   const qc = useQueryClient();
 
   const user = useAuthStore(s => s.user);
-  const myId = user?._id;
+
+  const { onlineUsers } = usePresenceContext();
 
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [showNewChat, setShowNewChat] = useState(false);
@@ -60,30 +66,51 @@ export function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
+    <div className="h-screen overflow-hidden flex flex-col" style={{ background: 'var(--bg)' }}>
     <Navbar />
     <div
-      className="flex flex-1"
-      style={{ height: 'calc(100vh - 64px)', background: 'var(--bg)' }}
+      className="flex flex-1 min-h-0"
+      style={{ background: 'var(--bg)' }}
     >
       {/* Sidebar */}
       <aside
-        className="w-80 flex-shrink-0 flex flex-col"
+        className="w-80 flex-shrink-0 flex flex-col min-h-0"
         style={{ borderRight: '1px solid var(--border)' }}
       >
-        {/* Header */}
-        <div className="px-4 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center gap-2">
-            <MessageSquare size={18} style={{ color: 'var(--color-primary)' }} />
-            <h2 className="font-bold text-base" style={{ color: 'var(--text-h)' }}>Messages</h2>
-          </div>
+        {/* Icon nav row */}
+        <nav
+          className="grid grid-cols-4 px-2 py-3"
+          style={{ borderBottom: '1px solid var(--border)' }}
+          aria-label="Sections"
+        >
+          {[
+            { to: user?.username ? `/${user.username}/calendar` : '/chat', Icon: Calendar, label: 'CAL', active: false },
+            { to: '/meetups/new', Icon: CalendarClock, label: 'EVENTS', active: false },
+            { to: '/friends', Icon: Users, label: 'FRIENDS', active: false },
+            { to: '/chat', Icon: MessageSquare, label: 'CHATS', active: true },
+          ].map(({ to, Icon, label, active }) => (
+            <Link
+              key={label}
+              to={to}
+              className="flex flex-col items-center gap-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+              style={{ color: active ? 'var(--color-primary)' : 'var(--text)' }}
+            >
+              <Icon size={20} strokeWidth={1.5} />
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Recent chats label */}
+        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+          <h2 className="text-xs font-bold tracking-wide" style={{ color: 'var(--text)' }}>RECENT CHATS</h2>
           <button
             onClick={() => setShowNewChat(v => !v)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-            style={{ background: 'var(--accent-bg)', color: 'var(--color-primary)' }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+            style={{ color: 'var(--color-primary)' }}
             title="New chat"
           >
-            <Plus size={16} />
+            <SquarePen size={16} />
           </button>
         </div>
 
@@ -145,13 +172,14 @@ export function ChatPage() {
                 conversations={conversations}
                 activeId={activeConv?._id}
                 onSelect={setActiveConv}
+                onlineUsers={onlineUsers}
               />
           }
         </div>
       </aside>
 
       {/* Main thread area */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0">
         {activeConv ? (
           <>
             {/* Thread header */}
@@ -159,24 +187,50 @@ export function ChatPage() {
               className="px-5 py-3 flex items-center gap-3 flex-shrink-0"
               style={{ borderBottom: '1px solid var(--border)' }}
             >
-              {activeConv.type === 'group'
-                ? <Users size={16} style={{ color: 'var(--color-primary)' }} />
-                : null}
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-h)' }}>
-                  {activeConv.type === 'group'
-                    ? activeConv.name
-                    : activeConv.participants.find(p => p._id !== myId)?.display_name
-                      ?? activeConv.participants[0]?.display_name}
-                </p>
-                {activeConv.type === 'group' && (
-                  <p className="text-xs" style={{ color: 'var(--text)' }}>
-                    {activeConv.participants.length} members
-                  </p>
-                )}
-              </div>
+              {(() => {
+                const isGroup = activeConv.type === 'group';
+                const peer = getPeer(activeConv, user);
+                const name = isGroup ? activeConv.name : (peer?.display_name ?? peer?.username);
+                const avatar = isGroup ? activeConv.avatar_url : peer?.avatar_url;
+                const online = !isGroup && !!peer && onlineUsers.has(peer._id);
+                return (
+                  <>
+                    <div className="relative flex-shrink-0">
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden"
+                        style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' }}
+                      >
+                        {isGroup
+                          ? <Users size={16} style={{ color: 'var(--color-primary)' }} />
+                          : avatar
+                            ? <img src={avatar} alt="" className="w-full h-full object-cover" />
+                            : (name ?? '?').charAt(0).toUpperCase()}
+                      </div>
+                      {!isGroup && (
+                        <span className="absolute -bottom-0.5 -right-0.5">
+                          <PresenceDot online={online} size={11} />
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-bold text-base" style={{ color: 'var(--text-h)' }}>{name}</p>
+                      {isGroup ? (
+                        <p className="text-xs" style={{ color: 'var(--text)' }}>
+                          {activeConv.participants.length} members
+                        </p>
+                      ) : (
+                        <p className="text-xs" style={{ color: 'var(--text)' }}>
+                          {online
+                            ? <span style={{ color: '#16a34a' }}>● Online</span>
+                            : `It's ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} for your connection`}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
-            <MessageThread key={activeConv._id} conversation={activeConv} />
+            <MessageThread conversation={activeConv} />
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
@@ -187,6 +241,11 @@ export function ChatPage() {
           </div>
         )}
       </main>
+
+      {/* Details panel */}
+      {activeConv && (
+        <ChatDetailsPanel conversation={activeConv} onlineUsers={onlineUsers} />
+      )}
     </div>
     </div>
   );

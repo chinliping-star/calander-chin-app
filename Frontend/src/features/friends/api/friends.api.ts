@@ -13,6 +13,11 @@ export interface ApiFriend {
   since: string;
 }
 
+export interface ApiMutualFriends {
+  total: number;
+  friends: ApiFriendUser[];
+}
+
 export interface ApiRequest {
   _id: string;
   requester_id: ApiFriendUser;
@@ -26,6 +31,7 @@ export function useFriendsApi() {
 
   return {
     getFriends:       ()                         => api.get<ApiFriend[]>('/friends'),
+    getMutual:        (userId: string)           => api.get<ApiMutualFriends>(`/friends/mutual/${userId}`),
     getArchived:      ()                         => api.get<ApiFriend[]>('/friends/archived'),
     getRequests:      ()                         => api.get<ApiRequest[]>('/friends/requests'),
     getOutgoing:      ()                         => api.get<{ _id: string; recipient_id: ApiFriendUser }[]>('/friends/outgoing'),

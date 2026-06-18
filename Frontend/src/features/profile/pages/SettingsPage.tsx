@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { Pencil, ChevronRight, MessageCircle, FileText, Shield, Mail, Phone, ExternalLink, Check, Crown, AlertTriangle } from 'lucide-react';
+import { Pencil, ChevronRight, MessageCircle, Mail, Phone, Check, Crown, AlertTriangle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
@@ -10,6 +10,8 @@ import { useThemeStore, THEMES } from '../../../lib/theme.ts';
 import { usePreferences, CURSORS } from '../../../lib/preferences.ts';
 import { useAuthStore } from '../../../store/auth.ts';
 import { useApi } from '../../../lib/api.ts';
+import { SupportChatWidget } from '../components/SupportChatWidget.tsx';
+import { SupportEmailModal } from '../components/SupportEmailModal.tsx';
 import type { SettingsSection } from '../components/SettingsSidebar.tsx';
 
 const inputStyle: React.CSSProperties = {
@@ -856,8 +858,19 @@ const FAQ = [
   { q: 'How do I mark a day as blocked?',  a: 'Click any available day on your own calendar and select "Block this day".' },
 ];
 
+// WhatsApp number for "Call Us" (digits only, intl format, no +)
+const WHATSAPP_NUMBER = '18001234567';
+
 function HelpSection() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
+
+  const actions = [
+    { icon: MessageCircle, label: 'Live Chat', sub: 'Chat with support',        color: 'var(--color-primary)', onClick: () => setShowChat(true) },
+    { icon: Mail,          label: 'Email Us',  sub: 'support@friendiary.app',    color: '#7c3aed',              onClick: () => setShowEmail(true) },
+    { icon: Phone,         label: 'Call Us',   sub: 'Chat on WhatsApp',          color: '#059669',              onClick: () => window.open(`https://wa.me/${WHATSAPP_NUMBER}`, '_blank', 'noopener') },
+  ];
 
   return (
     <section aria-labelledby="help-heading">
@@ -866,13 +879,9 @@ function HelpSection() {
 
         {/* Quick links */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          {[
-            { icon: MessageCircle, label: 'Live Chat',      sub: 'Chat with support', color: 'var(--color-primary)' },
-            { icon: Mail,          label: 'Email Us',       sub: 'support@friendiary.app', color: '#7c3aed' },
-            { icon: Phone,         label: 'Call Us',        sub: '+1 (800) 123-4567', color: '#059669' },
-          ].map(({ icon: Icon, label, sub, color }) => (
-            <button key={label} type="button"
-              className="flex flex-col items-center gap-2 rounded-xl p-4 text-center transition-all hover:shadow-md focus-visible:outline-none"
+          {actions.map(({ icon: Icon, label, sub, color, onClick }) => (
+            <button key={label} type="button" onClick={onClick}
+              className="flex flex-col items-center gap-2 rounded-xl p-4 text-center transition-all hover:shadow-md active:scale-[0.98] focus-visible:outline-none"
               style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)' }}>
               <div className="flex h-10 w-10 items-center justify-center rounded-full"
                 style={{ backgroundColor: `${color}18` }}>
@@ -909,22 +918,10 @@ function HelpSection() {
           </div>
         </div>
 
-        {/* Docs + status */}
-        <div className="flex flex-wrap gap-3 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
-          {[
-            { icon: FileText, label: 'Documentation' },
-            { icon: Shield,   label: 'Privacy Policy' },
-            { icon: ExternalLink, label: 'System Status' },
-          ].map(({ icon: Icon, label }) => (
-            <button key={label} type="button"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-colors hover:opacity-80 focus-visible:outline-none"
-              style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)' }}>
-              <Icon size={12} />
-              {label}
-            </button>
-          ))}
-        </div>
       </SectionCard>
+
+      {showChat && <SupportChatWidget onClose={() => setShowChat(false)} />}
+      {showEmail && <SupportEmailModal onClose={() => setShowEmail(false)} />}
     </section>
   );
 }
