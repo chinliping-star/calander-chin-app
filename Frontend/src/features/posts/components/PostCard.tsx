@@ -27,11 +27,6 @@ export function PostCard({ post, isOwn, onDelete, onUpdate }: Props) {
       className="rounded-2xl overflow-hidden"
       style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}
     >
-      {/* Image */}
-      {post.image_url && !editing && (
-        <img src={post.image_url} alt="" className="w-full max-h-80 object-cover" />
-      )}
-
       <div className="p-4 flex flex-col gap-3">
         {/* Author row */}
         <div className="flex items-center justify-between gap-2">
@@ -87,6 +82,17 @@ export function PostCard({ post, isOwn, onDelete, onUpdate }: Props) {
         {/* Title */}
         {post.title && !editing && (
           <h3 className="font-bold" style={{ color: 'var(--text-h)' }}>{post.title}</h3>
+        )}
+
+        {/* Image */}
+        {post.image_url && !editing && (
+          <img
+            src={post.image_url}
+            alt=""
+            loading="lazy"
+            className="w-full rounded-xl object-contain"
+            style={{ maxHeight: '24rem', background: 'var(--color-tertiary)' }}
+          />
         )}
 
         {/* Content */}
