@@ -20,7 +20,7 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 export function LoginPage() {
-  const { signIn, isLoaded } = useSignIn();
+  const { signIn, isLoaded, setActive } = useSignIn();
   const navigate = useNavigate();
 
   const [email, setEmail]       = useState('');
@@ -28,6 +28,61 @@ export function LoginPage() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const [showPw, setShowPw]     = useState(false);
+
+  // Forgot-password flow
+  const [mode, setMode]   = useState<'signin' | 'forgot'>('signin');
+  const [fStep, setFStep] = useState<'request' | 'reset'>('request');
+  const [fCode, setFCode]   = useState('');
+  const [fNewPw, setFNewPw] = useState('');
+  const [fInfo, setFInfo]   = useState('');
+
+  function clerkError(err: unknown, fallback: string) {
+    const e = err as { errors?: { message: string }[] };
+    return e?.errors?.[0]?.message || fallback;
+  }
+
+  async function sendResetCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isLoaded) return;
+    setError(''); setFInfo(''); setLoading(true);
+    try {
+      await signIn.create({ strategy: 'reset_password_email_code', identifier: email });
+      setFStep('reset');
+      setFInfo('We emailed a reset code to ' + email);
+    } catch (err) {
+      setError(clerkError(err, 'Could not send reset code. Check the email.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isLoaded) return;
+    setError(''); setLoading(true);
+    try {
+      const res = await signIn.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code: fCode,
+        password: fNewPw,
+      });
+      if (res.status === 'complete') {
+        await setActive({ session: res.createdSessionId });
+        navigate('/friends');
+      } else {
+        setError('Reset incomplete. Try again.');
+      }
+    } catch (err) {
+      setError(clerkError(err, 'Invalid code or password.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function backToSignIn() {
+    setMode('signin'); setFStep('request');
+    setError(''); setFInfo(''); setFCode(''); setFNewPw('');
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,13 +165,82 @@ export function LoginPage() {
         <div className="flex flex-col items-center gap-1 text-center">
           <Logo size={56} showText={false} />
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-h)', fontFamily: 'var(--heading)' }}>
-            Welcome back
+            {mode === 'signin' ? 'Welcome back' : 'Reset password'}
           </h1>
           <p className="text-sm" style={{ color: 'var(--text)' }}>
-            Sign in to your Friendiary
+            {mode === 'signin'
+              ? 'Sign in to your Friendiary'
+              : fStep === 'request' ? 'Enter your email to get a reset code' : 'Enter the code and a new password'}
           </p>
         </div>
 
+        {mode === 'forgot' && (
+          <form onSubmit={fStep === 'request' ? sendResetCode : resetPassword} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Email</label>
+              <input
+                type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                disabled={fStep === 'reset'}
+                placeholder="you@example.com"
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 disabled:opacity-60"
+                style={{ border: '1.5px solid var(--border)', backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)' }}
+              />
+            </div>
+
+            {fStep === 'reset' && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Reset code</label>
+                  <input
+                    type="text" inputMode="numeric" required value={fCode} onChange={e => setFCode(e.target.value)}
+                    placeholder="123456"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2"
+                    style={{ border: '1.5px solid var(--border)', backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)' }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>New password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'} required value={fNewPw} onChange={e => setFNewPw(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:ring-2"
+                      style={{ border: '1.5px solid var(--border)', backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)' }}
+                    />
+                    <button type="button" onClick={() => setShowPw(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-60" style={{ color: 'var(--text)' }}
+                      aria-label={showPw ? 'Hide password' : 'Show password'}>
+                      <EyeIcon open={showPw} />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {fInfo && (
+              <p className="text-xs font-medium text-center rounded-xl py-2 px-3"
+                style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}>{fInfo}</p>
+            )}
+            {error && (
+              <p className="text-xs font-medium text-center rounded-xl py-2 px-3"
+                style={{ backgroundColor: '#fff0f0', color: '#e53e3e' }}>{error}</p>
+            )}
+
+            <button type="submit" disabled={loading || !isLoaded}
+              className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-60"
+              style={{ backgroundColor: 'var(--color-primary)' }}>
+              {loading ? 'Please wait…' : fStep === 'request' ? 'Send reset code' : 'Reset password 🌸'}
+            </button>
+
+            <button type="button" onClick={backToSignIn}
+              className="text-center text-xs font-semibold hover:opacity-80" style={{ color: 'var(--text)' }}>
+              ← Back to sign in
+            </button>
+          </form>
+        )}
+
+        {mode === 'signin' && (
+        <>
         {/* Google button */}
         <button
           type="button"
@@ -190,6 +314,14 @@ export function LoginPage() {
                 <EyeIcon open={showPw} />
               </button>
             </div>
+            <button
+              type="button"
+              onClick={() => { setMode('forgot'); setError(''); }}
+              className="self-end text-xs font-semibold hover:opacity-70"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              Forgot password?
+            </button>
           </div>
 
           {error && (
@@ -219,6 +351,8 @@ export function LoginPage() {
             Create one
           </Link>
         </p>
+        </>
+        )}
       </div>
     </div>
   );

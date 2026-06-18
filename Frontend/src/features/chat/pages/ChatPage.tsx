@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MessageSquare, Search, Users, Calendar, CalendarClock, SquarePen } from 'lucide-react';
+import { MessageSquare, Search, Users, Calendar, CalendarClock, SquarePen, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useChatApi } from '../api/chat.api';
 import { useApi } from '../../../lib/api';
@@ -35,6 +35,7 @@ export function ChatPage() {
   const [searchQ, setSearchQ] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [filterText, setFilterText] = useState('');
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations'],
@@ -65,21 +66,60 @@ export function ChatPage() {
     }
   }
 
+  // Filter conversations by the search text.
+  const visibleConvs = conversations.filter(c => {
+    const peer = getPeer(c, user);
+    const name = c.type === 'group'
+      ? (c.name ?? '')
+      : (peer?.display_name ?? peer?.username ?? '');
+    return name.toLowerCase().includes(filterText.toLowerCase());
+  });
+
   return (
     <div className="h-screen overflow-hidden flex flex-col" style={{ background: 'var(--bg)' }}>
-    <Navbar />
+    {/* Hide nav on mobile when a chat thread is open (full-screen conversation) */}
+    <div className={activeConv ? 'hidden md:contents' : 'contents'}>
+      <Navbar />
+    </div>
     <div
       className="flex flex-1 min-h-0"
       style={{ background: 'var(--bg)' }}
     >
-      {/* Sidebar */}
+      {/* Sidebar (full-width on mobile; hidden on mobile once a chat is open) */}
       <aside
-        className="w-80 flex-shrink-0 flex flex-col min-h-0"
+        className={`${activeConv ? 'hidden md:flex' : 'flex'} w-full md:w-80 flex-shrink-0 flex-col min-h-0`}
         style={{ borderRight: '1px solid var(--border)' }}
       >
-        {/* Icon nav row */}
+        {/* Title + new chat */}
+        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-h)' }}>Messages</h1>
+          <button
+            onClick={() => setShowNewChat(v => !v)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+            style={{ color: 'var(--color-primary)' }}
+            title="New chat"
+          >
+            <SquarePen size={18} />
+          </button>
+        </div>
+
+        {/* Filter search */}
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'var(--color-tertiary)', border: '1px solid var(--border)' }}>
+            <Search size={15} style={{ color: 'var(--text)' }} />
+            <input
+              value={filterText}
+              onChange={e => setFilterText(e.target.value)}
+              placeholder="Search friends or messages"
+              className="flex-1 bg-transparent outline-none text-sm"
+              style={{ color: 'var(--text-h)' }}
+            />
+          </div>
+        </div>
+
+        {/* Desktop section nav */}
         <nav
-          className="grid grid-cols-4 px-2 py-3"
+          className="hidden md:grid grid-cols-4 px-2 py-3"
           style={{ borderBottom: '1px solid var(--border)' }}
           aria-label="Sections"
         >
@@ -100,19 +140,6 @@ export function ChatPage() {
             </Link>
           ))}
         </nav>
-
-        {/* Recent chats label */}
-        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-          <h2 className="text-xs font-bold tracking-wide" style={{ color: 'var(--text)' }}>RECENT CHATS</h2>
-          <button
-            onClick={() => setShowNewChat(v => !v)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-            style={{ color: 'var(--color-primary)' }}
-            title="New chat"
-          >
-            <SquarePen size={16} />
-          </button>
-        </div>
 
         {/* New chat search */}
         {showNewChat && (
@@ -166,20 +193,21 @@ export function ChatPage() {
 
         {/* Conversation list */}
         <div className="flex-1 overflow-y-auto px-2 py-2">
-          {isLoading
-            ? <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>Loading…</p>
-            : <ConversationList
-                conversations={conversations}
-                activeId={activeConv?._id}
-                onSelect={setActiveConv}
-                onlineUsers={onlineUsers}
-              />
-          }
+          {isLoading ? (
+            <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>Loading…</p>
+          ) : (
+            <ConversationList
+              conversations={visibleConvs}
+              activeId={activeConv?._id}
+              onSelect={setActiveConv}
+              onlineUsers={onlineUsers}
+            />
+          )}
         </div>
       </aside>
 
-      {/* Main thread area */}
-      <main className="flex-1 flex flex-col min-w-0 min-h-0">
+      {/* Main thread area (full-screen on mobile; hidden on mobile when no chat) */}
+      <main className={`${activeConv ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 min-h-0`}>
         {activeConv ? (
           <>
             {/* Thread header */}
@@ -195,6 +223,15 @@ export function ChatPage() {
                 const online = !isGroup && !!peer && onlineUsers.has(peer._id);
                 return (
                   <>
+                    {/* Back (mobile only) */}
+                    <button
+                      onClick={() => setActiveConv(null)}
+                      className="md:hidden -ml-1 mr-0.5 flex h-8 w-8 items-center justify-center rounded-full"
+                      style={{ color: 'var(--text-h)' }}
+                      aria-label="Back to chats"
+                    >
+                      <ArrowLeft size={18} />
+                    </button>
                     <div className="relative flex-shrink-0">
                       <div
                         className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden"

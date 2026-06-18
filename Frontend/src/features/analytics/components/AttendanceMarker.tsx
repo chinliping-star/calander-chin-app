@@ -26,6 +26,8 @@ export function AttendanceMarker({ meetupId, meetupTitle, meetupDate, currentSta
     onSuccess: (_, status) => {
       setSelected(status);
       qc.invalidateQueries({ queryKey: ['analytics-attendance'] });
+      qc.invalidateQueries({ queryKey: ['my-attendance'] });
+      qc.invalidateQueries({ queryKey: ['analytics-overview'] });
     },
   });
 
