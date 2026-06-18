@@ -25,8 +25,11 @@ async function request<T>(
     throw new Error(err.message ?? `API ${method} ${path} failed: ${res.status}`);
   }
 
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  if (res.status === 204) return null as T;
+  // Some endpoints (e.g. profile when none exists) return 200 with an empty
+  // body — JSON.parse on "" throws, so guard it.
+  const text = await res.text();
+  return (text ? JSON.parse(text) : null) as T;
 }
 
 export function useApi() {

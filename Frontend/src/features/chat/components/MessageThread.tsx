@@ -196,7 +196,7 @@ export function MessageThread({ conversation }: Props) {
               {showDivider && <DateDivider date={msg.created_at} />}
               <MessageBubble
                 message={msg}
-                isOwn={msg.sender_id._id === myId}
+                isOwn={msg.sender_id?._id === myId}
                 seenByOthers={msg.seen_by.some(id => id !== myId)}
                 onEdit={(id, content) => setEditState({ messageId: id, content })}
                 onDelete={id => deleteMessage(id, convId)}
