@@ -56,7 +56,7 @@ export function AttendanceDonut({ attended, missed, skipped, score }: Props) {
       </div>
 
       {hasData ? (
-        <div className="relative">
+        <div className="relative [&_*]:outline-none [&_.recharts-sector]:outline-none [&_svg]:focus:outline-none">
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie
@@ -69,8 +69,8 @@ export function AttendanceDonut({ attended, missed, skipped, score }: Props) {
                 dataKey="value"
                 strokeWidth={0}
               >
-                {data.map((_, i) => (
-                  <Cell key={i} fill={SLICES[i % SLICES.length].color} />
+                {data.map((d, i) => (
+                  <Cell key={i} fill={SLICES.find(s => s.key === d.name)?.color ?? '#ccc'} />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />

@@ -88,15 +88,22 @@ export class MeetupsService {
 
     await meetup.save();
 
-    this.notifSvc.create({
-      userId:  ownerObjId,
-      actorId: proposerObjId,
-      type:    'meetup_proposed',
-      title:   `New meetup proposed: ${dto.title}`,
-      body:    `On ${dto.date}${dto.time ? ' at ' + dto.time : ''}`,
-      refId:   meetup._id as Types.ObjectId,
-      refModel: 'Meetup',
-    }).catch(() => {});
+    // Notify every invited participant (owner + extras), not just the owner —
+    // skip the proposer themselves.
+    const recipients = Array.from(participantSet).filter(
+      (id) => id !== proposerObjId.toString(),
+    );
+    for (const recipientId of recipients) {
+      this.notifSvc.create({
+        userId:  new Types.ObjectId(recipientId),
+        actorId: proposerObjId,
+        type:    'meetup_proposed',
+        title:   `New meetup proposed: ${dto.title}`,
+        body:    `On ${dto.date}${dto.time ? ' at ' + dto.time : ''}`,
+        refId:   meetup._id as Types.ObjectId,
+        refModel: 'Meetup',
+      }).catch(() => {});
+    }
 
     return meetup;
   }
@@ -104,7 +111,7 @@ export class MeetupsService {
   async findAllForUser(clerkId: string): Promise<MeetupDocument[]> {
     const userObjId = await this.resolveMongoId(clerkId);
     return this.meetupModel
-      .find({ $or: [{ proposer_id: userObjId }, { owner_id: userObjId }] })
+      .find({ $or: [{ proposer_id: userObjId }, { owner_id: userObjId }, { participants: userObjId }] })
       .populate('proposer_id', 'username display_name avatar_url')
       .populate('owner_id',    'username display_name avatar_url')
       .populate('participants', 'username display_name avatar_url')
@@ -194,5 +201,17 @@ export class MeetupsService {
     meetup.status = 'cancelled';
     await meetup.save();
     return this.findById(meetupId);
+  }
+
+  async remove(meetupId: string, clerkId: string): Promise<void> {
+    const meetup = await this.meetupModel.findById(meetupId).exec();
+    if (!meetup) throw new NotFoundException('Meetup not found');
+
+    const userObjId = await this.resolveMongoId(clerkId);
+    if (meetup.proposer_id.toString() !== userObjId.toString()) {
+      throw new ForbiddenException('Only the person who planned this meetup can delete it');
+    }
+
+    await this.meetupModel.deleteOne({ _id: meetup._id }).exec();
   }
 }

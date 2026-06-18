@@ -50,6 +50,49 @@ export class FriendshipsService {
       .filter((f) => !f.friend.username?.startsWith('__deleted__'));
   }
 
+  /** Accepted-friend mongo ids for a given user. */
+  private async friendIdsOf(userObjId: Types.ObjectId): Promise<string[]> {
+    const friendships = await this.friendshipModel
+      .find({
+        $or: [{ requester_id: userObjId }, { recipient_id: userObjId }],
+        status: 'accepted',
+      })
+      .select('requester_id recipient_id')
+      .lean()
+      .exec();
+
+    return friendships.map((f) => {
+      const reqId = f.requester_id.toString();
+      const recId = f.recipient_id.toString();
+      return reqId === userObjId.toString() ? recId : reqId;
+    });
+  }
+
+  /** Friends shared between the current user and another user. */
+  async getMutualFriends(clerkId: string, otherUserId: string) {
+    const meObjId = await this.resolveMongoId(clerkId);
+    const otherObjId = new Types.ObjectId(otherUserId);
+
+    const [mine, theirs] = await Promise.all([
+      this.friendIdsOf(meObjId),
+      this.friendIdsOf(otherObjId),
+    ]);
+
+    const theirSet = new Set(theirs);
+    const mutualIds = mine.filter((id) => theirSet.has(id));
+
+    const users = await this.userModel
+      .find({ _id: { $in: mutualIds.map((id) => new Types.ObjectId(id)) } })
+      .select('username display_name avatar_url _id')
+      .lean()
+      .exec();
+
+    return {
+      total: users.length,
+      friends: users.filter((u) => !u.username?.startsWith('__deleted__')),
+    };
+  }
+
   async getIncomingRequests(clerkId: string) {
     const userObjId = await this.resolveMongoId(clerkId);
     return this.friendshipModel

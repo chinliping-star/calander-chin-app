@@ -50,7 +50,8 @@ export function Navbar() {
   const { data: unreadData } = useQuery({
     queryKey: ['chat-unread'],
     queryFn: () => chatApi.getUnreadCount(),
-    refetchInterval: 30_000,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
     enabled: !!user,
   });
   const unreadCount = unreadData?.count ?? 0;
@@ -58,7 +59,8 @@ export function Navbar() {
   const { data: notifUnread } = useQuery({
     queryKey: ['notif-unread'],
     queryFn: () => notifApi.getUnread(),
-    refetchInterval: 30_000,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
     enabled: !!user,
   });
   const notifCount = notifUnread?.count ?? 0;

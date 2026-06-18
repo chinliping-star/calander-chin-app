@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -65,5 +66,14 @@ export class MeetupsController {
     @CurrentUser('sub') userId: string,
   ) {
     return this.meetupsService.cancel(id, userId);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
+  ) {
+    await this.meetupsService.remove(id, userId);
   }
 }
