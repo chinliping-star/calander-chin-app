@@ -70,7 +70,7 @@ export function ChatDetailsPanel({ conversation, onlineUsers }: Props) {
 
   return (
     <aside
-      className="w-80 flex-shrink-0 flex flex-col overflow-y-auto overflow-x-hidden"
+      className="hidden lg:flex w-80 flex-shrink-0 flex-col overflow-y-auto overflow-x-hidden"
       style={{ borderLeft: '1px solid var(--border)', background: 'var(--color-neutral)' }}
       aria-label="Conversation details"
     >

@@ -15,7 +15,9 @@ export function MessageBubble({ message, isOwn, seenByOthers, onEdit, onDelete }
   const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const name = message.sender_id.display_name ?? message.sender_id.username;
+  // sender_id can be null if that user was deleted
+  const sender = message.sender_id;
+  const name = sender?.display_name ?? sender?.username ?? 'Deleted user';
   const time = format(new Date(message.created_at), 'HH:mm');
 
   useEffect(() => {
@@ -32,9 +34,9 @@ export function MessageBubble({ message, isOwn, seenByOthers, onEdit, onDelete }
       className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold overflow-hidden self-start"
       style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' }}
     >
-      {message.sender_id.avatar_url
-        ? <img src={message.sender_id.avatar_url} alt="" className="w-full h-full object-cover" />
-        : name?.charAt(0).toUpperCase()}
+      {sender?.avatar_url
+        ? <img src={sender.avatar_url} alt="" className="w-full h-full object-cover" />
+        : name.charAt(0).toUpperCase()}
     </div>
   );
 

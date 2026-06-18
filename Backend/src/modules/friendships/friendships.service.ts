@@ -39,15 +39,16 @@ export class FriendshipsService {
       .populate('recipient_id', 'username display_name avatar_url _id')
       .exec();
 
-    return friendships
-      .map((f) => {
-        const requester = f.requester_id as unknown as UserDocument;
-        const recipient = f.recipient_id as unknown as UserDocument;
-        const isRequester = requester._id.toString() === userObjId.toString();
-        const friend = isRequester ? recipient : requester;
-        return { friendship_id: f._id, friend, since: f.created_at };
-      })
-      .filter((f) => !f.friend.username?.startsWith('__deleted__'));
+    return friendships.flatMap((f) => {
+      const requester = f.requester_id as unknown as UserDocument | null;
+      const recipient = f.recipient_id as unknown as UserDocument | null;
+      // A user may have been deleted — populate then yields null. Skip it.
+      if (!requester || !recipient) return [];
+      const isRequester = requester._id.toString() === userObjId.toString();
+      const friend = isRequester ? recipient : requester;
+      if (friend.username?.startsWith('__deleted__')) return [];
+      return [{ friendship_id: f._id, friend, since: f.created_at }];
+    });
   }
 
   /** Accepted-friend mongo ids for a given user. */
@@ -241,15 +242,16 @@ export class FriendshipsService {
       .populate('recipient_id', 'username display_name avatar_url _id')
       .exec();
 
-    return friendships
-      .map((f) => {
-        const requester = f.requester_id as unknown as UserDocument;
-        const recipient = f.recipient_id as unknown as UserDocument;
-        const isRequester = requester._id.toString() === userObjId.toString();
-        const friend = isRequester ? recipient : requester;
-        return { friendship_id: f._id, friend, since: f.created_at };
-      })
-      .filter((f) => !f.friend.username?.startsWith('__deleted__'));
+    return friendships.flatMap((f) => {
+      const requester = f.requester_id as unknown as UserDocument | null;
+      const recipient = f.recipient_id as unknown as UserDocument | null;
+      // A user may have been deleted — populate then yields null. Skip it.
+      if (!requester || !recipient) return [];
+      const isRequester = requester._id.toString() === userObjId.toString();
+      const friend = isRequester ? recipient : requester;
+      if (friend.username?.startsWith('__deleted__')) return [];
+      return [{ friendship_id: f._id, friend, since: f.created_at }];
+    });
   }
 
   async blockUser(blockerClerkId: string, blockedId: string): Promise<FriendshipDocument> {
