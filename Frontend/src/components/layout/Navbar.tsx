@@ -105,7 +105,7 @@ export function Navbar() {
       >
         <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-4 md:px-6">
           {/* Logo */}
-          <Logo to={user ? `/${user.username}/calendar` : '/login'} size={36} />
+          <Logo to={user ? `/${user.username}/calendar` : '/login'} size={52} showText={false} />
 
           {/* Center nav */}
           <nav aria-label="Main navigation">
