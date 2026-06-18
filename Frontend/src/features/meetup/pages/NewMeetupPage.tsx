@@ -277,25 +277,27 @@ export function NewMeetupPage() {
               <p className="text-sm text-center" style={{ color: 'var(--color-primary)' }}>{submitError}</p>
             )}
 
+            {/* Limit warning — own row above buttons */}
+            {atLimit && values.date && (
+              <p className="text-xs font-semibold text-center" style={{ color: '#dc2626' }}>
+                Max 3 meetups per day reached for {values.date}
+              </p>
+            )}
+
             {/* Buttons */}
             <div className="flex items-center gap-4">
-              {atLimit && values.date && (
-                <p className="text-xs font-semibold text-center w-full" style={{ color: '#dc2626' }}>
-                  Max 3 meetups per day reached for {values.date}
-                </p>
-              )}
               <button
                 type="submit"
                 disabled={createMeetup.isPending || atLimit}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60"
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ backgroundColor: 'var(--color-primary)' }}
               >
                 {createMeetup.isPending && <Loader2 size={14} className="animate-spin" />}
-                {createMeetup.isPending ? 'Creating...' : 'Create Meetup'}
+                {createMeetup.isPending ? 'Creating...' : atLimit ? 'Day Full (3/3)' : 'Create Meetup'}
               </button>
               <Link
                 to="/friends"
-                className="text-sm font-medium hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 rounded"
+                className="text-sm font-medium hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 rounded px-2"
                 style={{ color: 'var(--text)', textDecoration: 'none' }}
               >
                 Cancel

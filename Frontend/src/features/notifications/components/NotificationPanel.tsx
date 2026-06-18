@@ -79,6 +79,13 @@ export function NotificationPanel({ onClose }: Props) {
     },
   });
 
+  // Mark everything read when the panel opens so the bell badge clears
+  // reliably (covers unread items beyond the visible list too).
+  useEffect(() => {
+    markAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
