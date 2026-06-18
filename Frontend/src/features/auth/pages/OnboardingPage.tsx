@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { useApi } from '../../../lib/api.ts';
+import { Logo } from '../../../components/Logo.tsx';
 import { useAuthStore } from '../../../store/auth.ts';
 import type { User } from '../../../types/index.ts';
 
@@ -168,9 +169,8 @@ export function OnboardingPage() {
       <div className="w-full max-w-md">
 
         <div className="text-center mb-6">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-3xl mb-3 shadow-lg"
-            style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)' }}>
-            <span className="text-2xl">✨</span>
+          <div className="inline-flex items-center justify-center mb-3">
+            <Logo size={56} showText={false} />
           </div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-h)' }}>Set up your profile</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text)' }}>Step {step} of 2</p>

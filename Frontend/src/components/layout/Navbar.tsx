@@ -9,6 +9,7 @@ import {
   MoreHorizontal, X,
 } from 'lucide-react';
 import { cn } from '../../lib/utils.ts';
+import { Logo } from '../Logo.tsx';
 import { useAuthStore } from '../../store/auth.ts';
 import { useClerk } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
@@ -104,14 +105,7 @@ export function Navbar() {
       >
         <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-4 md:px-6">
           {/* Logo */}
-          <Link
-            to={user ? `/${user.username}/calendar` : '/login'}
-            className="text-xl font-bold italic tracking-tight focus-visible:outline-none focus-visible:ring-2 rounded"
-            style={{ color: 'var(--color-primary)', fontFamily: 'var(--heading)', textDecoration: 'none' }}
-            aria-label="Friendiary home"
-          >
-            Friendiary
-          </Link>
+          <Logo to={user ? `/${user.username}/calendar` : '/login'} size={36} />
 
           {/* Center nav */}
           <nav aria-label="Main navigation">
