@@ -633,7 +633,7 @@ function StatChip({ value, label }: { value: number; label: string }) {
 export function MemoryPage() {
   const memoryApi = useMemoryApi();
   const { user } = useAuthStore();
-  const premium = effectivePremium(premium);
+  const premium = effectivePremium(user?.is_premium);
 
   const { data: meetups = [], isLoading } = useQuery({
     queryKey: ['memory', 'album'],
@@ -734,7 +734,7 @@ export function MemoryPage() {
         >
           {meetups.map((m, i) => (
             <div key={m._id} className="w-full" style={{ maxWidth: 240 }}>
-              <MemoryCard meetup={m} currentUser={user.username} cardIndex={i} />
+              <MemoryCard meetup={m} currentUser={user?.username ?? ''} cardIndex={i} />
             </div>
           ))}
         </div>
