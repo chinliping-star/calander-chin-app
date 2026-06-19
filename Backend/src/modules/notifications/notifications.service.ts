@@ -17,6 +17,13 @@ export class NotificationsService {
     return user._id as Types.ObjectId;
   }
 
+  /** Like resolveMongoId but returns null instead of throwing — for read paths
+   * that should degrade gracefully when the Clerk user has no DB profile yet. */
+  private async resolveMongoIdOrNull(clerkId: string): Promise<Types.ObjectId | null> {
+    const user = await this.userModel.findOne({ clerk_id: clerkId }).select('_id').lean().exec();
+    return user ? (user._id as Types.ObjectId) : null;
+  }
+
   async create(payload: {
     userId: Types.ObjectId;
     actorId?: Types.ObjectId;
@@ -38,7 +45,8 @@ export class NotificationsService {
   }
 
   async getForUser(clerkId: string): Promise<NotificationDocument[]> {
-    const userId = await this.resolveMongoId(clerkId);
+    const userId = await this.resolveMongoIdOrNull(clerkId);
+    if (!userId) return [];
     return this.notifModel
       .find({ user_id: userId })
       .sort({ created_at: -1 })
@@ -49,7 +57,8 @@ export class NotificationsService {
   }
 
   async getUnreadCount(clerkId: string): Promise<number> {
-    const userId = await this.resolveMongoId(clerkId);
+    const userId = await this.resolveMongoIdOrNull(clerkId);
+    if (!userId) return 0;
     return this.notifModel.countDocuments({ user_id: userId, is_read: false }).exec();
   }
 

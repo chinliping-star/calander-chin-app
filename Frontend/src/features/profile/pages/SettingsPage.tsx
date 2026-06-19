@@ -929,77 +929,28 @@ function HelpSection() {
 // ─── Subscription ─────────────────────────────────────────────────────────────
 
 function SubscriptionSection() {
-  const { user, updateUser } = useAuthStore();
-  const api = useApi();
-  const isPremium = !!user?.is_premium;
-
-  const { mutate: cancelSub, isPending: cancelPending } = useMutation({
-    mutationFn: () => api.patch<{ is_premium: boolean }>('/users/me', { is_premium: false }),
-    onSuccess: () => updateUser({ is_premium: false }),
-  });
-
+  // Early-access / development phase: no subscription. All features unlocked.
   return (
     <section aria-labelledby="sub-heading">
       <SectionCard>
         <SectionHeading id="sub-heading">Subscription</SectionHeading>
 
-        {isPremium ? (
-          <div className="flex flex-col gap-5">
-            <div className="flex items-center gap-3 p-4 rounded-2xl" style={{ background: 'linear-gradient(135deg, var(--accent-bg), #f5f3ff)', border: '1px solid var(--accent-border)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-primary)' }}>
-                <Crown size={18} color="#fff" />
-              </div>
-              <div>
-                <p className="font-bold text-sm" style={{ color: 'var(--text-h)' }}>Premium — Active</p>
-                <p className="text-xs" style={{ color: 'var(--text)' }}>All premium features unlocked</p>
-              </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 p-4 rounded-2xl" style={{ background: 'linear-gradient(135deg, var(--accent-bg), #f5f3ff)', border: '1px solid var(--accent-border)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-primary)' }}>
+              <Crown size={18} color="#fff" />
             </div>
             <div>
-              <p style={{ ...smallLabel, marginBottom: 8 }}>Manage</p>
-              <button
-                type="button"
-                onClick={() => cancelSub()}
-                disabled={cancelPending}
-                className="px-5 py-2 rounded-full text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ border: '1px solid #dc2626', color: '#dc2626' }}
-              >
-                {cancelPending ? 'Cancelling…' : 'Cancel Subscription'}
-              </button>
+              <p className="font-bold text-sm" style={{ color: 'var(--text-h)' }}>Early Access — All features unlocked</p>
+              <p className="text-xs" style={{ color: 'var(--text)' }}>
+                Free for the first 1000 users. No subscription needed.
+              </p>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm" style={{ color: 'var(--text)' }}>
-              You're on the free plan. Upgrade to unlock premium features.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <Link
-                to="/pricing"
-                className="relative flex flex-col items-center gap-1 py-4 rounded-2xl font-semibold transition-all hover:opacity-90"
-                style={{ background: 'var(--color-tertiary)', color: 'var(--color-primary)', border: '2px solid var(--color-primary-light)', textDecoration: 'none' }}
-              >
-                <Crown size={18} />
-                <span className="text-sm">$7 / month</span>
-                <span className="text-xs opacity-70">Billed monthly</span>
-              </Link>
-              <Link
-                to="/pricing"
-                className="relative flex flex-col items-center gap-1 py-4 rounded-2xl font-semibold transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)', color: '#fff', textDecoration: 'none' }}
-              >
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: '#fff', color: 'var(--color-primary)' }}>
-                  BEST VALUE
-                </span>
-                <Crown size={18} />
-                <span className="text-sm">$5 / month</span>
-                <span className="text-xs opacity-80">Billed yearly · save 30%</span>
-              </Link>
-            </div>
-            <Link to="/pricing" className="text-xs text-center" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
-              See all plan features →
-            </Link>
-          </div>
-        )}
+          <Link to="/pricing" className="text-xs text-center" style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
+            See what's included →
+          </Link>
+        </div>
       </SectionCard>
     </section>
   );
