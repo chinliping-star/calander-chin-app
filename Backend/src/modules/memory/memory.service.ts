@@ -8,6 +8,7 @@ import { Model, Types } from 'mongoose';
 import { Meetup, MeetupDocument } from '../meetups/schemas/meetup.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
+import { effectivePremium } from '../../common/feature-flags';
 
 @Injectable()
 export class MemoryService {
@@ -30,7 +31,7 @@ export class MemoryService {
   ): Promise<MeetupDocument> {
     const user = await this.resolveUser(clerkId);
 
-    if (!user.is_premium) {
+    if (!effectivePremium(user.is_premium)) {
       throw new ForbiddenException('Memory photos require a premium account');
     }
 

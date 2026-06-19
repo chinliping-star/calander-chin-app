@@ -5,6 +5,7 @@ import { ProfileView, ProfileViewDocument } from './schemas/profile-view.schema'
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { Friendship, FriendshipDocument } from '../friendships/schemas/friendship.schema';
 import { Meetup, MeetupDocument } from '../meetups/schemas/meetup.schema';
+import { effectivePremium } from '../../common/feature-flags';
 
 type Period = 'daily' | 'weekly' | 'monthly';
 
@@ -87,14 +88,14 @@ export class AnalyticsService {
       friends: friendCount,
       meetups: meetupCount,
       attendanceScore: (user as unknown as { attendance_score?: number }).attendance_score ?? 100,
-      isPremium: user.is_premium,
+      isPremium: effectivePremium(user.is_premium),
     };
   }
 
   async getProfileViews(clerkId: string, period: Period = 'weekly') {
     const user      = await this.resolveUser(clerkId);
     const userId    = user._id as Types.ObjectId;
-    const since     = startOfPeriod(period, user.is_premium);
+    const since     = startOfPeriod(period, effectivePremium(user.is_premium));
 
     const records = await this.profileViewModel.find({
       profile_id: userId,
@@ -106,7 +107,7 @@ export class AnalyticsService {
 
   async getWhoViewed(clerkId: string) {
     const user = await this.resolveUser(clerkId);
-    if (!user.is_premium) return [];
+    if (!effectivePremium(user.is_premium)) return [];
     const userId = user._id as Types.ObjectId;
 
     return this.profileViewModel
@@ -120,7 +121,7 @@ export class AnalyticsService {
   async getFriendRequestStats(clerkId: string, period: Period = 'weekly') {
     const user   = await this.resolveUser(clerkId);
     const userId = user._id as Types.ObjectId;
-    const since  = startOfPeriod(period, user.is_premium);
+    const since  = startOfPeriod(period, effectivePremium(user.is_premium));
 
     const [sent, received] = await Promise.all([
       this.friendshipModel.find({ requester_id: userId, created_at: { $gte: since } }).select('created_at').exec(),
@@ -136,7 +137,7 @@ export class AnalyticsService {
   async getMeetupRequestStats(clerkId: string, period: Period = 'weekly') {
     const user   = await this.resolveUser(clerkId);
     const userId = user._id as Types.ObjectId;
-    const since  = startOfPeriod(period, user.is_premium);
+    const since  = startOfPeriod(period, effectivePremium(user.is_premium));
 
     const [sent, received] = await Promise.all([
       this.meetupModel.find({ proposer_id: userId, created_at: { $gte: since } }).select('created_at').exec(),

@@ -16,6 +16,8 @@ import { ActivityModule } from './modules/activity/activity.module';
 import { RsvpModule } from './modules/rsvp/rsvp.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SupportModule } from './modules/support/support.module';
+import { ShoutboxModule } from './modules/shoutbox/shoutbox.module';
+import { StickyNotesModule } from './modules/sticky-notes/sticky-notes.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { SupportModule } from './modules/support/support.module';
     RsvpModule,
     NotificationsModule,
     SupportModule,
+    ShoutboxModule,
+    StickyNotesModule,
   ],
 })
 export class AppModule {}
