@@ -1,5 +1,11 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Send, Plus, Paperclip, FileText, Smile, Mic } from 'lucide-react';
+
+const EMOJIS = [
+  '😀','😂','😍','🥰','😎','😉','😮','😢','😭','😡','👍','👎','🙏','👏','🙌',
+  '❤️','🔥','✨','🎉','🥳','😅','😴','🤔','🙄','😘','💯','✅','❌','⭐','💖',
+  '🍕','☕','🎂','🌸','🌟','💪',
+];
 
 interface Props {
   onSend: (content: string) => void;
@@ -11,8 +17,19 @@ interface Props {
 
 export function ChatInput({ onSend, onTyping, disabled, editValue, onCancelEdit }: Props) {
   const [value, setValue] = useState(editValue ?? '');
+  const [showEmoji, setShowEmoji] = useState(false);
+  const emojiRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isEditing = editValue !== undefined;
+
+  useEffect(() => {
+    if (!showEmoji) return;
+    const onDown = (e: MouseEvent) => {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setShowEmoji(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [showEmoji]);
 
   // Sync editValue → input when entering edit mode
   const prevEditValue = useRef(editValue);
@@ -78,7 +95,7 @@ export function ChatInput({ onSend, onTyping, disabled, editValue, onCancelEdit 
         {/* Toolbar */}
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-1" style={{ color: 'var(--text)' }}>
-            {[Plus, Paperclip, FileText, Smile].map((Icon, i) => (
+            {[Plus, Paperclip, FileText].map((Icon, i) => (
               <button
                 key={i}
                 type="button"
@@ -89,6 +106,37 @@ export function ChatInput({ onSend, onTyping, disabled, editValue, onCancelEdit 
                 <Icon size={18} strokeWidth={1.5} />
               </button>
             ))}
+
+            {/* Emoji picker */}
+            <div className="relative" ref={emojiRef}>
+              <button
+                type="button"
+                onClick={() => setShowEmoji(v => !v)}
+                title="Emoji"
+                aria-label="Insert emoji"
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:opacity-100"
+                style={{ color: showEmoji ? 'var(--color-primary)' : 'var(--text)' }}
+              >
+                <Smile size={18} strokeWidth={1.5} />
+              </button>
+              {showEmoji && (
+                <div
+                  className="absolute bottom-10 left-0 z-20 grid grid-cols-7 gap-1 p-2 rounded-xl"
+                  style={{ background: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 10px 30px rgba(0,0,0,0.12)', width: 252 }}
+                >
+                  {EMOJIS.map(em => (
+                    <button
+                      key={em}
+                      type="button"
+                      onClick={() => { setValue(v => v + em); setShowEmoji(false); }}
+                      className="w-8 h-8 rounded-lg text-lg leading-none flex items-center justify-center hover:bg-black/5"
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

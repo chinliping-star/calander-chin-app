@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MessageSquare, Search, Users, Calendar, CalendarClock, SquarePen, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { MessageSquare, Search, Users, SquarePen, ArrowLeft } from 'lucide-react';
 import { useChatApi } from '../api/chat.api';
 import { useApi } from '../../../lib/api';
 import { useAuthStore } from '../../../store/auth';
@@ -35,7 +34,6 @@ export function ChatPage() {
   const [searchQ, setSearchQ] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [filterText, setFilterText] = useState('');
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations'],
@@ -66,14 +64,7 @@ export function ChatPage() {
     }
   }
 
-  // Filter conversations by the search text.
-  const visibleConvs = conversations.filter(c => {
-    const peer = getPeer(c, user);
-    const name = c.type === 'group'
-      ? (c.name ?? '')
-      : (peer?.display_name ?? peer?.username ?? '');
-    return name.toLowerCase().includes(filterText.toLowerCase());
-  });
+  const visibleConvs = conversations;
 
   return (
     <div className="h-screen overflow-hidden flex flex-col" style={{ background: 'var(--bg)' }}>
@@ -102,44 +93,6 @@ export function ChatPage() {
             <SquarePen size={18} />
           </button>
         </div>
-
-        {/* Filter search */}
-        <div className="px-4 pb-2">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'var(--color-tertiary)', border: '1px solid var(--border)' }}>
-            <Search size={15} style={{ color: 'var(--text)' }} />
-            <input
-              value={filterText}
-              onChange={e => setFilterText(e.target.value)}
-              placeholder="Search friends or messages"
-              className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: 'var(--text-h)' }}
-            />
-          </div>
-        </div>
-
-        {/* Desktop section nav */}
-        <nav
-          className="hidden md:grid grid-cols-4 px-2 py-3"
-          style={{ borderBottom: '1px solid var(--border)' }}
-          aria-label="Sections"
-        >
-          {[
-            { to: user?.username ? `/${user.username}/calendar` : '/chat', Icon: Calendar, label: 'CAL', active: false },
-            { to: '/meetups/new', Icon: CalendarClock, label: 'EVENTS', active: false },
-            { to: '/friends', Icon: Users, label: 'FRIENDS', active: false },
-            { to: '/chat', Icon: MessageSquare, label: 'CHATS', active: true },
-          ].map(({ to, Icon, label, active }) => (
-            <Link
-              key={label}
-              to={to}
-              className="flex flex-col items-center gap-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-              style={{ color: active ? 'var(--color-primary)' : 'var(--text)' }}
-            >
-              <Icon size={20} strokeWidth={1.5} />
-              {label}
-            </Link>
-          ))}
-        </nav>
 
         {/* New chat search */}
         {showNewChat && (

@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFriendsApi } from '../../friends/api/friends.api.ts';
+import {
+  useProfileApi,
+  type ProfileFriend,
+  type ProfileMeetup,
+  type ProfileCommunity,
+  type ProfileBooking,
+} from '../api/profile.api.ts';
 import { PostFeed } from '../../posts/components/PostFeed.tsx';
 import { NewPostModal } from '../../posts/components/NewPostModal.tsx';
 import { usePostsApi } from '../../posts/api/posts.api.ts';
@@ -29,75 +36,25 @@ import type { User } from '../../../types/index.ts';
 
 type TabId = 'overview' | 'meetups' | 'friends' | 'interests' | 'bookings' | 'posts';
 
-interface Friend {
-  id: string;
-  displayName: string;
-  username: string;
-  avatarUrl: string;
-  isMutual?: boolean;
+/** Format a 'YYYY-MM-DD' or ISO date string as e.g. "Jun 7, 2025". */
+function formatDate(raw?: string): string {
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-interface Meetup {
-  id: string;
-  title: string;
-  withFriend: string;
-  withAvatar: string;
-  date: string;
-  location: string;
-  status: 'accepted' | 'pending' | 'declined';
+/** Generic empty-state row for a tab with no real data yet. */
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-2 rounded-2xl py-10 px-6 text-center"
+      style={{ backgroundColor: 'var(--color-neutral)', border: '2px dashed var(--border)' }}
+    >
+      <p className="text-sm" style={{ color: 'var(--text)' }}>{message}</p>
+    </div>
+  );
 }
-
-interface Booking {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  type: 'event' | 'class' | 'reservation';
-}
-
-interface Club {
-  id: string;
-  name: string;
-  membersCount: number;
-  emoji: string;
-}
-
-// ── Fake social counts (real counts come later when API is wired) ─────────────
-const FAKE_COUNTS = { friendsCount: 0, meetupsCount: 0, photosCount: 0 };
-
-const FRIENDS: Friend[] = [
-  { id: '1', displayName: 'Mia Thompson',  username: 'mia.t',  avatarUrl: 'https://i.pravatar.cc/150?img=5',  isMutual: true },
-  { id: '2', displayName: 'Sara Mitchell', username: 'sara.m', avatarUrl: 'https://i.pravatar.cc/150?img=10', isMutual: true },
-  { id: '3', displayName: 'Jake Rivera',   username: 'jake.r', avatarUrl: 'https://i.pravatar.cc/150?img=12', isMutual: false },
-  { id: '4', displayName: 'Lily Anderson', username: 'lily.a', avatarUrl: 'https://i.pravatar.cc/150?img=20', isMutual: true },
-  { id: '5', displayName: 'Tom Bradley',   username: 'tom.b',  avatarUrl: 'https://i.pravatar.cc/150?img=15', isMutual: false },
-];
-
-const MUTUAL_FRIENDS = FRIENDS.filter(f => f.isMutual).slice(0, 3);
-
-const MEETUPS: Meetup[] = [
-  { id: 'm1', title: 'Coffee & Catch-up',    withFriend: 'Mia Thompson',  withAvatar: 'https://i.pravatar.cc/150?img=5',  date: 'Jun 7, 2025',  location: 'Brew & Co.',      status: 'accepted' },
-  { id: 'm2', title: 'Morning Run',           withFriend: 'Jake Rivera',   withAvatar: 'https://i.pravatar.cc/150?img=12', date: 'Jun 3, 2025',  location: 'Riverside Park',  status: 'accepted' },
-  { id: 'm3', title: 'Dinner at Sakura',      withFriend: 'Lily Anderson', withAvatar: 'https://i.pravatar.cc/150?img=20', date: 'May 28, 2025', location: 'Sakura Bistro',   status: 'accepted' },
-  { id: 'm4', title: 'Book Club: Chapter 8',  withFriend: 'Sara Mitchell', withAvatar: 'https://i.pravatar.cc/150?img=10', date: 'May 22, 2025', location: 'City Library',    status: 'accepted' },
-  { id: 'm5', title: 'Work Lunch',            withFriend: 'Tom Bradley',   withAvatar: 'https://i.pravatar.cc/150?img=15', date: 'May 18, 2025', location: 'Noodle House',    status: 'accepted' },
-  { id: 'm6', title: 'Yoga in the Park',      withFriend: 'Mia Thompson',  withAvatar: 'https://i.pravatar.cc/150?img=5',  date: 'May 10, 2025', location: 'Green Fields',    status: 'accepted' },
-];
-
-const INTEREST_TAGS = ['Reading', 'Yoga', 'Coffee', 'Board Games', 'Running', 'Cooking', 'Travel', 'Music'];
-
-const CLUBS: Club[] = [
-  { id: 'c1', name: 'Book Club',       membersCount: 12, emoji: '📚' },
-  { id: 'c2', name: 'Running Club',    membersCount: 28, emoji: '🏃' },
-  { id: 'c3', name: 'Coding Meetup',   membersCount: 45, emoji: '💻' },
-];
-
-const BOOKINGS: Booking[] = [
-  { id: 'b1', title: 'Pottery Workshop',      date: 'Jun 18, 2025', time: '2:00 PM',  location: 'Clay Studio, Downtown', type: 'class' },
-  { id: 'b2', title: 'Jazz Night at Blu Bar', date: 'Jun 21, 2025', time: '8:30 PM',  location: 'Blu Bar & Grill',       type: 'event' },
-  { id: 'b3', title: 'Brunch Reservation',    date: 'Jun 22, 2025', time: '11:00 AM', location: 'Café Bloom, Westside',  type: 'reservation' },
-];
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -151,7 +108,12 @@ function PremiumLock({ children, locked, message = 'Upgrade to Pro to view this 
 
 // ── Tab panels ────────────────────────────────────────────────────────────────
 
-function OverviewTab() {
+function OverviewTab({ meetups, friends, interests, onSeeAll }: {
+  meetups: ProfileMeetup[];
+  friends: ProfileFriend[];
+  interests: string[];
+  onSeeAll: () => void;
+}) {
   return (
     <div className="flex flex-col gap-6">
       {/* Recent Meetups */}
@@ -160,233 +122,243 @@ function OverviewTab() {
           <h3 id="overview-meetups-heading" className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
             Recent Meetups
           </h3>
-          <button
-            type="button"
-            className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none"
-            style={{ color: 'var(--color-primary)' }}
-          >
-            See all <ChevronRight size={12} />
-          </button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {MEETUPS.slice(0, 3).map(meetup => (
-            <article
-              key={meetup.id}
-              className="flex items-center gap-3 rounded-xl p-3"
-              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
+          {meetups.length > 0 && (
+            <button
+              type="button"
+              onClick={onSeeAll}
+              className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none"
+              style={{ color: 'var(--color-primary)' }}
             >
-              <img
-                src={meetup.withAvatar}
-                alt={meetup.withFriend}
-                className="h-9 w-9 rounded-full object-cover shrink-0"
-                width={36}
-                height={36}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-h)' }}>{meetup.title}</p>
-                <p className="text-xs truncate" style={{ color: 'var(--text)' }}>
-                  with <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{meetup.withFriend}</span>
-                  {' · '}
-                  <MapPin size={10} className="inline" />
-                  {' '}{meetup.location}
-                </p>
-              </div>
-              <span className="text-xs shrink-0 flex items-center gap-1" style={{ color: 'var(--text)' }}>
-                <Clock size={10} />
-                {meetup.date}
-              </span>
-            </article>
-          ))}
+              See all <ChevronRight size={12} />
+            </button>
+          )}
         </div>
+        {meetups.length === 0 ? (
+          <EmptyState message="No meetups yet." />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {meetups.slice(0, 3).map(meetup => (
+              <article
+                key={meetup._id}
+                className="flex items-center gap-3 rounded-xl p-3"
+                style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
+              >
+                <img
+                  src={meetup.with?.avatar_url || `https://i.pravatar.cc/150?u=${meetup.with?.username ?? meetup._id}`}
+                  alt={meetup.with?.display_name ?? 'Friend'}
+                  className="h-9 w-9 rounded-full object-cover shrink-0"
+                  width={36}
+                  height={36}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-h)' }}>{meetup.title}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--text)' }}>
+                    {meetup.with && (
+                      <>with <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{meetup.with.display_name}</span></>
+                    )}
+                    {meetup.location && (
+                      <>
+                        {meetup.with ? ' · ' : ''}
+                        <MapPin size={10} className="inline" />
+                        {' '}{meetup.location}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <span className="text-xs shrink-0 flex items-center gap-1" style={{ color: 'var(--text)' }}>
+                  <Clock size={10} />
+                  {formatDate(meetup.date)}
+                </span>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* Mutual Friends */}
-      <section aria-labelledby="overview-mutuals-heading">
-        <h3 id="overview-mutuals-heading" className="text-sm font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text)' }}>
-          Mutual Friends
+      {/* Friends preview */}
+      <section aria-labelledby="overview-friends-heading">
+        <h3 id="overview-friends-heading" className="text-sm font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text)' }}>
+          Friends
         </h3>
-        <div className="flex gap-3 flex-wrap">
-          {MUTUAL_FRIENDS.map(friend => (
-            <Link
-              key={friend.id}
-              to={`/${friend.username}`}
-              className="flex flex-col items-center gap-1.5 rounded-xl px-4 py-3 transition-all hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
-              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
-            >
-              <img
-                src={friend.avatarUrl}
-                alt={friend.displayName}
-                className="h-10 w-10 rounded-full object-cover"
-                width={40}
-                height={40}
-              />
-              <p className="text-xs font-semibold text-center" style={{ color: 'var(--text-h)' }}>{friend.displayName}</p>
-              <p className="text-[10px]" style={{ color: 'var(--text)' }}>@{friend.username}</p>
-            </Link>
-          ))}
-        </div>
+        {friends.length === 0 ? (
+          <EmptyState message="No friends yet." />
+        ) : (
+          <div className="flex gap-3 flex-wrap">
+            {friends.slice(0, 3).map(friend => (
+              <Link
+                key={friend._id}
+                to={`/${friend.username}`}
+                className="flex flex-col items-center gap-1.5 rounded-xl px-4 py-3 transition-all hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+                style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
+              >
+                <img
+                  src={friend.avatar_url || `https://i.pravatar.cc/150?u=${friend.username}`}
+                  alt={friend.display_name}
+                  className="h-10 w-10 rounded-full object-cover"
+                  width={40}
+                  height={40}
+                />
+                <p className="text-xs font-semibold text-center" style={{ color: 'var(--text-h)' }}>{friend.display_name}</p>
+                <p className="text-[10px]" style={{ color: 'var(--text)' }}>@{friend.username}</p>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Interests preview */}
-      <section aria-labelledby="overview-interests-heading">
-        <h3 id="overview-interests-heading" className="text-sm font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text)' }}>
-          Interests
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {INTEREST_TAGS.slice(0, 5).map(tag => (
-            <span
-              key={tag}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1px solid var(--accent-border, var(--color-primary))' }}
-            >
-              {tag}
-            </span>
-          ))}
-          <span
-            className="px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{ backgroundColor: 'var(--color-neutral)', color: 'var(--text)', border: '1px solid var(--border)' }}
-          >
-            +{INTEREST_TAGS.length - 5} more
-          </span>
-        </div>
-      </section>
+      {interests.length > 0 && (
+        <section aria-labelledby="overview-interests-heading">
+          <h3 id="overview-interests-heading" className="text-sm font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text)' }}>
+            Interests
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {interests.slice(0, 5).map(tag => (
+              <span
+                key={tag}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1px solid var(--accent-border, var(--color-primary))' }}
+              >
+                {tag}
+              </span>
+            ))}
+            {interests.length > 5 && (
+              <span
+                className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ backgroundColor: 'var(--color-neutral)', color: 'var(--text)', border: '1px solid var(--border)' }}
+              >
+                +{interests.length - 5} more
+              </span>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
-function MeetupsTab() {
+function MeetupsTab({ meetups }: { meetups: ProfileMeetup[] }) {
   return (
     <section aria-labelledby="meetups-tab-heading">
       <h3 id="meetups-tab-heading" className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text)' }}>
         Meetup Timeline
       </h3>
-      <div className="relative">
-        {/* Timeline line */}
-        <div
-          className="absolute left-[18px] top-0 bottom-0 w-px"
-          style={{ backgroundColor: 'var(--border)' }}
-          aria-hidden="true"
-        />
-        <div className="flex flex-col gap-4 pl-10">
-          {MEETUPS.map((meetup, idx) => (
-            <article key={meetup.id} className="relative">
-              {/* Timeline dot */}
-              <div
-                className="absolute -left-[30px] top-4 h-3 w-3 rounded-full border-2"
-                style={{ backgroundColor: 'var(--color-primary)', borderColor: 'var(--bg)' }}
-                aria-hidden="true"
-              />
-              <div
-                className="rounded-2xl p-4"
-                style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(74,62,78,0.06)' }}
-              >
-                <div className="flex items-start gap-3">
-                  <img
-                    src={meetup.withAvatar}
-                    alt={meetup.withFriend}
-                    className="h-10 w-10 rounded-full object-cover shrink-0 mt-0.5"
-                    width={40}
-                    height={40}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>{meetup.title}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>
-                      with <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{meetup.withFriend}</span>
-                    </p>
-                    <div className="flex items-center gap-3 mt-2 flex-wrap">
-                      <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text)' }}>
-                        <MapPin size={10} />
-                        {meetup.location}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text)' }}>
-                        <Clock size={10} />
-                        {meetup.date}
-                      </span>
+      {meetups.length === 0 ? (
+        <EmptyState message="No meetups yet." />
+      ) : (
+        <div className="relative">
+          {/* Timeline line */}
+          <div
+            className="absolute left-[18px] top-0 bottom-0 w-px"
+            style={{ backgroundColor: 'var(--border)' }}
+            aria-hidden="true"
+          />
+          <div className="flex flex-col gap-4 pl-10">
+            {meetups.map((meetup, idx) => (
+              <article key={meetup._id} className="relative">
+                {/* Timeline dot */}
+                <div
+                  className="absolute -left-[30px] top-4 h-3 w-3 rounded-full border-2"
+                  style={{ backgroundColor: 'var(--color-primary)', borderColor: 'var(--bg)' }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(74,62,78,0.06)' }}
+                >
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={meetup.with?.avatar_url || `https://i.pravatar.cc/150?u=${meetup.with?.username ?? meetup._id}`}
+                      alt={meetup.with?.display_name ?? 'Friend'}
+                      className="h-10 w-10 rounded-full object-cover shrink-0 mt-0.5"
+                      width={40}
+                      height={40}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>{meetup.title}</p>
+                      {meetup.with && (
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>
+                          with <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{meetup.with.display_name}</span>
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 flex-wrap">
+                        {meetup.location && (
+                          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text)' }}>
+                            <MapPin size={10} />
+                            {meetup.location}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text)' }}>
+                          <Clock size={10} />
+                          {formatDate(meetup.date)}
+                        </span>
+                      </div>
                     </div>
+                    <span
+                      className="text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0"
+                      style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}
+                    >
+                      Went
+                    </span>
                   </div>
-                  <span
-                    className="text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0"
-                    style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}
-                  >
-                    Went
-                  </span>
                 </div>
-              </div>
-              {/* Connector to next */}
-              {idx < MEETUPS.length - 1 && (
-                <div className="h-4" aria-hidden="true" />
-              )}
-            </article>
-          ))}
+                {/* Connector to next */}
+                {idx < meetups.length - 1 && (
+                  <div className="h-4" aria-hidden="true" />
+                )}
+              </article>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
 
-function FriendsTab() {
+function FriendsTab({ friends }: { friends: ProfileFriend[] }) {
   return (
     <section aria-labelledby="friends-tab-heading">
       <div className="flex items-center justify-between mb-4">
         <h3 id="friends-tab-heading" className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
           Friends
         </h3>
+        {friends.length > 0 && (
+          <span className="text-xs font-semibold" style={{ color: 'var(--text)' }}>{friends.length} total</span>
+        )}
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {FRIENDS.map(friend => (
-          <Link
-            key={friend.id}
-            to={`/${friend.username}`}
-            className="flex flex-col items-center gap-2 rounded-2xl p-4 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2"
-            style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
-          >
-            <div className="relative">
-              <img
-                src={friend.avatarUrl}
-                alt={friend.displayName}
-                className="h-14 w-14 rounded-full object-cover"
-                width={56}
-                height={56}
-              />
-              {friend.isMutual && (
-                <span
-                  className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full"
-                  title="Mutual friend"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
-                >
-                  <Users size={9} color="white" />
-                </span>
-              )}
-            </div>
-            <p className="text-xs font-bold text-center leading-tight" style={{ color: 'var(--text-h)' }}>
-              {friend.displayName}
-            </p>
-            <p className="text-[10px]" style={{ color: 'var(--text)' }}>@{friend.username}</p>
-            {friend.isMutual && (
-              <span
-                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}
-              >
-                Mutual
-              </span>
-            )}
-          </Link>
-        ))}
-        {/* Placeholder card for remaining */}
-        <div
-          className="flex flex-col items-center justify-center gap-2 rounded-2xl p-4 text-center"
-          style={{ backgroundColor: 'var(--color-neutral)', border: '2px dashed var(--border)', minHeight: '140px' }}
-          aria-label="More friends"
-        >
-          <p className="text-[11px]" style={{ color: 'var(--text)' }}>More coming soon</p>
+      {friends.length === 0 ? (
+        <EmptyState message="No friends yet." />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {friends.map(friend => (
+            <Link
+              key={friend._id}
+              to={`/${friend.username}`}
+              className="flex flex-col items-center gap-2 rounded-2xl p-4 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2"
+              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
+            >
+              <div className="relative">
+                <img
+                  src={friend.avatar_url || `https://i.pravatar.cc/150?u=${friend.username}`}
+                  alt={friend.display_name}
+                  className="h-14 w-14 rounded-full object-cover"
+                  width={56}
+                  height={56}
+                />
+              </div>
+              <p className="text-xs font-bold text-center leading-tight" style={{ color: 'var(--text-h)' }}>
+                {friend.display_name}
+              </p>
+              <p className="text-[10px]" style={{ color: 'var(--text)' }}>@{friend.username}</p>
+            </Link>
+          ))}
         </div>
-      </div>
+      )}
     </section>
   );
 }
 
-function InterestsTab({ interests }: { interests: string[] }) {
-  const tags = interests.length > 0 ? interests : INTEREST_TAGS;
+function InterestsTab({ interests, communities }: { interests: string[]; communities: ProfileCommunity[] }) {
   return (
     <div className="flex flex-col gap-6">
       {/* Interest tag cloud */}
@@ -394,112 +366,122 @@ function InterestsTab({ interests }: { interests: string[] }) {
         <h3 id="interests-tags-heading" className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text)' }}>
           Interests
         </h3>
-        <div className="flex flex-wrap gap-3">
-          {tags.map((tag, idx) => {
-            // Vary sizes slightly for a tag-cloud feel
-            const sizes = ['text-xs', 'text-sm', 'text-xs', 'text-base', 'text-xs', 'text-sm', 'text-xs', 'text-sm', 'text-xs', 'text-sm', 'text-xs', 'text-sm', 'text-xs', 'text-sm', 'text-xs'];
-            const pads  = ['px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-5 py-2.5', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5'];
-            return (
-              <span
-                key={tag}
-                className={cn('rounded-full font-semibold cursor-default transition-all', sizes[idx], pads[idx])}
-                style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1.5px solid var(--color-primary)' }}
-              >
-                <Tag size={10} className="inline mr-1" aria-hidden="true" />
-                {tag}
-              </span>
-            );
-          })}
-        </div>
+        {interests.length === 0 ? (
+          <EmptyState message="No interests added yet." />
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            {interests.map((tag, idx) => {
+              // Vary sizes slightly for a tag-cloud feel
+              const sizes = ['text-xs', 'text-sm', 'text-xs', 'text-base', 'text-xs', 'text-sm'];
+              const pads  = ['px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-5 py-2.5', 'px-3 py-1.5', 'px-4 py-2'];
+              return (
+                <span
+                  key={tag}
+                  className={cn('rounded-full font-semibold cursor-default transition-all', sizes[idx % sizes.length], pads[idx % pads.length])}
+                  style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1.5px solid var(--color-primary)' }}
+                >
+                  <Tag size={10} className="inline mr-1" aria-hidden="true" />
+                  {tag}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </section>
 
-      {/* Clubs */}
+      {/* Clubs / Communities */}
       <section aria-labelledby="clubs-heading">
         <h3 id="clubs-heading" className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text)' }}>
           Clubs & Groups
         </h3>
-        <div className="flex flex-col gap-3">
-          {CLUBS.map(club => (
-            <div
-              key={club.id}
-              className="flex items-center gap-4 rounded-2xl p-4"
-              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(74,62,78,0.06)' }}
-            >
-              <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl shrink-0 text-2xl"
-                style={{ backgroundColor: 'var(--color-tertiary)', border: '1px solid var(--border)' }}
-                aria-hidden="true"
+        {communities.length === 0 ? (
+          <EmptyState message="Not a member of any communities yet." />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {communities.map(club => (
+              <Link
+                key={club._id}
+                to={`/communities/${club.slug}`}
+                className="flex items-center gap-4 rounded-2xl p-4 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2"
+                style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(74,62,78,0.06)' }}
               >
-                {club.emoji}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>{club.name}</p>
-                <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: 'var(--text)' }}>
-                  <Users size={10} />
-                  {club.membersCount} members
-                </p>
-              </div>
-              <button
-                type="button"
-                className="text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 shrink-0"
-                style={{ border: '1.5px solid var(--color-primary)', color: 'var(--color-primary)', backgroundColor: 'transparent' }}
-              >
-                View
-              </button>
-            </div>
-          ))}
-        </div>
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-xl shrink-0 text-lg font-black overflow-hidden"
+                  style={{ backgroundColor: 'var(--color-tertiary)', border: '1px solid var(--border)', color: 'var(--color-primary)' }}
+                  aria-hidden="true"
+                >
+                  {club.avatar_url
+                    ? <img src={club.avatar_url} alt="" className="h-full w-full object-cover" />
+                    : club.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>{club.name}</p>
+                  <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: 'var(--text)' }}>
+                    <Users size={10} />
+                    {club.member_count} members
+                    {club.category && <> · {club.category}</>}
+                  </p>
+                </div>
+                <span
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full shrink-0"
+                  style={{ border: '1.5px solid var(--color-primary)', color: 'var(--color-primary)', backgroundColor: 'transparent' }}
+                >
+                  View
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
 }
 
-function BookingsTab({ isOwn, isPremium }: { isOwn: boolean; isPremium: boolean }) {
-  const bookingTypeColors: Record<Booking['type'], { bg: string; text: string; label: string }> = {
-    event:       { bg: 'rgba(167,139,250,0.15)', text: '#7c3aed', label: 'Event' },
-    class:       { bg: 'var(--accent-bg)',        text: 'var(--color-primary)', label: 'Class' },
-    reservation: { bg: 'rgba(52,211,153,0.15)',   text: '#059669', label: 'Reservation' },
-  };
-
-  const content = (
+function BookingsTab({ bookings, isOwn, isPremium }: { bookings: ProfileBooking[]; isOwn: boolean; isPremium: boolean }) {
+  const content = bookings.length === 0 ? (
+    <EmptyState message="No event bookings yet." />
+  ) : (
     <div className="flex flex-col gap-3">
-      {BOOKINGS.map(booking => {
-        const badge = bookingTypeColors[booking.type];
-        return (
-          <article
-            key={booking.id}
-            className="flex items-start gap-4 rounded-2xl p-4"
-            style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(74,62,78,0.06)' }}
+      {bookings.map(booking => (
+        <article
+          key={booking._id}
+          className="flex items-start gap-4 rounded-2xl p-4"
+          style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(74,62,78,0.06)' }}
+        >
+          <div
+            className="flex h-12 w-12 flex-col items-center justify-center rounded-xl shrink-0"
+            style={{ backgroundColor: 'var(--color-tertiary)', border: '1px solid var(--border)' }}
+            aria-hidden="true"
           >
-            <div
-              className="flex h-12 w-12 flex-col items-center justify-center rounded-xl shrink-0"
-              style={{ backgroundColor: 'var(--color-tertiary)', border: '1px solid var(--border)' }}
-              aria-hidden="true"
-            >
-              <Calendar size={18} style={{ color: 'var(--color-primary)' }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>{booking.title}</p>
+            <Calendar size={18} style={{ color: 'var(--color-primary)' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>{booking.title || booking.content}</p>
+              {booking.community && (
                 <span
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
-                  style={{ backgroundColor: badge.bg, color: badge.text }}
+                  style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}
                 >
-                  {badge.label}
+                  {booking.community.name}
                 </span>
-              </div>
+              )}
+            </div>
+            {booking.event_date && (
               <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text)' }}>
                 <Clock size={10} />
-                {booking.date} at {booking.time}
+                {formatDate(booking.event_date)}
               </p>
+            )}
+            {booking.event_location && (
               <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: 'var(--text)' }}>
                 <MapPin size={10} />
-                {booking.location}
+                {booking.event_location}
               </p>
-            </div>
-          </article>
-        );
-      })}
+            )}
+          </div>
+        </article>
+      ))}
     </div>
   );
 
@@ -580,6 +562,20 @@ export function ProfilePage() {
     (r.recipient_id.username === me?.username && r.requester_id.username === username)
   );
 
+  // Aggregated tab data (friends, meetups, interests, communities, bookings)
+  const profileApi = useProfileApi();
+  const { data: profileData } = useQuery({
+    queryKey: ['profile-data', username],
+    queryFn: () => profileApi.getProfileData(username!),
+    enabled: !!username,
+    staleTime: 30_000,
+  });
+  const tabFriends     = profileData?.friends ?? [];
+  const tabMeetups     = profileData?.meetups ?? [];
+  const tabCommunities = profileData?.communities ?? [];
+  const tabBookings    = profileData?.bookings ?? [];
+  const counts = profileData?.counts ?? { friends: 0, meetups: 0, communities: 0 };
+
   useEffect(() => {
     if (!username) return;
     if (isOwnProfile && me) {
@@ -617,7 +613,7 @@ export function ProfilePage() {
 
   const displayName = profileUser.display_name || profileUser.username;
   const avatarUrl = profileUser.avatar_url || `https://i.pravatar.cc/150?u=${profileUser.username}`;
-  const interests = (profileUser as User & { interests?: string[] }).interests ?? [];
+  const interests = profileData?.interests ?? (profileUser as User & { interests?: string[] }).interests ?? [];
 
   return (
     <AppShell>
@@ -774,8 +770,8 @@ export function ProfilePage() {
               aria-label="Profile statistics"
             >
               {[
-                { value: FAKE_COUNTS.friendsCount, label: 'Friends',  icon: <Users size={14} /> },
-                { value: FAKE_COUNTS.meetupsCount,  label: 'Meetups',  icon: <Calendar size={14} /> },
+                { value: counts.friends, label: 'Friends',  icon: <Users size={14} /> },
+                { value: counts.meetups, label: 'Meetups',  icon: <Calendar size={14} /> },
               ].map((stat, idx) => (
                 <div
                   key={stat.label}
@@ -874,11 +870,11 @@ export function ProfilePage() {
             id={`tabpanel-${activeTab}`}
             aria-labelledby={`tab-${activeTab}`}
           >
-            {activeTab === 'overview'  && <OverviewTab />}
-            {activeTab === 'meetups'   && <MeetupsTab />}
-            {activeTab === 'friends'   && <FriendsTab />}
-            {activeTab === 'interests' && <InterestsTab interests={interests} />}
-            {activeTab === 'bookings'  && <BookingsTab isOwn={isOwnProfile} isPremium={viewerIsPremium} />}
+            {activeTab === 'overview'  && <OverviewTab meetups={tabMeetups} friends={tabFriends} interests={interests} onSeeAll={() => setActiveTab('meetups')} />}
+            {activeTab === 'meetups'   && <MeetupsTab meetups={tabMeetups} />}
+            {activeTab === 'friends'   && <FriendsTab friends={tabFriends} />}
+            {activeTab === 'interests' && <InterestsTab interests={interests} communities={tabCommunities} />}
+            {activeTab === 'bookings'  && <BookingsTab bookings={tabBookings} isOwn={isOwnProfile} isPremium={viewerIsPremium} />}
             {activeTab === 'posts' && (
               <div className="flex flex-col gap-4">
                 {isOwnProfile && (
