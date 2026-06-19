@@ -10,6 +10,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { useMemoryApi } from '../api/memory.api.ts';
 import { useAuthStore } from '../../../store/auth.ts';
+import { effectivePremium } from '../../../lib/featureFlags.ts';
 import type { ApiMeetup } from '../../calendar/api/calendar.api.ts';
 
 // ── Local multi-photo store ────────────────────────────────────────────────────
@@ -632,11 +633,12 @@ function StatChip({ value, label }: { value: number; label: string }) {
 export function MemoryPage() {
   const memoryApi = useMemoryApi();
   const { user } = useAuthStore();
+  const premium = effectivePremium(premium);
 
   const { data: meetups = [], isLoading } = useQuery({
     queryKey: ['memory', 'album'],
     queryFn: () => memoryApi.getAlbum(),
-    enabled: !!user?.is_premium,
+    enabled: premium,
     staleTime: 30_000,
   });
 
@@ -673,19 +675,19 @@ export function MemoryPage() {
             Your Moments,<br />Captured. 📸
           </h1>
           <p className="mt-2 text-sm text-white/70">
-            {user?.is_premium
+            {premium
               ? 'Upload photos from your meetups and relive every memory.'
               : 'Premium feature — upgrade to unlock.'}
           </p>
         </div>
-        {user?.is_premium && meetups.length > 0 && (
+        {premium && meetups.length > 0 && (
           <div className="hidden md:flex items-center gap-3">
             <StatChip value={meetups.length} label="Meetups" />
             <StatChip value={totalPhotos} label="Photos" />
             <StatChip value={meetupsWithPhotos} label="Captured" />
           </div>
         )}
-        {user?.is_premium && (
+        {premium && (
           <span
             className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold self-start"
             style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}
@@ -695,15 +697,15 @@ export function MemoryPage() {
         )}
       </motion.div>
 
-      {!user?.is_premium && <PremiumGate />}
+      {!premium && <PremiumGate />}
 
-      {user?.is_premium && isLoading && (
+      {premium && isLoading && (
         <div className="flex justify-center py-20">
           <Loader2 size={28} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
         </div>
       )}
 
-      {user?.is_premium && !isLoading && meetups.length === 0 && (
+      {premium && !isLoading && meetups.length === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -725,7 +727,7 @@ export function MemoryPage() {
         </motion.div>
       )}
 
-      {user?.is_premium && !isLoading && meetups.length > 0 && (
+      {premium && !isLoading && meetups.length > 0 && (
         <div
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mx-auto w-full justify-items-center"
           style={{ gap: '40px', paddingTop: 24, paddingBottom: 48, maxWidth: 900 }}

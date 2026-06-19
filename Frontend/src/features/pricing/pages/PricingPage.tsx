@@ -1,10 +1,7 @@
-﻿import { useState } from 'react';
-import { Check, Zap, Star, Crown, X, CreditCard, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Zap, Star, Crown, Gift } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
-import { useApi } from '../../../lib/api.ts';
-import { useAuthStore } from '../../../store/auth.ts';
 
 type Billing = 'monthly' | 'yearly';
 
@@ -35,7 +32,7 @@ const PLANS: Plan[] = [
     description: 'Perfect for getting started with social planning.',
     features: [
       'Personal calendar',
-      'Up to 5 friends',
+      'Unlimited friends',
       'Propose meetups',
       'Basic day states',
       'Public profile page',
@@ -55,13 +52,12 @@ const PLANS: Plan[] = [
     description: 'For active social butterflies who plan often.',
     features: [
       'Everything in Free',
-      'Unlimited friends',
       'Custom themes & colors',
       'Sticker packs (V3)',
       'Weekly digest emails',
       'Priority support',
     ],
-    cta: 'Start Pro',
+    cta: 'Coming Soon',
     highlighted: true,
   },
   {
@@ -81,164 +77,26 @@ const PLANS: Plan[] = [
       'Early access to new features',
       'Dedicated support',
     ],
-    cta: 'Go Premium',
+    cta: 'Coming Soon',
     highlighted: false,
   },
 ];
 
 const FAQS = [
-  { q: 'Can I cancel anytime?',          a: 'Yes — cancel anytime from Settings → Account. No hidden fees.' },
-  { q: 'What happens to my data if I downgrade?', a: 'Your data stays safe. Premium features are hidden but not deleted.' },
-  { q: 'Is there a student discount?',   a: 'Yes — email us with your .edu address for 50% off Pro.' },
-  { q: 'Do you offer team plans?',       a: 'Group plans are coming in V6. Join the waitlist!' },
+  { q: 'How much does it cost right now?', a: 'Nothing. Every feature is free for our first 1000 users during early access — no card required.' },
+  { q: 'What happens after the first 1000 users?', a: 'Paid plans will roll out later. Early users keep their access while we finalize pricing.' },
+  { q: 'Do I need to pay for Pro or Premium features?', a: 'No. During development all Pro and Premium features are unlocked for everyone.' },
+  { q: 'Will my data be safe?', a: 'Yes — your calendar, friends and memories stay safe regardless of plan.' },
 ];
-
-// ── Dummy Checkout Modal ──────────────────────────────────────────────────────
-
-function CheckoutModal({ planName, price, onClose }: { planName: string; price: number; onClose: () => void }) {
-  const api = useApi();
-  const { updateUser } = useAuthStore();
-  const [step, setStep] = useState<'form' | 'success'>('form');
-  const [form, setForm] = useState({ firstName: '', lastName: '', address: '', card: '', expiry: '', cvv: '' });
-  const [errors, setErrors] = useState<Partial<typeof form>>({});
-
-  const { mutate: subscribe, isPending } = useMutation({
-    mutationFn: () => api.patch<{ is_premium: boolean }>('/users/me', { is_premium: true }),
-    onSuccess: () => {
-      updateUser({ is_premium: true });
-      setStep('success');
-    },
-  });
-
-  function formatCard(val: string) {
-    return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
-  }
-  function formatExpiry(val: string) {
-    const d = val.replace(/\D/g, '').slice(0, 4);
-    return d.length >= 3 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
-  }
-
-  function validate() {
-    const e: Partial<typeof form> = {};
-    if (!form.firstName.trim()) e.firstName = 'Required';
-    if (!form.lastName.trim()) e.lastName = 'Required';
-    if (!form.address.trim()) e.address = 'Required';
-    if (form.card.replace(/\s/g, '').length < 16) e.card = 'Enter valid 16-digit card number';
-    if (form.expiry.length < 5) e.expiry = 'Enter MM/YY';
-    if (form.cvv.length < 3) e.cvv = 'Enter 3-digit CVV';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (validate()) subscribe();
-  }
-
-  const field = (key: keyof typeof form, label: string, placeholder: string, extra?: Partial<React.InputHTMLAttributes<HTMLInputElement>>) => (
-    <div>
-      <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-h)' }}>{label}</label>
-      <input
-        {...extra}
-        value={form[key]}
-        onChange={e => {
-          let v = e.target.value;
-          if (key === 'card') v = formatCard(v);
-          if (key === 'expiry') v = formatExpiry(v);
-          if (key === 'cvv') v = v.replace(/\D/g, '').slice(0, 4);
-          setForm(f => ({ ...f, [key]: v }));
-          if (errors[key]) setErrors(er => ({ ...er, [key]: undefined }));
-        }}
-        placeholder={placeholder}
-        className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2"
-        style={{ backgroundColor: 'var(--color-neutral)', border: `1px solid ${errors[key] ? '#e11d48' : 'var(--border)'}`, color: 'var(--text-h)' }}
-      />
-      {errors[key] && <p className="text-xs mt-1" style={{ color: '#e11d48' }}>{errors[key]}</p>}
-    </div>
-  );
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
-
-        {step === 'success' ? (
-          <div className="flex flex-col items-center gap-4 p-10 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: 'var(--color-tertiary)' }}>
-              <CheckCircle2 size={32} style={{ color: 'var(--color-primary)' }} />
-            </div>
-            <h2 className="text-xl font-bold" style={{ color: 'var(--text-h)' }}>You're Premium!</h2>
-            <p className="text-sm" style={{ color: 'var(--text)' }}>
-              Welcome to {planName}. All premium features are now unlocked.
-            </p>
-            <button type="button" onClick={onClose} className="mt-2 px-8 py-2.5 rounded-full text-sm font-bold text-white" style={{ backgroundColor: 'var(--color-primary)' }}>
-              Start Exploring
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-              <div>
-                <h2 className="font-bold text-base" style={{ color: 'var(--text-h)' }}>Subscribe to {planName}</h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>${price}/mo · Cancel anytime</p>
-              </div>
-              <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full hover:opacity-70" style={{ color: 'var(--text)' }}><X size={18} /></button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                {field('firstName', 'First Name', 'John')}
-                {field('lastName', 'Last Name', 'Doe')}
-              </div>
-              {field('address', 'Billing Address', '123 Main St, City')}
-
-              <div className="pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <CreditCard size={15} style={{ color: 'var(--color-primary)' }} />
-                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Payment Details</span>
-                </div>
-                {field('card', 'Card Number', '1234 5678 9012 3456')}
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  {field('expiry', 'Expiry', 'MM/YY')}
-                  {field('cvv', 'CVV', '123')}
-                </div>
-              </div>
-
-              <p className="text-[11px] text-center" style={{ color: 'var(--text)' }}>
-                🔒 Demo only — no real payment processed
-              </p>
-
-              <button
-                type="submit"
-                disabled={isPending}
-                className="w-full py-3 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                style={{ backgroundColor: 'var(--color-primary)' }}
-              >
-                {isPending ? 'Processing…' : `Subscribe · $${price}/mo`}
-              </button>
-            </form>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ── Pricing Page ──────────────────────────────────────────────────────────────
 
 export function PricingPage() {
   const [billing, setBilling] = useState<Billing>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
 
   return (
     <AppShell>
-      {checkoutPlan && (
-        <CheckoutModal
-          planName={checkoutPlan.name}
-          price={checkoutPlan.price[billing]}
-          onClose={() => setCheckoutPlan(null)}
-        />
-      )}
       <div className="max-w-5xl mx-auto pb-20">
 
         {/* Hero */}
@@ -247,16 +105,31 @@ export function PricingPage() {
             className="inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4"
             style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)' }}
           >
-            Simple Pricing
+            Early Access
           </span>
           <h1
             className="font-bold tracking-tight mb-3"
             style={{ fontSize: '40px', color: 'var(--text-h)', margin: '0 0 12px' }}
           >
-            Plans for every social life
+            Free for our first 1000 users
           </h1>
           <p className="text-base max-w-md mx-auto" style={{ color: 'var(--text)' }}>
-            Start free. Upgrade when you're ready for more memories.
+            We're in early access — every feature is unlocked for everyone, no payment needed.
+          </p>
+        </div>
+
+        {/* Early-access banner */}
+        <div
+          className="rounded-2xl p-5 mb-10 flex items-center justify-center gap-3 text-center"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-primary) 0%, #c084fc 100%)',
+            boxShadow: '0 8px 32px var(--accent-border)',
+          }}
+        >
+          <Gift size={22} color="#ffffff" className="shrink-0" />
+          <p className="text-sm font-semibold text-white">
+            🎉 All Pro &amp; Premium features are <strong>100% free</strong> for the first 1000 users.
+            No subscription required during early access.
           </p>
         </div>
 
@@ -282,7 +155,7 @@ export function PricingPage() {
                 {b === 'yearly' && (
                   <span
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{ backgroundColor: billing === 'yearly' ? 'rgba(255,255,255,0.25)' : 'var(--color-primary)', color: billing === 'yearly' ? '#fff' : '#fff' }}
+                    style={{ backgroundColor: billing === 'yearly' ? 'rgba(255,255,255,0.25)' : 'var(--color-primary)', color: '#fff' }}
                   >
                     Save 30%
                   </span>
@@ -297,6 +170,7 @@ export function PricingPage() {
           {PLANS.map(plan => {
             const price = plan.price[billing];
             const Icon = plan.icon;
+            const isPaidPlan = plan.key !== 'free';
             return (
               <div
                 key={plan.key}
@@ -308,8 +182,6 @@ export function PricingPage() {
                     ? '0 12px 40px var(--accent-border)'
                     : '0 2px 12px rgba(74,62,78,0.08)',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = plan.highlighted ? '0 20px 48px var(--accent-border)' : '0 12px 32px rgba(74,62,78,0.14)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = plan.highlighted ? '0 12px 40px var(--accent-border)' : '0 2px 12px rgba(74,62,78,0.08)'; }}
               >
                 {/* Badge */}
                 {plan.badge && (
@@ -338,7 +210,7 @@ export function PricingPage() {
                 </div>
 
                 {/* Price */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <div className="flex items-end gap-1">
                     <span className="text-4xl font-bold" style={{ color: plan.color }}>
                       ${price}
@@ -359,6 +231,17 @@ export function PricingPage() {
                   )}
                 </div>
 
+                {/* Early-access note on paid plans */}
+                {isPaidPlan && (
+                  <div
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 mb-5 text-xs font-semibold"
+                    style={{ backgroundColor: `${plan.color}14`, color: plan.color }}
+                  >
+                    <Gift size={14} className="shrink-0" />
+                    Free for the first 1000 users
+                  </div>
+                )}
+
                 {/* Features */}
                 <ul className="flex flex-col gap-2.5 flex-1 mb-6">
                   {plan.features.map(f => (
@@ -370,16 +253,31 @@ export function PricingPage() {
                 </ul>
 
                 {/* CTA */}
-                <button
-                  type="button"
-                  onClick={() => plan.key !== 'free' && setCheckoutPlan(plan)}
-                  className="w-full py-3 rounded-full text-sm font-bold transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none"
-                  style={plan.highlighted
-                    ? { backgroundColor: plan.color, color: '#ffffff', boxShadow: `0 4px 14px ${plan.color}60` }
-                    : { backgroundColor: 'transparent', border: `1.5px solid ${plan.border}`, color: plan.color }}
-                >
-                  {plan.cta}
-                </button>
+                {isPaidPlan ? (
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    title="Free for all users during early access"
+                    className="w-full py-3 rounded-full text-sm font-bold cursor-not-allowed"
+                    style={{
+                      backgroundColor: 'var(--color-neutral)',
+                      border: `1.5px solid ${plan.border}`,
+                      color: 'var(--text)',
+                      opacity: 0.7,
+                    }}
+                  >
+                    {plan.cta}
+                  </button>
+                ) : (
+                  <Link
+                    to="/register"
+                    className="w-full py-3 rounded-full text-sm font-bold text-center transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none"
+                    style={{ backgroundColor: 'transparent', border: `1.5px solid ${plan.border}`, color: plan.color, textDecoration: 'none' }}
+                  >
+                    {plan.cta}
+                  </Link>
+                )}
               </div>
             );
           })}
@@ -391,9 +289,9 @@ export function PricingPage() {
           style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, #c084fc 100%)', boxShadow: '0 8px 32px var(--accent-border)' }}
         >
           <div>
-            <p className="text-white font-bold text-base">Not sure which plan?</p>
+            <p className="text-white font-bold text-base">Everything's unlocked right now</p>
             <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.8)' }}>
-              Start free — upgrade anytime. No credit card required.
+              Join early and enjoy every feature free — no credit card required.
             </p>
           </div>
           <Link
@@ -437,7 +335,7 @@ export function PricingPage() {
                 {openFaq === i && (
                   <div
                     className="px-5 pb-4 pt-1"
-                    style={{ backgroundColor: 'var(--color-tertiary)', borderTop: '1px solid var(--border)', animation: 'fadeSlideDown 0.18s ease forwards' }}
+                    style={{ backgroundColor: 'var(--color-tertiary)', borderTop: '1px solid var(--border)' }}
                   >
                     <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{faq.a}</p>
                   </div>

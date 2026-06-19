@@ -53,6 +53,9 @@ export class User {
   @Prop({ default: false })
   is_premium: boolean;
 
+  @Prop({ default: false })
+  is_admin: boolean;
+
   @Prop({ default: Date.now })
   created_at: Date;
 
