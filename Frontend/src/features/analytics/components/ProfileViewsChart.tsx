@@ -7,6 +7,7 @@ import { CustomSelect } from '../../../components/ui/CustomSelect.tsx';
 import type { SelectOption } from '../../../components/ui/CustomSelect.tsx';
 import type { Period } from '../types';
 import { useState } from 'react';
+import { effectivePremium } from '../../../lib/featureFlags.ts';
 
 const PERIOD_OPTIONS: SelectOption<Period>[] = [
   { value: 'daily',   label: 'Daily'   },
@@ -27,6 +28,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 export function ProfileViewsChart({ isPremium }: { isPremium: boolean }) {
   const api = useAnalyticsApi();
   const [period, setPeriod] = useState<Period>('weekly');
+  const premium = effectivePremium(isPremium);
 
   const { data = [] } = useQuery({
     queryKey: ['analytics-profile-views', period],
@@ -49,13 +51,13 @@ export function ProfileViewsChart({ isPremium }: { isPremium: boolean }) {
         <div className="w-32 shrink-0">
           <CustomSelect<Period>
             value={period}
-            onChange={v => { if (v !== 'daily' || isPremium) setPeriod(v); }}
+            onChange={v => { if (v !== 'daily' || premium) setPeriod(v); }}
             options={PERIOD_OPTIONS}
           />
         </div>
       </div>
 
-      {!isPremium && (
+      {!premium && (
         <p className="text-xs px-3 py-2 rounded-xl" style={{ background: 'var(--accent-bg)', color: 'var(--color-primary)' }}>
           Free plan shows last 7 days. Upgrade for all-time data.
         </p>

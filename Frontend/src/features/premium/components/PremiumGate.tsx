@@ -1,5 +1,6 @@
 import { Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { effectivePremium } from '../../../lib/featureFlags.ts';
 
 interface Props {
   isPremium: boolean;
@@ -8,7 +9,7 @@ interface Props {
 }
 
 export function PremiumGate({ isPremium, children, message = 'This feature is available for Premium members.' }: Props) {
-  if (isPremium) return <>{children}</>;
+  if (effectivePremium(isPremium)) return <>{children}</>;
 
   return (
     <div

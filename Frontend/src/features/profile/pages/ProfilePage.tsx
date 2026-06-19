@@ -30,6 +30,7 @@ import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { useAuthStore } from '../../../store/auth.ts';
 import { api } from '../../../lib/api.ts';
+import { effectivePremium } from '../../../lib/featureFlags.ts';
 import type { User } from '../../../types/index.ts';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -522,7 +523,7 @@ export function ProfilePage() {
 
   const { user: me } = useAuthStore();
   const isOwnProfile = username === me?.username;
-  const viewerIsPremium = !!me?.is_premium;
+  const viewerIsPremium = effectivePremium(me?.is_premium);
   const postsApi = usePostsApi();
   const friendsApi = useFriendsApi();
   const qc = useQueryClient();
