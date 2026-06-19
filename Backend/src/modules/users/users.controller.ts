@@ -31,6 +31,13 @@ export class UsersController {
     return this.usersService.findByUsername(username);
   }
 
+  // Public — aggregated tab data for the profile page
+  @Get(':username/profile-data')
+  @HttpCode(HttpStatus.OK)
+  async getProfileData(@Param('username') username: string) {
+    return this.usersService.getProfileData(username);
+  }
+
   // Check if username is available (for onboarding form)
   @Get('check/:username')
   @HttpCode(HttpStatus.OK)

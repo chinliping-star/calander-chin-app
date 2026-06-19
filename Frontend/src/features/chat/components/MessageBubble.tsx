@@ -50,9 +50,8 @@ export function MessageBubble({ message, isOwn, seenByOthers, onEdit, onDelete }
 
       {/* Bubble column */}
       <div className={`flex flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
-        {/* Name + time row */}
-        <div className={`flex items-center gap-2 mb-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
-          <span className="text-sm font-semibold" style={{ color: 'var(--text-h)' }}>{name}</span>
+        {/* Time row (sender name hidden) */}
+        <div className={`flex mb-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
           <span className="text-xs" style={{ color: 'var(--text)' }}>{time}</span>
         </div>
 
