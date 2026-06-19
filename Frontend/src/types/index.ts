@@ -10,6 +10,7 @@ export interface User {
   bio?: string;
   theme?: string;
   is_premium?: boolean;
+  is_admin?: boolean;
   clerk_id?: string;
 }
 
