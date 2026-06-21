@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { MeetupsService } from './meetups.service';
 import { CreateMeetupDto } from './dto/create-meetup.dto';
+import { UpdateMeetupDto } from './dto/update-meetup.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -39,6 +40,16 @@ export class MeetupsController {
   @HttpCode(HttpStatus.OK)
   async findOne(@Param('id') id: string) {
     return this.meetupsService.findById(id);
+  }
+
+  @Patch(':id')
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdateMeetupDto,
+  ) {
+    return this.meetupsService.update(id, userId, dto);
   }
 
   @Patch(':id/accept')
