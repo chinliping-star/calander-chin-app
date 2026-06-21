@@ -6,6 +6,7 @@ import { CommunityPost, CommunityPostSchema } from './schemas/community-post.sch
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { CommunitiesService } from './communities.service';
 import { CommunitiesController } from './communities.controller';
+import { ActivityModule } from '../activity/activity.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CommunitiesController } from './communities.controller';
       { name: CommunityPost.name, schema: CommunityPostSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    ActivityModule,
   ],
   providers: [CommunitiesService],
   controllers: [CommunitiesController],
