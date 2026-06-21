@@ -29,6 +29,22 @@ export class Meetup {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   participants: Types.ObjectId[];
 
+  /**
+   * Per-invitee RSVP. One entry per invited person (owner + extras, not the
+   * proposer). Each responds independently — one accept does not decide for the
+   * others. The top-level `status` is a derived rollup for calendar colouring.
+   */
+  @Prop({
+    type: [
+      {
+        user_id: { type: Types.ObjectId, ref: 'User', required: true },
+        status:  { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },
+      },
+    ],
+    default: [],
+  })
+  responses: { user_id: Types.ObjectId; status: string }[];
+
   @Prop({
     enum: ['pending', 'accepted', 'declined', 'cancelled'],
     default: 'pending',

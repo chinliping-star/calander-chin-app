@@ -63,7 +63,7 @@ interface MeetupItem {
   ownerId: string;
   arrangedBy: string;                                   // proposer display name
   arrangedByAvatar?: string;
-  invited: { name: string; avatar?: string }[];         // everyone except the proposer
+  invited: { name: string; avatar?: string; status: 'pending' | 'accepted' | 'declined' }[]; // everyone except the proposer (declined hidden)
 }
 
 interface MeetupDetailInfo {
@@ -134,10 +134,13 @@ function buildMeetupList(meetups: ApiMeetup[], timeFormat: '12h' | '24h'): Meetu
     .filter(m => m.status === 'accepted' || m.status === 'pending')
     .map(m => {
       const proposerId = m.proposer_id?._id ?? '';
-      // Everyone except the proposer = the invited people
+      // Per-invitee RSVP status, keyed by user id
+      const respMap = new Map((m.responses ?? []).map(r => [r.user_id?._id, r.status]));
+      // Everyone except the proposer = the invited people; declined are hidden
       const invited = (m.participants ?? [])
         .filter(p => p._id !== proposerId)
-        .map(p => ({ name: nameOf(p), avatar: p.avatar_url }));
+        .map(p => ({ name: nameOf(p), avatar: p.avatar_url, status: (respMap.get(p._id) ?? 'pending') as 'pending' | 'accepted' | 'declined' }))
+        .filter(p => p.status !== 'declined');
       return {
         id: m._id,
         day: parseInt(m.date.split('-')[2], 10),
@@ -349,6 +352,9 @@ function MeetupDetailModal({
                       style={{ background: 'var(--color-tertiary)' }}>
                       <Avatar name={p.name} src={p.avatar} />
                       <span style={{ color: 'var(--text-h)' }}>{p.name}</span>
+                      {p.status === 'accepted'
+                        ? <Check size={12} style={{ color: 'var(--color-primary)' }} aria-label="accepted" />
+                        : <span className="text-[9px] font-semibold" style={{ color: 'var(--text)' }}>pending</span>}
                     </span>
                   ))}
                 </div>
@@ -1015,9 +1021,17 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
   });
   const attendanceMap = new Map(myAttendance.map(a => [a.meetup_id, a.status]));
 
-  const overrides = data ? buildOverrides(data.days, data.meetups) : {};
+  // Hide meetups I personally declined from my own calendar + list.
+  // The proposer has no response row, so their meetups always stay visible.
+  const myId = user?._id ?? '';
+  const visibleMeetups = (data?.meetups ?? []).filter(m => {
+    const mine = m.responses?.find(r => r.user_id?._id === myId);
+    return !mine || mine.status !== 'declined';
+  });
+
+  const overrides = data ? buildOverrides(data.days, visibleMeetups) : {};
   // Bug 10.1: pass timeFormat to buildMeetupList so times are pre-formatted
-  const meetupList = (data ? buildMeetupList(data.meetups, timeFormat) : []).map(m => ({
+  const meetupList = (data ? buildMeetupList(visibleMeetups, timeFormat) : []).map(m => ({
     ...m,
     attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
   }));

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Activity } from '../types';
+import { useAuthStore } from '../../../store/auth.ts';
 
 const TYPE_LABELS: Record<Activity['type'], string> = {
   meetup_accepted:   'accepted a meetup',
@@ -20,6 +21,9 @@ function timeAgo(iso: string) {
 export function ActivityItem({ activity }: { activity: Activity }) {
   const { actor, type, meta, created_at } = activity;
   const label = TYPE_LABELS[type] ?? type.replace(/_/g, ' ');
+  const me = useAuthStore(s => s.user);
+  const isMe = !!me && me.username === actor.username;
+  const displayName = isMe ? 'You' : actor.display_name;
 
   return (
     <div className="flex items-start gap-3 py-3">
@@ -34,7 +38,7 @@ export function ActivityItem({ activity }: { activity: Activity }) {
       <div className="flex-1 min-w-0">
         <p className="text-sm" style={{ color: 'var(--text-h)' }}>
           <Link to={`/${actor.username}`} style={{ fontWeight: 700, color: 'var(--text-h)', textDecoration: 'none' }}>
-            {actor.display_name}
+            {displayName}
           </Link>
           {' '}{label}
           {meta?.title && (

@@ -76,6 +76,11 @@ export class MeetupsService {
       ...extraParticipants.map((p) => p.toString()),
     ]);
 
+    // One RSVP row per invited person (everyone except the proposer).
+    const responses = Array.from(participantSet)
+      .filter((id) => id !== proposerObjId.toString())
+      .map((id) => ({ user_id: new Types.ObjectId(id), status: 'pending' }));
+
     const meetup = new this.meetupModel({
       proposer_id:  proposerObjId,
       owner_id:     ownerObjId,
@@ -86,6 +91,7 @@ export class MeetupsService {
       location:     dto.location,
       is_private:   dto.is_private ?? false,
       participants: Array.from(participantSet).map((id) => new Types.ObjectId(id)),
+      responses,
       status:       'pending',
     });
 
@@ -161,6 +167,7 @@ export class MeetupsService {
       .populate('proposer_id', 'username display_name avatar_url')
       .populate('owner_id',    'username display_name avatar_url')
       .populate('participants', 'username display_name avatar_url')
+      .populate('responses.user_id', 'username display_name avatar_url')
       .sort({ date: 1, time: 1 })
       .exec();
   }
@@ -171,9 +178,38 @@ export class MeetupsService {
       .populate('proposer_id', 'username display_name avatar_url')
       .populate('owner_id',    'username display_name avatar_url')
       .populate('participants', 'username display_name avatar_url')
+      .populate('responses.user_id', 'username display_name avatar_url')
       .exec();
     if (!meetup) throw new NotFoundException('Meetup not found');
     return meetup;
+  }
+
+  /**
+   * Record one invitee's RSVP independently of the others, then recompute the
+   * rollup `status` used for calendar colouring:
+   *   accepted  → at least one invitee accepted
+   *   declined  → every invitee declined
+   *   pending   → still awaiting someone
+   * The proposer is not an invitee, so they have no response row.
+   */
+  private setResponse(
+    meetup: MeetupDocument,
+    userObjId: Types.ObjectId,
+    status: 'accepted' | 'declined',
+  ): void {
+    const resp = meetup.responses.find(
+      r => r.user_id.toString() === userObjId.toString(),
+    );
+    if (!resp) {
+      throw new ForbiddenException('You were not invited to this meetup');
+    }
+    resp.status = status;
+    meetup.markModified('responses');
+
+    const all = meetup.responses.map(r => r.status);
+    if (all.some(s => s === 'accepted')) meetup.status = 'accepted';
+    else if (all.length > 0 && all.every(s => s === 'declined')) meetup.status = 'declined';
+    else meetup.status = 'pending';
   }
 
   async accept(meetupId: string, clerkId: string): Promise<MeetupDocument> {
@@ -181,14 +217,7 @@ export class MeetupsService {
     if (!meetup) throw new NotFoundException('Meetup not found');
 
     const userObjId = await this.resolveMongoId(clerkId);
-    if (meetup.owner_id.toString() !== userObjId.toString()) {
-      throw new ForbiddenException('Only the owner can accept this meetup');
-    }
-    if (meetup.status !== 'pending') {
-      throw new ForbiddenException(`Cannot accept a meetup with status '${meetup.status}'`);
-    }
-
-    meetup.status = 'accepted';
+    this.setResponse(meetup, userObjId, 'accepted');
     await meetup.save();
 
     this.activitySvc.record(
@@ -199,6 +228,7 @@ export class MeetupsService {
       { title: meetup.title },
     ).catch(() => {});
 
+    // Only the proposer is notified — never the other invitees.
     this.notifSvc.create({
       userId:  meetup.proposer_id as Types.ObjectId,
       actorId: userObjId,
@@ -217,16 +247,10 @@ export class MeetupsService {
     if (!meetup) throw new NotFoundException('Meetup not found');
 
     const userObjId = await this.resolveMongoId(clerkId);
-    if (meetup.owner_id.toString() !== userObjId.toString()) {
-      throw new ForbiddenException('Only the owner can decline this meetup');
-    }
-    if (meetup.status !== 'pending') {
-      throw new ForbiddenException(`Cannot decline a meetup with status '${meetup.status}'`);
-    }
-
-    meetup.status = 'declined';
+    this.setResponse(meetup, userObjId, 'declined');
     await meetup.save();
 
+    // Only the proposer is notified — never the other invitees.
     this.notifSvc.create({
       userId:  meetup.proposer_id as Types.ObjectId,
       actorId: userObjId,
