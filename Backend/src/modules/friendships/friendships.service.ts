@@ -10,6 +10,7 @@ import { Model, Types } from 'mongoose';
 import { Friendship, FriendshipDocument } from './schemas/friendship.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class FriendshipsService {
@@ -19,6 +20,7 @@ export class FriendshipsService {
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
     private readonly notifSvc: NotificationsService,
+    private readonly activitySvc: ActivityService,
   ) {}
 
   private async resolveMongoId(clerkId: string): Promise<Types.ObjectId> {
@@ -168,6 +170,13 @@ export class FriendshipsService {
 
     friendship.status = 'accepted';
     await friendship.save();
+
+    this.activitySvc.record(
+      currentObjId,
+      'friend_added',
+      requesterObjId,
+      'User',
+    ).catch(() => {});
 
     const acceptor = await this.userModel.findById(currentObjId).select('display_name username').lean().exec();
     this.notifSvc.create({
