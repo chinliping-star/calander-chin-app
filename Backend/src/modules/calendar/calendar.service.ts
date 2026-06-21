@@ -50,6 +50,7 @@ export class CalendarService {
         .populate('proposer_id', 'username display_name avatar_url')
         .populate('owner_id', 'username display_name avatar_url')
         .populate('participants', 'username display_name avatar_url')
+        .populate('responses.user_id', 'username display_name avatar_url')
         .exec(),
     ]);
 
