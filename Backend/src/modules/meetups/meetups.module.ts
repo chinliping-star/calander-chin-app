@@ -6,6 +6,7 @@ import { Meetup, MeetupSchema } from './schemas/meetup.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { CalendarDay, CalendarDaySchema } from '../calendar/schemas/calendar-day.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ActivityModule } from '../activity/activity.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       { name: CalendarDay.name, schema: CalendarDaySchema },
     ]),
     NotificationsModule,
+    ActivityModule,
   ],
   controllers: [MeetupsController],
   providers: [MeetupsService],
