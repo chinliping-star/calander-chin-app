@@ -12,6 +12,14 @@ export interface CreateMeetupPayload {
   participants?: string[];
 }
 
+export interface UpdateMeetupPayload {
+  date?: string;
+  time?: string;
+  title?: string;
+  description?: string;
+  location?: string;
+}
+
 export function useMeetupsApi() {
   const api = useApi();
 
@@ -19,6 +27,7 @@ export function useMeetupsApi() {
     getMeetups:   ()                              => api.get<ApiMeetup[]>('/meetups'),
     getMeetup:    (id: string)                    => api.get<ApiMeetup>(`/meetups/${id}`),
     createMeetup: (payload: CreateMeetupPayload)  => api.post<ApiMeetup>('/meetups', payload),
+    updateMeetup: (id: string, payload: UpdateMeetupPayload) => api.patch<ApiMeetup>(`/meetups/${id}`, payload),
     acceptMeetup: (id: string)                    => api.patch<ApiMeetup>(`/meetups/${id}/accept`),
     declineMeetup:(id: string)                    => api.patch<ApiMeetup>(`/meetups/${id}/decline`),
     cancelMeetup: (id: string)                    => api.patch<ApiMeetup>(`/meetups/${id}/cancel`),

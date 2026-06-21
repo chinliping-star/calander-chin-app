@@ -10,6 +10,7 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { Friendship, FriendshipDocument } from '../friendships/schemas/friendship.schema';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { CreatePostDto, UpdatePostDto } from './dto/posts.dto';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class PostsService {
@@ -18,6 +19,7 @@ export class PostsService {
     @InjectModel(User.name)       private readonly userModel:       Model<UserDocument>,
     @InjectModel(Friendship.name) private readonly friendshipModel: Model<FriendshipDocument>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly activitySvc: ActivityService,
   ) {}
 
   private async resolveMongoId(clerkId: string): Promise<Types.ObjectId> {
@@ -128,6 +130,17 @@ export class PostsService {
       meetup_ref: dto.meetup_ref ? new Types.ObjectId(dto.meetup_ref) : undefined,
     });
     await post.save();
+
+    // Only surface non-private posts in the friend activity feed.
+    if (post.privacy !== 'private') {
+      this.activitySvc.record(
+        authorId,
+        'post_created',
+        post._id as Types.ObjectId,
+        'Post',
+        post.title ? { title: post.title } : undefined,
+      ).catch(() => {});
+    }
 
     return this.postModel
       .findById(post._id)

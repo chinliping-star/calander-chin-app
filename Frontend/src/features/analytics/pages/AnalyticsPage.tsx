@@ -76,8 +76,7 @@ const { data: overview, isLoading } = useQuery({
           />
           <StatsCard
             label="Reliability"
-            value={`${overview?.attendanceScore ?? 0}%`}
-            sub="attendance score"
+            value={`${attendance?.score ?? overview?.attendanceScore ?? 0}%`}
             icon={<Star size={16} />}
           />
         </div>
