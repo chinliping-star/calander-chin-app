@@ -17,6 +17,7 @@ import {
   CreatePostDto,
   UpdateRoleDto,
 } from './dto/communities.dto';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class CommunitiesService {
@@ -25,6 +26,7 @@ export class CommunitiesService {
     @InjectModel(CommunityMember.name) private readonly memberModel:      Model<CommunityMemberDocument>,
     @InjectModel(CommunityPost.name)   private readonly postModel:        Model<CommunityPostDocument>,
     @InjectModel(User.name)            private readonly userModel:        Model<UserDocument>,
+    private readonly activitySvc: ActivityService,
   ) {}
 
   private async resolveMongoId(clerkId: string): Promise<Types.ObjectId> {
@@ -99,6 +101,14 @@ export class CommunitiesService {
       role: 'owner',
     }).save();
 
+    this.activitySvc.record(
+      userId,
+      'community_created',
+      community._id as Types.ObjectId,
+      'Community',
+      { name: community.name, slug: community.slug },
+    ).catch(() => {});
+
     return this.communityModel
       .findById(community._id)
       .populate('owner_id', 'username display_name avatar_url')
@@ -153,6 +163,14 @@ export class CommunitiesService {
     }).save();
 
     await this.communityModel.findByIdAndUpdate(communityId, { $inc: { member_count: 1 } }).exec();
+
+    this.activitySvc.record(
+      userId,
+      'community_joined',
+      community._id as Types.ObjectId,
+      'Community',
+      { name: community.name, slug: community.slug },
+    ).catch(() => {});
   }
 
   async leave(clerkId: string, communityId: string): Promise<void> {
