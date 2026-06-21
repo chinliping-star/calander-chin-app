@@ -32,13 +32,18 @@ function apiFriendToProfile(f: ApiFriend): FriendProfile {
 function InvitesPanel() {
   const qc = useQueryClient();
   const meetupsApi = useMeetupsApi();
+  const { user } = useAuthStore();
   const { data: meetups = [], isLoading } = useQuery({
     queryKey: ['meetups'],
     queryFn: () => meetupsApi.getMeetups(),
     staleTime: 30_000,
   });
 
-  const pending = meetups.filter(m => m.status === 'pending');
+  // Show an invite only while MY own RSVP is pending — independent of others.
+  const pending = meetups.filter(m =>
+    m.proposer_id._id !== user?._id &&
+    m.responses?.find(r => r.user_id?._id === user?._id)?.status === 'pending',
+  );
   const [responded, setResponded] = useState<Map<string, 'accepted' | 'declined'>>(new Map());
 
   const accept = useMutation({
