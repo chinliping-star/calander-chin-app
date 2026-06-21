@@ -10,7 +10,9 @@ import { Meetup, MeetupDocument } from './schemas/meetup.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { CalendarDay, CalendarDayDocument } from '../calendar/schemas/calendar-day.schema';
 import { CreateMeetupDto } from './dto/create-meetup.dto';
+import { UpdateMeetupDto } from './dto/update-meetup.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class MeetupsService {
@@ -19,6 +21,7 @@ export class MeetupsService {
     @InjectModel(User.name)       private readonly userModel: Model<UserDocument>,
     @InjectModel(CalendarDay.name) private readonly calendarDayModel: Model<CalendarDayDocument>,
     private readonly notifSvc: NotificationsService,
+    private readonly activitySvc: ActivityService,
   ) {}
 
   private async resolveMongoId(clerkId: string): Promise<Types.ObjectId> {
@@ -108,6 +111,49 @@ export class MeetupsService {
     return meetup;
   }
 
+  async update(
+    meetupId: string,
+    clerkId: string,
+    dto: UpdateMeetupDto,
+  ): Promise<MeetupDocument> {
+    const meetup = await this.meetupModel.findById(meetupId).exec();
+    if (!meetup) throw new NotFoundException('Meetup not found');
+
+    const userObjId = await this.resolveMongoId(clerkId);
+    if (meetup.proposer_id.toString() !== userObjId.toString()) {
+      throw new ForbiddenException('Only the person who planned this meetup can edit it');
+    }
+
+    // If the date changes, re-validate against the owner's busy days and daily limit.
+    if (dto.date && dto.date !== meetup.date) {
+      const busyDay = await this.calendarDayModel.findOne({
+        user_id: meetup.owner_id,
+        date: dto.date,
+        status: 'blocked',
+      }).exec();
+      if (busyDay) throw new BadRequestException('This user is busy on that date');
+
+      const existingCount = await this.meetupModel.countDocuments({
+        owner_id: meetup.owner_id,
+        date: dto.date,
+        status: { $in: ['pending', 'accepted'] },
+        _id: { $ne: meetup._id },
+      }).exec();
+      if (existingCount >= 3) {
+        throw new BadRequestException('This user already has 3 meetups on that date');
+      }
+    }
+
+    if (dto.date        !== undefined) meetup.date        = dto.date;
+    if (dto.time        !== undefined) meetup.time        = dto.time;
+    if (dto.title       !== undefined) meetup.title       = dto.title;
+    if (dto.description !== undefined) meetup.description = dto.description;
+    if (dto.location    !== undefined) meetup.location    = dto.location;
+
+    await meetup.save();
+    return this.findById(meetupId);
+  }
+
   async findAllForUser(clerkId: string): Promise<MeetupDocument[]> {
     const userObjId = await this.resolveMongoId(clerkId);
     return this.meetupModel
@@ -144,6 +190,14 @@ export class MeetupsService {
 
     meetup.status = 'accepted';
     await meetup.save();
+
+    this.activitySvc.record(
+      userObjId,
+      'meetup_accepted',
+      meetup._id as Types.ObjectId,
+      'Meetup',
+      { title: meetup.title },
+    ).catch(() => {});
 
     this.notifSvc.create({
       userId:  meetup.proposer_id as Types.ObjectId,

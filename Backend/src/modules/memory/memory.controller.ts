@@ -45,12 +45,13 @@ export class MemoryController {
     return this.memoryService.uploadPhoto(clerkId, meetupId, file);
   }
 
-  @Delete(':meetupId/photo')
+  @Delete(':meetupId/photo/:photoId')
   @HttpCode(HttpStatus.OK)
   async deletePhoto(
     @CurrentUser() clerkId: string,
     @Param('meetupId') meetupId: string,
+    @Param('photoId') photoId: string,
   ) {
-    return this.memoryService.deletePhoto(clerkId, meetupId);
+    return this.memoryService.deletePhoto(clerkId, meetupId, photoId);
   }
 }
