@@ -24,6 +24,27 @@ export class MemoryService {
     return user;
   }
 
+  /** Any invited participant (proposer / owner / participants) may add photos. */
+  private assertParticipant(meetup: MeetupDocument, userObjId: Types.ObjectId): void {
+    const isParticipant =
+      meetup.proposer_id.toString() === userObjId.toString() ||
+      meetup.owner_id.toString() === userObjId.toString() ||
+      meetup.participants.some(p => p.toString() === userObjId.toString());
+    if (!isParticipant) {
+      throw new ForbiddenException('You were not part of this meetup');
+    }
+  }
+
+  private populated(meetupId: string): Promise<MeetupDocument> {
+    return this.meetupModel
+      .findById(meetupId)
+      .populate('proposer_id', 'username display_name avatar_url')
+      .populate('owner_id', 'username display_name avatar_url')
+      .populate('participants', 'username display_name avatar_url')
+      .populate('memory_photos.added_by', 'username display_name avatar_url')
+      .exec() as Promise<MeetupDocument>;
+  }
+
   async uploadPhoto(
     clerkId: string,
     meetupId: string,
@@ -39,62 +60,55 @@ export class MemoryService {
     if (!meetup) throw new NotFoundException('Meetup not found');
 
     const userObjId = user._id as Types.ObjectId;
-    const isParticipant =
-      meetup.proposer_id.toString() === userObjId.toString() ||
-      meetup.owner_id.toString() === userObjId.toString() ||
-      meetup.participants.some(p => p.toString() === userObjId.toString());
-
-    if (!isParticipant) {
-      throw new ForbiddenException('You were not part of this meetup');
-    }
+    this.assertParticipant(meetup, userObjId);
 
     if (meetup.status !== 'accepted') {
       throw new ForbiddenException('Can only add photos to accepted meetups');
     }
 
-    // Delete old photo from Cloudinary if exists
-    if (meetup.memory_photo_url) {
-      const parts = meetup.memory_photo_url.split('/');
-      const fileWithExt = parts[parts.length - 1];
-      const folder = parts[parts.length - 2];
-      const publicId = `${folder}/${fileWithExt.split('.')[0]}`;
-      await this.cloudinaryService.deleteFile(publicId).catch(() => null);
-    }
-
     const result = await this.cloudinaryService.uploadFile(file, 'helloxxx/memories') as { secure_url: string };
-    meetup.memory_photo_url = result.secure_url;
+    meetup.memory_photos.push({
+      url: result.secure_url,
+      added_by: userObjId,
+      added_at: new Date(),
+    });
     await meetup.save();
 
-    return this.meetupModel
-      .findById(meetupId)
-      .populate('proposer_id', 'username display_name avatar_url')
-      .populate('owner_id', 'username display_name avatar_url')
-      .exec() as Promise<MeetupDocument>;
+    return this.populated(meetupId);
   }
 
-  async deletePhoto(clerkId: string, meetupId: string): Promise<MeetupDocument> {
+  /** A photo may be removed by whoever added it, or by the meetup owner. */
+  async deletePhoto(
+    clerkId: string,
+    meetupId: string,
+    photoId: string,
+  ): Promise<MeetupDocument> {
     const user = await this.resolveUser(clerkId);
     const meetup = await this.meetupModel.findById(meetupId).exec();
     if (!meetup) throw new NotFoundException('Meetup not found');
 
     const userObjId = user._id as Types.ObjectId;
-    const isParticipant =
-      meetup.proposer_id.toString() === userObjId.toString() ||
+    const photo = (meetup.memory_photos as unknown as Array<{ _id: Types.ObjectId; url: string; added_by: Types.ObjectId }>)
+      .find(p => p._id.toString() === photoId);
+    if (!photo) throw new NotFoundException('Photo not found');
+
+    const canDelete =
+      photo.added_by.toString() === userObjId.toString() ||
       meetup.owner_id.toString() === userObjId.toString();
+    if (!canDelete) throw new ForbiddenException('Cannot remove this photo');
 
-    if (!isParticipant) throw new ForbiddenException('Cannot remove this photo');
-    if (!meetup.memory_photo_url) throw new NotFoundException('No photo to delete');
-
-    const parts = meetup.memory_photo_url.split('/');
+    // Remove from Cloudinary
+    const parts = photo.url.split('/');
     const fileWithExt = parts[parts.length - 1];
     const folder = parts[parts.length - 2];
     const publicId = `${folder}/${fileWithExt.split('.')[0]}`;
     await this.cloudinaryService.deleteFile(publicId).catch(() => null);
 
-    meetup.memory_photo_url = undefined as unknown as string;
+    meetup.memory_photos = (meetup.memory_photos as unknown as Array<{ _id: Types.ObjectId }>)
+      .filter(p => p._id.toString() !== photoId) as unknown as typeof meetup.memory_photos;
     await meetup.save();
 
-    return meetup;
+    return this.populated(meetupId);
   }
 
   async getAlbum(clerkId: string): Promise<MeetupDocument[]> {
@@ -103,12 +117,17 @@ export class MemoryService {
 
     return this.meetupModel
       .find({
-        $or: [{ proposer_id: userObjId }, { owner_id: userObjId }],
+        $or: [
+          { proposer_id: userObjId },
+          { owner_id: userObjId },
+          { participants: userObjId },
+        ],
         status: 'accepted',
       })
       .populate('proposer_id', 'username display_name avatar_url')
       .populate('owner_id',    'username display_name avatar_url')
       .populate('participants', 'username display_name avatar_url')
+      .populate('memory_photos.added_by', 'username display_name avatar_url')
       .sort({ date: -1 })
       .exec();
   }

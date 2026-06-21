@@ -38,8 +38,21 @@ export class Meetup {
   @Prop({ default: false })
   is_private: boolean;
 
+  /** @deprecated kept for backward compat; new uploads go to memory_photos[] */
   @Prop()
   memory_photo_url: string;
+
+  @Prop({
+    type: [
+      {
+        url:      { type: String, required: true },
+        added_by: { type: Types.ObjectId, ref: 'User', required: true },
+        added_at: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  })
+  memory_photos: { url: string; added_by: Types.ObjectId; added_at: Date }[];
 
   @Prop({ default: Date.now })
   created_at: Date;
