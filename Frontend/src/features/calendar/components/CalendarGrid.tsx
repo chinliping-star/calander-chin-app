@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Clock, MapPin, LayoutGrid, AlignJustify, Calendar, X, Trash2 } from 'lucide-react';
+import { Clock, MapPin, LayoutGrid, AlignJustify, Calendar, X, Trash2, Pencil, Check } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/Skeleton.tsx';
 import { ChevronLeft, ChevronRight } from '../../../components/ui/Icon.tsx';
 import { DayCell } from './DayCell.tsx';
@@ -224,6 +224,38 @@ function MeetupDetailModal({
     }
   }
 
+  // Edit — proposer only, same gate as delete
+  const canEdit = canDelete;
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ title: '', date: '', time: '', location: '', description: '' });
+
+  const updateMutation = useMutation({
+    mutationFn: (payload: { title: string; date: string; time: string; location: string; description: string }) =>
+      meetupsApi.updateMeetup(meetup!.id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['calendar'] });
+      qc.invalidateQueries({ queryKey: ['meetups'] });
+      setEditing(false);
+    },
+  });
+
+  function startEdit() {
+    if (!meetup) return;
+    setForm({
+      title: meetup.label,
+      date: meetup.date,
+      time: meetup.time,
+      location: meetup.location ?? '',
+      description: meetup.description ?? '',
+    });
+    setEditing(true);
+  }
+
+  function handleSave() {
+    if (!form.title.trim()) return;
+    updateMutation.mutate(form);
+  }
+
   return createPortal(
     // Backdrop
     <div
@@ -265,12 +297,15 @@ function MeetupDetailModal({
           >
             {isPending ? 'Pending' : 'Confirmed'}
           </span>
-          <h3 className="text-base font-bold leading-snug" style={{ color: 'var(--text-h)' }}>
-            {meetup?.label ?? info.eventLabel}
-          </h3>
+          {!editing && (
+            <h3 className="text-base font-bold leading-snug" style={{ color: 'var(--text-h)' }}>
+              {meetup?.label ?? info.eventLabel}
+            </h3>
+          )}
         </div>
 
-        {/* Details */}
+        {/* Details (view mode) */}
+        {!editing && (
         <div className="flex flex-col gap-2">
           {/* Date */}
           <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
@@ -329,9 +364,69 @@ function MeetupDetailModal({
             </p>
           )}
         </div>
+        )}
 
-        {/* Attendance — only for past, accepted meetups */}
-        {canMarkAttendance && meetup && (
+        {/* Edit form — proposer only */}
+        {editing && meetup && (
+          <div className="flex flex-col gap-2.5">
+            <label className="flex flex-col gap-1 text-[11px] font-semibold" style={{ color: 'var(--text-h)' }}>
+              Title
+              <input
+                type="text"
+                value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                className="rounded-lg px-3 py-2 text-xs font-normal outline-none"
+                style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
+              />
+            </label>
+            <div className="flex gap-2">
+              <label className="flex flex-1 flex-col gap-1 text-[11px] font-semibold" style={{ color: 'var(--text-h)' }}>
+                Date
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                  className="rounded-lg px-3 py-2 text-xs font-normal outline-none"
+                  style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
+                />
+              </label>
+              <label className="flex flex-1 flex-col gap-1 text-[11px] font-semibold" style={{ color: 'var(--text-h)' }}>
+                Time
+                <input
+                  type="text"
+                  value={form.time}
+                  onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
+                  placeholder="5:30 AM"
+                  className="rounded-lg px-3 py-2 text-xs font-normal outline-none"
+                  style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
+                />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 text-[11px] font-semibold" style={{ color: 'var(--text-h)' }}>
+              Location
+              <input
+                type="text"
+                value={form.location}
+                onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                className="rounded-lg px-3 py-2 text-xs font-normal outline-none"
+                style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] font-semibold" style={{ color: 'var(--text-h)' }}>
+              Description
+              <textarea
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                rows={2}
+                className="rounded-lg px-3 py-2 text-xs font-normal outline-none resize-none"
+                style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
+              />
+            </label>
+          </div>
+        )}
+
+        {/* Attendance — only for past, accepted meetups (view mode) */}
+        {!editing && canMarkAttendance && meetup && (
           <div className="flex flex-col gap-1.5">
             <p className="text-xs font-semibold" style={{ color: 'var(--text-h)' }}>How did it go?</p>
             <AttendanceMarker
@@ -343,18 +438,54 @@ function MeetupDetailModal({
           </div>
         )}
 
-        {/* Delete — host/proposer only */}
-        {canDelete && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-            className="mt-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-60"
-            style={{ background: 'rgba(239,68,68,0.10)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.3)' }}
-          >
-            <Trash2 size={15} />
-            {deleteMutation.isPending ? 'Deleting…' : 'Delete Meetup'}
-          </button>
+        {/* Edit-mode actions — Save / Cancel */}
+        {editing && (
+          <div className="mt-1 flex gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={updateMutation.isPending || !form.title.trim()}
+              className="flex flex-1 items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              style={{ background: 'var(--color-primary)' }}
+            >
+              <Check size={15} />
+              {updateMutation.isPending ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              disabled={updateMutation.isPending}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-60"
+              style={{ background: 'var(--color-tertiary)', color: 'var(--text-h)' }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* View-mode actions — Edit / Delete (proposer only) */}
+        {!editing && canEdit && (
+          <div className="mt-1 flex gap-2">
+            <button
+              type="button"
+              onClick={startEdit}
+              className="flex flex-1 items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90"
+              style={{ background: 'var(--accent-bg)', color: 'var(--color-primary-dark)', border: '1px solid var(--accent-border)' }}
+            >
+              <Pencil size={15} />
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="flex flex-1 items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-60"
+              style={{ background: 'rgba(239,68,68,0.10)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.3)' }}
+            >
+              <Trash2 size={15} />
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         )}
       </div>
     </div>,

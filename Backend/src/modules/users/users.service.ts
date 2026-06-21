@@ -145,11 +145,12 @@ export class UsersService {
       .sort({ date: -1 })
       .lean()
       .exec();
-    const meetups = meetupDocs.map((m) => {
+    const meetups = meetupDocs.flatMap((m) => {
       const proposer = m.proposer_id as unknown as PopulatedUser | null;
       const owner = m.owner_id as unknown as PopulatedUser | null;
       const counterpart = proposer?._id?.toString() === userId.toString() ? owner : proposer;
-      return {
+      if (counterpart && counterpart.username?.startsWith('__deleted__')) return [];
+      return [{
         _id: m._id,
         title: m.title,
         date: m.date,
@@ -163,7 +164,7 @@ export class UsersService {
               avatar_url: counterpart.avatar_url ?? '',
             }
           : null,
-      };
+      }];
     });
 
     // ── Communities (clubs the user belongs to) ─────────────────────────────

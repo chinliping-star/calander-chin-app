@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Lock, ImageIcon, X,
   Plus, Loader2, Sparkles,
@@ -13,55 +13,26 @@ import { useAuthStore } from '../../../store/auth.ts';
 import { effectivePremium } from '../../../lib/featureFlags.ts';
 import type { ApiMeetup } from '../../calendar/api/calendar.api.ts';
 
-// ── Local multi-photo store ────────────────────────────────────────────────────
+// ── Shared (server) photos ──────────────────────────────────────────────────────
+// Photos live on the meetup itself (memory_photos[]) so every invited participant
+// sees the same album. memory_photo_url is a legacy single-photo fallback.
 
-interface LocalPhoto {
+interface PhotoView {
   id: string;
   url: string;
   addedBy: string;
-  addedAt: string;
 }
 
-function getLocalPhotos(meetupId: string): LocalPhoto[] {
-  try {
-    const raw = localStorage.getItem(`friendiary-memory-${meetupId}`);
-    return raw ? (JSON.parse(raw) as LocalPhoto[]) : [];
-  } catch { return []; }
-}
-
-function saveLocalPhoto(meetupId: string, photo: LocalPhoto): boolean {
-  try {
-    const existing = getLocalPhotos(meetupId);
-    localStorage.setItem(`friendiary-memory-${meetupId}`, JSON.stringify([...existing, photo]));
-    return true;
-  } catch {
-    return false; // QuotaExceededError
+function photosOf(meetup: ApiMeetup): PhotoView[] {
+  const arr: PhotoView[] = (meetup.memory_photos ?? []).map(p => ({
+    id: p._id,
+    url: p.url,
+    addedBy: p.added_by?.display_name || p.added_by?.username || '',
+  }));
+  if (meetup.memory_photo_url && !arr.some(p => p.url === meetup.memory_photo_url)) {
+    arr.unshift({ id: 'legacy', url: meetup.memory_photo_url, addedBy: 'host' });
   }
-}
-
-function deleteLocalPhoto(meetupId: string, photoId: string) {
-  const updated = getLocalPhotos(meetupId).filter(p => p.id !== photoId);
-  localStorage.setItem(`friendiary-memory-${meetupId}`, JSON.stringify(updated));
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      const MAX = 640;
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.65));
-    };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Image load failed')); };
-    img.src = objectUrl;
-  });
+  return arr;
 }
 
 // ── Participant avatar ────────────────────────────────────────────────────────
@@ -158,16 +129,15 @@ function PremiumGate() {
 
 // ── Album modal (bottom sheet) ────────────────────────────────────────────────
 
-function AlbumModal({ meetup, currentUser, photos, onClose, onPhotoAdded, onDeletePhoto }: {
+function AlbumModal({ meetup, onClose }: {
   meetup: ApiMeetup;
-  currentUser: string;
-  photos: LocalPhoto[];
   onClose: () => void;
-  onPhotoAdded: (photo: LocalPhoto) => void;
-  onDeletePhoto: (id: string) => void;
 }) {
   const [uploading, setUploading] = useState(false);
+  const memoryApi = useMemoryApi();
+  const queryClient = useQueryClient();
   const fileInputId = `album-file-${meetup._id}`;
+  const photos = photosOf(meetup);
   const participants = [meetup.proposer_id, ...meetup.participants].filter(Boolean).filter((p, i, arr) => arr.findIndex(x => x._id === p._id) === i);
   const dayNum = parseInt(meetup.date.split('-')[2], 10);
   const mon = new Date(meetup.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
@@ -178,23 +148,22 @@ function AlbumModal({ meetup, currentUser, photos, onClose, onPhotoAdded, onDele
     e.target.value = '';
     setUploading(true);
     try {
-      const url = await fileToDataUrl(file);
-      const photo: LocalPhoto = {
-        id: String(Date.now()),
-        url,
-        addedBy: currentUser,
-        addedAt: new Date().toISOString(),
-      };
-      const saved = saveLocalPhoto(meetup._id, photo);
-      if (!saved) {
-        alert('Storage full. Delete some photos to free space, then try again.');
-        return;
-      }
-      onPhotoAdded(photo);
-    } catch {
-      alert('Failed to process image. Try a smaller file.');
+      // Share to server so every invited participant sees it.
+      await memoryApi.uploadPhoto(meetup._id, file);
+      await queryClient.invalidateQueries({ queryKey: ['memory', 'album'] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Upload failed. Try a smaller image.');
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleDelete(photoId: string) {
+    try {
+      await memoryApi.deletePhoto(meetup._id, photoId);
+      await queryClient.invalidateQueries({ queryKey: ['memory', 'album'] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Delete failed.');
     }
   }
 
@@ -348,7 +317,7 @@ function AlbumModal({ meetup, currentUser, photos, onClose, onPhotoAdded, onDele
                   />
                   <button
                     type="button"
-                    onClick={e => { e.stopPropagation(); onDeletePhoto(p.id); }}
+                    onClick={e => { e.stopPropagation(); handleDelete(p.id); }}
                     className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full focus-visible:outline-none"
                     style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: 'white' }}
                   >
@@ -403,25 +372,17 @@ const STACK_HOVERED = [
   { rotate:   0, x:   0, y:  0  },
 ];
 
-function MemoryCard({ meetup, currentUser, cardIndex }: {
+function MemoryCard({ meetup, cardIndex }: {
   meetup: ApiMeetup;
-  currentUser: string;
   cardIndex: number;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLElement>(null);
   const inView  = useInView(cardRef, { once: true, margin: '0px 0px -80px 0px' });
+  const memoryApi = useMemoryApi();
+  const queryClient = useQueryClient();
 
-  const [photos, setPhotos] = useState<LocalPhoto[]>(() => {
-    const local = getLocalPhotos(meetup._id);
-    if (meetup.memory_photo_url && !local.some(p => p.url === meetup.memory_photo_url)) {
-      return [
-        { id: 'api', url: meetup.memory_photo_url, addedBy: meetup.proposer_id?.username ?? 'host', addedAt: meetup.date },
-        ...local,
-      ];
-    }
-    return local;
-  });
+  const photos = photosOf(meetup);
 
   const [hovered, setHovered]       = useState(false);
   const [albumOpen, setAlbumOpen]   = useState(false);
@@ -436,15 +397,13 @@ function MemoryCard({ meetup, currentUser, cardIndex }: {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-    const url = await fileToDataUrl(file);
-    const photo: LocalPhoto = { id: String(Date.now()), url, addedBy: currentUser, addedAt: new Date().toISOString() };
-    saveLocalPhoto(meetup._id, photo);
-    setPhotos(prev => [...prev, photo]);
-  }
-
-  function handleDelete(photoId: string) {
-    deleteLocalPhoto(meetup._id, photoId);
-    setPhotos(prev => prev.filter(p => p.id !== photoId));
+    try {
+      // Share to server so every invited participant sees it.
+      await memoryApi.uploadPhoto(meetup._id, file);
+      await queryClient.invalidateQueries({ queryKey: ['memory', 'album'] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Upload failed. Try a smaller image.');
+    }
   }
 
   return (
@@ -597,11 +556,7 @@ function MemoryCard({ meetup, currentUser, cardIndex }: {
         {albumOpen && (
           <AlbumModal
             meetup={meetup}
-            currentUser={currentUser}
-            photos={photos}
             onClose={() => setAlbumOpen(false)}
-            onPhotoAdded={photo => setPhotos(prev => [...prev, photo])}
-            onDeletePhoto={handleDelete}
           />
         )}
       </AnimatePresence>
@@ -642,16 +597,9 @@ export function MemoryPage() {
     staleTime: 30_000,
   });
 
-  const totalPhotos = meetups.reduce((acc, m) => {
-    const local = getLocalPhotos(m._id);
-    const apiPhoto = m.memory_photo_url && !local.some(p => p.url === m.memory_photo_url) ? 1 : 0;
-    return acc + local.length + apiPhoto;
-  }, 0);
+  const totalPhotos = meetups.reduce((acc, m) => acc + photosOf(m).length, 0);
 
-  const meetupsWithPhotos = meetups.filter(m => {
-    const local = getLocalPhotos(m._id);
-    return local.length > 0 || !!m.memory_photo_url;
-  }).length;
+  const meetupsWithPhotos = meetups.filter(m => photosOf(m).length > 0).length;
 
   return (
     <AppShell>
@@ -734,7 +682,7 @@ export function MemoryPage() {
         >
           {meetups.map((m, i) => (
             <div key={m._id} className="w-full" style={{ maxWidth: 240 }}>
-              <MemoryCard meetup={m} currentUser={user?.username ?? ''} cardIndex={i} />
+              <MemoryCard meetup={m} cardIndex={i} />
             </div>
           ))}
         </div>

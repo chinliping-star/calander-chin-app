@@ -29,7 +29,15 @@ export interface ApiMeetup {
   is_private: boolean;
   participants: ApiMeetupUser[];
   memory_photo_url?: string;
+  memory_photos?: ApiMemoryPhoto[];
   created_at: string;
+}
+
+export interface ApiMemoryPhoto {
+  _id: string;
+  url: string;
+  added_by: ApiMeetupUser;
+  added_at: string;
 }
 
 export interface ApiCalendarUser {
