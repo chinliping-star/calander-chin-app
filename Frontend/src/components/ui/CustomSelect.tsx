@@ -18,6 +18,7 @@ interface CustomSelectProps<T extends string = string> {
   error?: string;
   disabled?: boolean;
   className?: string;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function CustomSelect<T extends string = string>({
@@ -29,8 +30,12 @@ export function CustomSelect<T extends string = string>({
   error,
   disabled,
   className,
+  onOpenChange,
 }: CustomSelectProps<T>) {
   const [open, setOpen] = useState(false);
+
+  // Notify parent on open/close (e.g. to grow modal so dropdown fits)
+  useEffect(() => { onOpenChange?.(open); }, [open, onOpenChange]);
   const [focusedIdx, setFocusedIdx] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);

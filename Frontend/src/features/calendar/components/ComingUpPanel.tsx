@@ -33,16 +33,22 @@ export function ComingUpPanel() {
 
   const today = new Date().toISOString().split('T')[0];
 
+  // My personal RSVP on a meetup (proposer has no response row → undefined)
+  const myResponse = (m: typeof meetups[number]) =>
+    m.responses?.find(r => r.user_id?._id === user?._id)?.status;
+
   const upcoming = meetups
     .filter(m => m.date >= today && (m.status === 'accepted' || m.status === 'pending'))
+    .filter(m => myResponse(m) !== 'declined') // hide meetups I declined
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5);
 
-  // Only show requests where current user is the RECEIVER (owner), not the proposer
+  // Show a request only while MY own response is still pending — one friend
+  // accepting does not clear it for the others.
   const pendingRequests = meetups.filter(m =>
-    m.status === 'pending' &&
     m.date >= today &&
-    m.proposer_id._id !== user?._id
+    m.proposer_id._id !== user?._id &&
+    myResponse(m) === 'pending'
   );
 
   const accept = useMutation({

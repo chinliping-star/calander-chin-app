@@ -28,6 +28,7 @@ export function NewPostModal({ onClose, onSubmit, submitting }: Props) {
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -61,7 +62,10 @@ export function NewPostModal({ onClose, onSubmit, submitting }: Props) {
           <button onClick={onClose} style={{ color: 'var(--text)' }}><X size={18} /></button>
         </div>
 
-        <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto">
+        <div
+          className="px-5 py-4 flex flex-col gap-4 overflow-y-auto transition-[padding] duration-200"
+          style={{ paddingBottom: privacyOpen ? '180px' : undefined }}
+        >
           {/* Title */}
           <input
             value={title}
@@ -113,6 +117,7 @@ export function NewPostModal({ onClose, onSubmit, submitting }: Props) {
             value={privacy}
             onChange={setPrivacy}
             options={PRIVACY_OPTIONS}
+            onOpenChange={setPrivacyOpen}
           />
         </div>
 

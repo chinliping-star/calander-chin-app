@@ -28,9 +28,15 @@ export interface ApiMeetup {
   status: 'pending' | 'accepted' | 'declined' | 'cancelled';
   is_private: boolean;
   participants: ApiMeetupUser[];
+  responses?: ApiMeetupResponse[];
   memory_photo_url?: string;
   memory_photos?: ApiMemoryPhoto[];
   created_at: string;
+}
+
+export interface ApiMeetupResponse {
+  user_id: ApiMeetupUser;
+  status: 'pending' | 'accepted' | 'declined';
 }
 
 export interface ApiMemoryPhoto {
