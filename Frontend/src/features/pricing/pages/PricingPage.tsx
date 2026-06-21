@@ -100,7 +100,7 @@ export function PricingPage() {
       <div className="max-w-5xl mx-auto pb-20">
 
         {/* Hero */}
-        <div className="text-center py-10">
+        <div className="flex flex-col items-center text-center py-10">
           <span
             className="inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4"
             style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)' }}
