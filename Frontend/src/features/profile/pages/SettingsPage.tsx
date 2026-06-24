@@ -353,6 +353,12 @@ function ThemeCard({ t, isActive, onSelect }: { t: import('../../../lib/theme.ts
 
 function ThemeSection() {
   const { theme, setTheme } = useThemeStore();
+  const api = useApi();
+
+  function handleThemeSelect(id: Parameters<typeof setTheme>[0]) {
+    setTheme(id);
+    api.patch('/users/me', { theme: id }).catch(() => {/* silent — local theme already applied */});
+  }
 
   return (
     <section aria-labelledby="theme-heading">
@@ -377,7 +383,7 @@ function ThemeSection() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {THEMES.map(t => (
-            <ThemeCard key={t.id} t={t} isActive={theme === t.id} onSelect={() => setTheme(t.id)} />
+            <ThemeCard key={t.id} t={t} isActive={theme === t.id} onSelect={() => handleThemeSelect(t.id)} />
           ))}
         </div>
 
