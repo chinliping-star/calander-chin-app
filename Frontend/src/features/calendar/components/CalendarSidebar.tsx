@@ -42,7 +42,7 @@ export function CalendarSidebar() {
 
   return (
     <aside
-      className="flex w-60 shrink-0 flex-col gap-4"
+      className="flex w-full shrink-0 flex-col gap-4 lg:w-60"
       aria-label="Profile and friends sidebar"
     >
       {/* Profile card */}

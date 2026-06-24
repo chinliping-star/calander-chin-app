@@ -224,10 +224,10 @@ function AlbumModal({ meetup, onClose }: {
 
         {/* Header */}
         <div
-          className="flex items-center justify-between px-5 py-3 flex-shrink-0"
+          className="flex flex-col gap-3 px-5 py-3 shrink-0 sm:flex-row sm:items-center sm:justify-between"
           style={{ borderBottom: '1px solid var(--border)' }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Date chip */}
             <div
               className="flex flex-col items-center justify-center h-11 w-11 rounded-2xl shrink-0"
@@ -236,10 +236,10 @@ function AlbumModal({ meetup, onClose }: {
               <span className="text-[8px] font-bold uppercase tracking-wide" style={{ color: 'var(--color-primary)' }}>{mon}</span>
               <span className="text-base font-bold leading-tight" style={{ color: 'var(--color-primary-dark)' }}>{dayNum}</span>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="font-bold truncate" style={{ color: 'var(--text-h)' }}>{meetup.title}</p>
               <div className="flex items-center gap-2 mt-0.5">
-                <div className="flex -space-x-1.5 items-center">
+                <div className="flex -space-x-1.5 items-center shrink-0">
                   {participants.slice(0, 4).map((p, i) => (
                     <ParticipantAvatar key={i} user={p} size={20} border="1.5px solid var(--bg)" />
                   ))}
@@ -252,15 +252,24 @@ function AlbumModal({ meetup, onClose }: {
                     </span>
                   )}
                 </div>
-                <span className="text-[11px]" style={{ color: 'var(--text)' }}>
+                <span className="text-[11px] truncate" style={{ color: 'var(--text)' }}>
                   {participants.length} people · {photos.length} photo{photos.length !== 1 ? 's' : ''}
                 </span>
               </div>
             </div>
+            {/* Close — pinned top-right on mobile, hidden on desktop (shown in actions row) */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70 focus-visible:outline-none shrink-0 sm:hidden"
+              style={{ backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)' }}
+            >
+              <X size={16} />
+            </button>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="hidden sm:block text-[10px] font-semibold" style={{ color: 'var(--text)' }}>
+          <div className="flex items-center justify-between gap-2 shrink-0 sm:justify-end">
+            <span className="text-[10px] font-semibold" style={{ color: 'var(--text)' }}>
               {myPhotoCount}/{MAX_PHOTOS_PER_USER} · max 5MB
             </span>
             {/* label triggers native file picker — no JS .click() needed */}
@@ -282,7 +291,7 @@ function AlbumModal({ meetup, onClose }: {
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70 focus-visible:outline-none"
+              className="hidden h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70 focus-visible:outline-none sm:flex"
               style={{ backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)' }}
             >
               <X size={16} />

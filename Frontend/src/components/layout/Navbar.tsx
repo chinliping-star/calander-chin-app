@@ -13,7 +13,7 @@ import { useIsAdmin } from '../../features/admin/hooks/useIsAdmin.ts';
 import { Logo } from '../Logo.tsx';
 import { useAuthStore } from '../../store/auth.ts';
 import { useClerk } from '@clerk/clerk-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useChatApi } from '../../features/chat/api/chat.api.ts';
 import { useNotificationsApi } from '../../features/notifications/api/notifications.api.ts';
 import { NotificationPanel } from '../../features/notifications/components/NotificationPanel.tsx';
@@ -67,15 +67,27 @@ export function Navbar() {
   });
   const notifCount = notifUnread?.count ?? 0;
 
-  const NAV_LINKS = [
+  // Pre-fetch full notification list in background so bell panel opens instantly
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!user) return;
+    void qc.prefetchQuery({
+      queryKey: ['notifications'],
+      queryFn: () => notifApi.getAll(),
+      staleTime: 30_000,
+    });
+  }, [notifCount, user, qc, notifApi]);
+
+  // secondary: hidden on md (tablet), visible on xl (wide desktop)
+  const NAV_LINKS: { label: string; href: string; secondary?: boolean }[] = [
     { label: 'My Calendar', href: user ? `/${user.username}/calendar` : '/login' },
     { label: 'Friends',     href: '/friends' },
-    { label: 'Memories',    href: '/memory' },
-    { label: 'Diary',       href: '/diary' },
-    { label: 'Pricing',     href: '/pricing' },
     { label: 'Chat',        href: '/chat' },
-    { label: 'Analytics',   href: '/analytics' },
-    { label: 'Activity',    href: '/activity' },
+    { label: 'Memories',    href: '/memory',    secondary: true },
+    { label: 'Diary',       href: '/diary',     secondary: true },
+    { label: 'Pricing',     href: '/pricing',   secondary: true },
+    { label: 'Analytics',   href: '/analytics', secondary: true },
+    { label: 'Activity',    href: '/activity',  secondary: true },
   ];
 
   // Mobile bottom nav — primary 4 tabs
@@ -102,18 +114,18 @@ export function Navbar() {
 
   return (
     <>
-      {/* ── Desktop top header ── */}
+      {/* ── Desktop top header (wide screens only — tablet/mobile use bottom nav) ── */}
       <header
-        className="sticky top-0 z-50 w-full border-b hidden md:block"
+        className="sticky top-0 z-50 w-full border-b hidden xl:block"
         style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}
       >
-        <div className="mx-auto flex  h-16 max-w-screen-xl items-center justify-between px-4 md:px-6">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
           {/* Logo */}
           <Logo className="mt-4" to={user ? `/${user.username}/calendar` : '/login'} size={90} showText={false} />
 
           {/* Center nav */}
           <nav aria-label="Main navigation">
-            <ul className="flex items-center gap-6" role="list">
+            <ul className="flex items-center gap-5" role="list">
               {NAV_LINKS.map(({ label, href }) => {
                 const active = isActive(href);
                 return (
@@ -274,9 +286,9 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* ── Mobile bottom nav ── */}
+      {/* ── Mobile + tablet bottom nav ── */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-50 xl:hidden"
         aria-label="Mobile navigation"
       >
         <div
@@ -295,7 +307,7 @@ export function Navbar() {
                   key={href}
                   to={href}
                   aria-current={active ? 'page' : undefined}
-                  className="relative flex flex-col items-center gap-0.5 px-3 py-2 min-w-[56px]"
+                  className="relative flex flex-col items-center gap-0.5 px-3 py-2 min-w-14"
                   style={{ textDecoration: 'none' }}
                 >
                   <div
@@ -334,7 +346,7 @@ export function Navbar() {
               type="button"
               aria-label="More navigation options"
               onClick={() => setMoreOpen(true)}
-              className="flex flex-col items-center gap-0.5 px-3 py-2 min-w-[56px]"
+              className="flex flex-col items-center gap-0.5 px-3 py-2 min-w-14"
             >
               <div
                 className="flex items-center justify-center rounded-full transition-all"
@@ -358,7 +370,7 @@ export function Navbar() {
           {/* Backdrop */}
           <motion.div
             key="more-backdrop"
-            className="fixed inset-0 z-[9980]"
+            className="fixed inset-0 z-9980"
             style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -369,7 +381,7 @@ export function Navbar() {
           {/* Sheet */}
           <motion.div
             key="more-sheet"
-            className="fixed left-0 right-0 bottom-0 z-[9981] rounded-t-3xl pb-8"
+            className="fixed left-0 right-0 bottom-0 z-9981 rounded-t-3xl pb-8"
             style={{
               backgroundColor: 'var(--bg)',
               border: '1px solid var(--border)',
@@ -465,9 +477,9 @@ export function Navbar() {
         document.body,
       )}
 
-      {/* Notification panel (mobile) — portal so it's above everything */}
+      {/* Notification panel (mobile + tablet) — portal so it's above everything */}
       {notifOpen && (
-        <div className="md:hidden">
+        <div className="xl:hidden">
           <NotificationPanel onClose={() => setNotifOpen(false)} />
         </div>
       )}

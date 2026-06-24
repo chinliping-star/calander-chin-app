@@ -49,8 +49,11 @@ const DAY_NUMBER_STYLES: Record<string, CSSProperties> = {
 function MeetupChip({ m, date, onMeetupClick }: {
   m: DayCellMeetup; date: string; onMeetupClick?: (info: MeetupClickInfo) => void;
 }) {
+  // Accepted = "Planned" → follows the active theme (var(--color-primary)).
+  // Pending = purple, per the calendar legend. (Proposer's own theme colour is
+  // surfaced on their profile, not on every chip — keeps the calendar coherent.)
   const style: CSSProperties = m.status === 'accepted'
-    ? { backgroundColor: m.color ?? 'var(--color-primary)', color: '#fff' }
+    ? { backgroundColor: 'var(--color-primary)', color: '#fff' }
     : { backgroundColor: '#ede9fe', color: '#7c3aed' };
   return (
     <button
