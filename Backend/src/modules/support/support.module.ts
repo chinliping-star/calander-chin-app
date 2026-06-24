@@ -18,5 +18,6 @@ import { SupportController } from './support.controller';
   ],
   providers:   [SupportService],
   controllers: [SupportController],
+  exports:     [SupportService],
 })
 export class SupportModule {}

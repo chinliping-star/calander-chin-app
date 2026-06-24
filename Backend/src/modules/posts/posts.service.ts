@@ -11,6 +11,8 @@ import { Friendship, FriendshipDocument } from '../friendships/schemas/friendshi
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { CreatePostDto, UpdatePostDto } from './dto/posts.dto';
 import { ActivityService } from '../activity/activity.service';
+import { ReportsService } from '../reports/reports.service';
+import { ModerationService } from '../reports/moderation.service';
 
 @Injectable()
 export class PostsService {
@@ -20,6 +22,8 @@ export class PostsService {
     @InjectModel(Friendship.name) private readonly friendshipModel: Model<FriendshipDocument>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly activitySvc: ActivityService,
+    private readonly reportsSvc: ReportsService,
+    private readonly moderationSvc: ModerationService,
   ) {}
 
   private async resolveMongoId(clerkId: string): Promise<Types.ObjectId> {
@@ -130,6 +134,12 @@ export class PostsService {
       meetup_ref: dto.meetup_ref ? new Types.ObjectId(dto.meetup_ref) : undefined,
     });
     await post.save();
+
+    // Auto-moderation: scan content; auto-file a report for human review if flagged.
+    const scan = this.moderationSvc.scan(`${dto.title ?? ''} ${dto.content ?? ''}`);
+    if (scan.flagged && scan.reason) {
+      this.reportsSvc.createAuto('post', post._id as Types.ObjectId, scan.reason, scan.detail).catch(() => {});
+    }
 
     // Only surface non-private posts in the friend activity feed.
     if (post.privacy !== 'private') {
