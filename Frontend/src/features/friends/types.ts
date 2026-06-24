@@ -9,6 +9,7 @@ export interface FriendProfile {
   meetupCount: number;
   tags: FriendTag[];
   mutualCount?: number;
+  theme?: string;
 }
 
 export interface PendingRequest {

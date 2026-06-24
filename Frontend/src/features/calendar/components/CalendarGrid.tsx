@@ -8,8 +8,10 @@ import { ChevronLeft, ChevronRight } from '../../../components/ui/Icon.tsx';
 import { DayCell } from './DayCell.tsx';
 import { useCalendarApi, type ApiMeetup, type ApiCalendarDay } from '../api/calendar.api.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
+import { InviteFriendsPicker } from '../../meetup/components/InviteFriendsPicker.tsx';
 import { useAuthStore } from '../../../store/auth.ts';
 import { usePreferences } from '../../../lib/preferences.ts';
+import { themeColor } from '../../../lib/theme.ts';
 import type { CalendarDayData } from '../types.ts';
 import type { DayStatus } from '../../../types/index.ts';
 import { AttendanceMarker } from '../../analytics/components/AttendanceMarker.tsx';
@@ -64,6 +66,8 @@ interface MeetupItem {
   arrangedBy: string;                                   // proposer display name
   arrangedByAvatar?: string;
   invited: { name: string; avatar?: string; status: 'pending' | 'accepted' | 'declined' }[]; // everyone except the proposer (declined hidden)
+  participantIds: string[];                             // extra invitee ids (excludes proposer, includes owner)
+  color: string;                                        // proposer's theme colour
 }
 
 interface MeetupDetailInfo {
@@ -156,6 +160,10 @@ function buildMeetupList(meetups: ApiMeetup[], timeFormat: '12h' | '24h'): Meetu
         arrangedBy: nameOf(m.proposer_id),
         arrangedByAvatar: m.proposer_id?.avatar_url,
         invited,
+        participantIds: (m.participants ?? [])
+          .map(p => p._id)
+          .filter(id => id !== proposerId),
+        color: themeColor(m.proposer_id?.theme),
       };
     })
     // Sort by date ascending so the list is chronological, not random
@@ -231,9 +239,10 @@ function MeetupDetailModal({
   const canEdit = canDelete;
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ title: '', date: '', time: '', location: '', description: '' });
+  const [invited, setInvited] = useState<string[]>([]);
 
   const updateMutation = useMutation({
-    mutationFn: (payload: { title: string; date: string; time: string; location: string; description: string }) =>
+    mutationFn: (payload: { title: string; date: string; time: string; location: string; description: string; participants: string[] }) =>
       meetupsApi.updateMeetup(meetup!.id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['calendar'] });
@@ -251,12 +260,13 @@ function MeetupDetailModal({
       location: meetup.location ?? '',
       description: meetup.description ?? '',
     });
+    setInvited(meetup.participantIds);
     setEditing(true);
   }
 
   function handleSave() {
     if (!form.title.trim()) return;
-    updateMutation.mutate(form);
+    updateMutation.mutate({ ...form, participants: invited });
   }
 
   return createPortal(
@@ -428,6 +438,9 @@ function MeetupDetailModal({
                 style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
               />
             </label>
+            <div className="pt-1">
+              <InviteFriendsPicker selected={invited} onChange={setInvited} />
+            </div>
           </div>
         )}
 
@@ -619,11 +632,10 @@ function MonthlyView({
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Count meetups per date for the 3-per-day limit
-  const meetupCountByDate: Record<string, number> = {};
+  // Group meetups by full date string so each cell can show several chips
+  const meetupsByDate: Record<string, MeetupItem[]> = {};
   meetups.forEach(m => {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(m.day).padStart(2,'0')}`;
-    meetupCountByDate[dateStr] = (meetupCountByDate[dateStr] ?? 0) + 1;
+    (meetupsByDate[m.date] ??= []).push(m);
   });
 
   const cells: CalendarDayData[] = [];
@@ -655,7 +667,7 @@ function MonthlyView({
               data={day}
               isToday={day.date === todayStr}
               isOwn={isOwn}
-              meetupCount={meetupCountByDate[day.date] ?? 0}
+              meetups={meetupsByDate[day.date] ?? []}
               onNewMeetup={onNewMeetup}
               onToggleAvailability={onToggleAvailability}
               onClick={!isOwn ? (d) => onDayClick?.(d.date, d.status) : undefined}

@@ -25,6 +25,11 @@ export const THEMES: ThemeMeta[] = [
   { id: 'grey',   label: 'Grey',   primary: '#6B7280', bg: '#F9FAFB', surface: '#ffffff',  textH: '#374151', text: '#6B7280', border: '#D1D5DB' },
 ];
 
+/** Map a stored theme id → its primary colour. Falls back to pink. */
+export function themeColor(theme?: string | null): string {
+  return THEMES.find(t => t.id === theme)?.primary ?? '#FF7FB1';
+}
+
 interface ThemeState {
   theme: Theme;
   setTheme: (theme: Theme) => void;

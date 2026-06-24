@@ -5,6 +5,7 @@ export interface ApiFriendUser {
   username: string;
   display_name: string;
   avatar_url?: string;
+  theme?: string;
 }
 
 export interface ApiFriend {

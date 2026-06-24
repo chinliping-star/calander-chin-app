@@ -5,6 +5,7 @@ import { UserPlus } from '../../../components/ui/Icon.tsx';
 import { useAuthStore } from '../../../store/auth.ts';
 import { useFriendsApi } from '../../friends/api/friends.api.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
+import { themeColor } from '../../../lib/theme.ts';
 
 const CARD_STYLE: CSSProperties = {
   backgroundColor: 'var(--bg)',
@@ -142,12 +143,18 @@ export function CalendarSidebar() {
                 className="flex items-center gap-2 rounded-xl px-1 py-0.5 transition-all hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
                 style={{ textDecoration: 'none' }}
               >
-                <img
-                  src={f.friend.avatar_url || `https://i.pravatar.cc/150?u=${f.friend.username}`}
-                  alt={f.friend.display_name}
-                  className="h-7 w-7 rounded-full object-cover shrink-0"
-                  width={28} height={28}
-                />
+                <span
+                  className="rounded-full shrink-0 block"
+                  style={{ background: themeColor(f.friend.theme), padding: '2px' }}
+                  title={`${f.friend.display_name}'s theme`}
+                >
+                  <img
+                    src={f.friend.avatar_url || `https://i.pravatar.cc/150?u=${f.friend.username}`}
+                    alt={f.friend.display_name}
+                    className="h-7 w-7 rounded-full object-cover block"
+                    width={28} height={28}
+                  />
+                </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-h)' }}>
                     {f.friend.display_name}

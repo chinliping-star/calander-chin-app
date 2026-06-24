@@ -24,6 +24,7 @@ function apiFriendToProfile(f: ApiFriend): FriendProfile {
     avatarUrl: f.friend.avatar_url || `https://i.pravatar.cc/150?u=${f.friend.username}`,
     meetupCount: 0,
     tags: [],
+    theme: f.friend.theme,
   };
 }
 
