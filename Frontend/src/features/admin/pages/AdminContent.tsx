@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Trash2 } from 'lucide-react';
 import { useAdminApi } from '../api/admin.api.ts';
+import type { Paginated } from '../api/admin.api.ts';
 
 type Tab = 'posts' | 'communities' | 'meetups';
 const TABS: { id: Tab; label: string }[] = [
@@ -21,12 +22,12 @@ export function AdminContent() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<Paginated<Record<string, any>>>({
     queryKey: ['admin', tab, { search, page }],
     queryFn: () => {
-      if (tab === 'posts')       return api.listPosts({ search, page });
-      if (tab === 'communities') return api.listCommunities({ search, page });
-      return api.listMeetups({ search, page });
+      if (tab === 'posts')       return api.listPosts({ search, page }) as any;
+      if (tab === 'communities') return api.listCommunities({ search, page }) as any;
+      return api.listMeetups({ search, page }) as any;
     },
     staleTime: 15_000,
   });
