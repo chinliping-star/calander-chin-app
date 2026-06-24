@@ -12,6 +12,7 @@ import {
 import { PostFeed } from '../../posts/components/PostFeed.tsx';
 import { NewPostModal } from '../../posts/components/NewPostModal.tsx';
 import { usePostsApi } from '../../posts/api/posts.api.ts';
+import { themeColor } from '../../../lib/theme.ts';
 import {
   UserPlus,
   MessageCircle,
@@ -25,10 +26,12 @@ import {
   Tag,
   BookOpen,
   ChevronRight,
+  Flag,
 } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { useAuthStore } from '../../../store/auth.ts';
+import { ReportModal } from '../../reports/components/ReportModal.tsx';
 import { api } from '../../../lib/api.ts';
 import { effectivePremium } from '../../../lib/featureFlags.ts';
 import type { User } from '../../../types/index.ts';
@@ -523,6 +526,7 @@ export function ProfilePage() {
 
   const { user: me } = useAuthStore();
   const isOwnProfile = username === me?.username;
+  const [reportOpen, setReportOpen] = useState(false);
   const viewerIsPremium = effectivePremium(me?.is_premium);
   const postsApi = usePostsApi();
   const friendsApi = useFriendsApi();
@@ -669,9 +673,10 @@ export function ProfilePage() {
                   className="h-20 w-20 rounded-full object-cover"
                   width={80}
                   height={80}
+                  title={`${displayName}'s theme`}
                   style={{
                     border: '4px solid var(--bg)',
-                    boxShadow: '0 4px 16px rgba(74,62,78,0.18)',
+                    boxShadow: `0 0 0 3px ${themeColor((profileUser as User & { theme?: string }).theme)}, 0 4px 16px rgba(74,62,78,0.18)`,
                   }}
                 />
                 {profileUser.is_premium && (
@@ -722,7 +727,20 @@ export function ProfilePage() {
                   >
                     <MessageCircle size={15} style={{ color: 'var(--color-primary)' }} />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setReportOpen(true)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:opacity-80 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+                    style={{ backgroundColor: 'var(--color-tertiary)', border: '1.5px solid var(--border)' }}
+                    aria-label="Report user"
+                  >
+                    <Flag size={15} style={{ color: 'var(--text)' }} />
+                  </button>
                 </div>
+              )}
+
+              {reportOpen && profileUser._id && (
+                <ReportModal targetType="user" targetId={profileUser._id} onClose={() => setReportOpen(false)} />
               )}
 
               {isOwnProfile && (

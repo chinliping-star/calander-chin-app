@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Trash2, Pencil, X, Check } from 'lucide-react';
+import { Trash2, Pencil, X, Check, Flag } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { PostPrivacyBadge } from './PostPrivacyBadge.tsx';
+import { ReportModal } from '../../reports/components/ReportModal.tsx';
 import type { Post } from '../types';
 
 interface Props {
@@ -16,6 +17,7 @@ export function PostCard({ post, isOwn, onDelete, onUpdate }: Props) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [editPrivacy, setEditPrivacy] = useState(post.privacy);
+  const [reportOpen, setReportOpen] = useState(false);
 
   function commitEdit() {
     onUpdate(post._id, editContent, editPrivacy);
@@ -77,7 +79,21 @@ export function PostCard({ post, isOwn, onDelete, onUpdate }: Props) {
               </button>
             </div>
           )}
+          {!isOwn && (
+            <button
+              onClick={() => setReportOpen(true)}
+              title="Report post"
+              className="p-1.5 rounded-lg"
+              style={{ color: 'var(--text)' }}
+            >
+              <Flag size={14} />
+            </button>
+          )}
         </div>
+
+        {reportOpen && (
+          <ReportModal targetType="post" targetId={post._id} onClose={() => setReportOpen(false)} />
+        )}
 
         {/* Title */}
         {post.title && !editing && (
@@ -105,6 +121,33 @@ export function PostCard({ post, isOwn, onDelete, onUpdate }: Props) {
               className="w-full resize-none rounded-xl px-3 py-2.5 text-sm outline-none"
               style={{ background: 'var(--color-tertiary)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
             />
+            {/* Privacy / category selector */}
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Post visibility">
+              {([
+                { value: 'public',  icon: '🌐', label: 'Public' },
+                { value: 'friends', icon: '👥', label: 'Friends Only' },
+                { value: 'private', icon: '🔒', label: 'Private' },
+              ] as const).map(({ value, icon, label }) => {
+                const active = editPrivacy === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setEditPrivacy(value)}
+                    aria-pressed={active}
+                    className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all hover:opacity-80"
+                    style={{
+                      borderColor: active ? 'var(--color-primary)' : 'var(--border)',
+                      backgroundColor: active ? 'var(--accent-bg)' : 'var(--color-tertiary)',
+                      color: active ? 'var(--color-primary)' : 'var(--text)',
+                    }}
+                  >
+                    <span aria-hidden="true">{icon}</span>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setEditing(false)}

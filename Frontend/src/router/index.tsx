@@ -19,6 +19,15 @@ import { ChatPage } from '../features/chat/pages/ChatPage.tsx';
 import { PresenceProvider } from '../features/chat/context/presence.tsx';
 import AnalyticsPage from '../features/analytics/pages/AnalyticsPage.tsx';
 import ActivityPage from '../features/activity/pages/ActivityPage.tsx';
+import { AdminLayout } from '../features/admin/pages/AdminLayout.tsx';
+import { AdminDashboard } from '../features/admin/pages/AdminDashboard.tsx';
+import { AdminUsers } from '../features/admin/pages/AdminUsers.tsx';
+import { AdminContent } from '../features/admin/pages/AdminContent.tsx';
+import { AdminReports } from '../features/admin/pages/AdminReports.tsx';
+import { AdminAnnouncements } from '../features/admin/pages/AdminAnnouncements.tsx';
+import { AdminAudit } from '../features/admin/pages/AdminAudit.tsx';
+import { AdminSettings } from '../features/admin/pages/AdminSettings.tsx';
+import { AdminFeedback } from '../features/admin/pages/AdminFeedback.tsx';
 
 export const router = createBrowserRouter([
   // Public — authenticated users bounced away from auth pages
@@ -42,6 +51,20 @@ export const router = createBrowserRouter([
       { path: '/communities/:slug', element: <Navigate to="/" replace /> },
       { path: '/analytics',         element: <AnalyticsPage /> },
       { path: '/activity',          element: <ActivityPage /> },
+      {
+        path: '/admin',
+        element: <AdminLayout />,
+        children: [
+          { index: true,        element: <AdminDashboard /> },
+          { path: 'users',      element: <AdminUsers /> },
+          { path: 'content',    element: <AdminContent /> },
+          { path: 'reports',       element: <AdminReports /> },
+          { path: 'announcements', element: <AdminAnnouncements /> },
+          { path: 'feedback',      element: <AdminFeedback /> },
+          { path: 'audit',         element: <AdminAudit /> },
+          { path: 'settings',      element: <AdminSettings /> },
+        ],
+      },
       { path: '/meetups/new',        element: <NewMeetupPage /> },
       { path: '/meetups/propose',    element: <ProposeMeetupPage /> },
       { path: '/meetups/propose/saved', element: <SavedDraftsPage /> },
