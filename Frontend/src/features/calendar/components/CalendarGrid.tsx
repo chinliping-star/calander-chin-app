@@ -41,7 +41,7 @@ function meetupBlockStyle(m: { status: 'accepted' | 'pending'; attendance?: 'att
   if (m.attendance) return ATTENDANCE_BLOCK[m.attendance];
   return m.status === 'pending'
     ? { bg: '#ede9fe', border: '1.5px dashed #c084fc', text: '#7c3aed' }
-    : { bg: '#fff0f6', border: '1.5px solid var(--color-primary-light)', text: 'var(--color-primary-dark)' };
+    : { bg: 'var(--color-tertiary)', border: '1.5px solid var(--color-primary-light)', text: 'var(--color-primary-dark)' };
 }
 
 type ViewMode = 'monthly' | 'weekly' | 'daily';

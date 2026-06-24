@@ -68,7 +68,7 @@ export function ComingUpPanel() {
 
   return (
     <aside
-      className="flex w-72 shrink-0 flex-col gap-4"
+      className="flex w-full shrink-0 flex-col gap-4 lg:w-72"
       aria-label="Upcoming events and meetup requests"
     >
       {/* Coming Up card */}
