@@ -37,8 +37,8 @@ export class FriendshipsService {
         $or: [{ requester_id: userObjId }, { recipient_id: userObjId }],
         status: 'accepted',
       })
-      .populate('requester_id', 'username display_name avatar_url _id')
-      .populate('recipient_id', 'username display_name avatar_url _id')
+      .populate('requester_id', 'username display_name avatar_url theme _id')
+      .populate('recipient_id', 'username display_name avatar_url theme _id')
       .exec();
 
     return friendships.flatMap((f) => {
@@ -100,7 +100,7 @@ export class FriendshipsService {
     const userObjId = await this.resolveMongoId(clerkId);
     return this.friendshipModel
       .find({ recipient_id: userObjId, status: 'pending' })
-      .populate('requester_id', 'username display_name avatar_url _id')
+      .populate('requester_id', 'username display_name avatar_url theme _id')
       .exec();
   }
 
@@ -108,7 +108,7 @@ export class FriendshipsService {
     const userObjId = await this.resolveMongoId(clerkId);
     return this.friendshipModel
       .find({ requester_id: userObjId, status: 'pending' })
-      .populate('recipient_id', 'username display_name avatar_url _id')
+      .populate('recipient_id', 'username display_name avatar_url theme _id')
       .exec();
   }
 
@@ -247,8 +247,8 @@ export class FriendshipsService {
         $or: [{ requester_id: userObjId }, { recipient_id: userObjId }],
         status: 'removed',
       })
-      .populate('requester_id', 'username display_name avatar_url _id')
-      .populate('recipient_id', 'username display_name avatar_url _id')
+      .populate('requester_id', 'username display_name avatar_url theme _id')
+      .populate('recipient_id', 'username display_name avatar_url theme _id')
       .exec();
 
     return friendships.flatMap((f) => {

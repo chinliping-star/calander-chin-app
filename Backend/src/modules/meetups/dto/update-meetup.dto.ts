@@ -1,12 +1,13 @@
 import {
   IsString,
   IsOptional,
+  IsArray,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
 
-/** Editable fields of a meetup. Proposer-only; participants/owner not editable here. */
+/** Editable fields of a meetup. Proposer-only. */
 export class UpdateMeetupDto {
   @IsOptional()
   @IsString()
@@ -32,4 +33,10 @@ export class UpdateMeetupDto {
   @IsString()
   @MaxLength(200)
   location?: string;
+
+  /** Full set of extra invited friends (excludes proposer/owner). Replaces the current invite list. */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  participants?: string[];
 }

@@ -47,10 +47,10 @@ export class CalendarService {
           date: { $gte: startDate, $lte: endDate },
           status: { $in: ['pending', 'accepted'] },
         })
-        .populate('proposer_id', 'username display_name avatar_url')
-        .populate('owner_id', 'username display_name avatar_url')
-        .populate('participants', 'username display_name avatar_url')
-        .populate('responses.user_id', 'username display_name avatar_url')
+        .populate('proposer_id', 'username display_name avatar_url theme')
+        .populate('owner_id', 'username display_name avatar_url theme')
+        .populate('participants', 'username display_name avatar_url theme')
+        .populate('responses.user_id', 'username display_name avatar_url theme')
         .exec(),
     ]);
 
