@@ -8,11 +8,23 @@ interface MeetupClickInfo {
   status: string;
 }
 
+// Lightweight chip shape — a subset of the calendar's MeetupItem.
+export interface DayCellMeetup {
+  id: string;
+  label: string;
+  status: 'accepted' | 'pending';
+  attendance?: 'attended' | 'missed' | 'skipped';
+  color?: string; // proposer's theme colour
+}
+
+// Up to this many meetups may be planned on a single day.
+const MAX_MEETUPS_PER_DAY = 4;
+
 interface DayCellProps {
   data: CalendarDayData;
   isToday?: boolean;
   isOwn?: boolean;
-  meetupCount?: number;
+  meetups?: DayCellMeetup[];
   onClick?: (data: CalendarDayData) => void;
   onNewMeetup?: (date: string) => void;
   onToggleAvailability?: (date: string, current: 'available' | 'blocked') => void;
@@ -33,23 +45,59 @@ const DAY_NUMBER_STYLES: Record<string, CSSProperties> = {
   pending:   { color: '#7c3aed', fontWeight: 700 },
 };
 
-export function DayCell({ data, isToday = false, isOwn = false, meetupCount = 0, onClick, onNewMeetup, onToggleAvailability, onMeetupClick }: DayCellProps) {
+// One meetup chip — clickable, opens the detail modal.
+function MeetupChip({ m, date, onMeetupClick }: {
+  m: DayCellMeetup; date: string; onMeetupClick?: (info: MeetupClickInfo) => void;
+}) {
+  const style: CSSProperties = m.status === 'accepted'
+    ? { backgroundColor: m.color ?? 'var(--color-primary)', color: '#fff' }
+    : { backgroundColor: '#ede9fe', color: '#7c3aed' };
+  return (
+    <button
+      type="button"
+      aria-label={`View meetup: ${m.label}`}
+      onClick={(e) => { e.stopPropagation(); onMeetupClick?.({ date, eventLabel: m.label, status: m.status }); }}
+      className="w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-medium leading-tight text-left hover:opacity-80 transition-opacity"
+      style={style}
+    >
+      {m.label}
+    </button>
+  );
+}
+
+export function DayCell({ data, isToday = false, isOwn = false, meetups = [], onClick, onNewMeetup, onToggleAvailability, onMeetupClick }: DayCellProps) {
   if (!data.isCurrentMonth || data.day === 0) {
     return <div className="rounded-xl" style={{ minHeight: '72px', height: '100%', backgroundColor: 'transparent' }} aria-hidden="true" />;
   }
 
-  const { status, eventLabel, stickers, day, date } = data;
+  const { status, stickers, day, date } = data;
   const isBlocked = status === 'blocked';
   const isBusy = isBlocked;
-  const canAddMeetup = !isBlocked && meetupCount < 3;
-  const hasMeetup = !!eventLabel && !isBusy;
+  const meetupCount = meetups.length;
+  const canAddMeetup = !isBlocked && meetupCount < MAX_MEETUPS_PER_DAY;
+  const hasMeetup = meetupCount > 0 && !isBusy;
+  const shownMeetups = meetups.slice(0, 3);
+  const extraCount = meetupCount - shownMeetups.length;
 
   const statusLabel =
     status === 'available' ? 'available' :
     status === 'blocked'   ? 'busy/blocked' :
     status === 'accepted'  ? 'accepted meetup' : 'pending meetup';
 
-  const ariaLabel = `${date}, ${statusLabel}${eventLabel ? `, ${eventLabel}` : ''}`;
+  const ariaLabel = `${date}, ${statusLabel}${meetupCount ? `, ${meetupCount} meetup${meetupCount > 1 ? 's' : ''}` : ''}`;
+
+  // Small round "+" add button — sits top-right, doesn't cover meetup chips.
+  const addButton = isOwn && canAddMeetup ? (
+    <button
+      type="button"
+      aria-label="New meetup"
+      onClick={(e) => { e.stopPropagation(); onNewMeetup?.(date); }}
+      className="absolute top-1 right-1 z-20 flex h-5 w-5 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+      style={{ backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '13px', lineHeight: 1 }}
+    >
+      +
+    </button>
+  ) : null;
 
   if (isToday) {
     const todayBlocked = status === 'blocked';
@@ -71,37 +119,26 @@ export function DayCell({ data, isToday = false, isOwn = false, meetupCount = 0,
           ),
         }}
       >
-        <span className="text-[10px] md:text-xs font-bold"
-          style={{ color: todayBlocked ? '#6b7280' : 'rgba(255,255,255,0.9)' }}>{day}</span>
+        <div className="flex w-full items-center justify-between">
+          <span className="text-[10px] md:text-xs font-bold"
+            style={{ color: todayBlocked ? '#6b7280' : 'rgba(255,255,255,0.9)' }}>{day}</span>
+        </div>
         {todayBlocked ? (
-          <>
-            <span className="mx-auto text-lg leading-none" aria-hidden="true">⊘</span>
-            <span className="w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-center"
-              style={{ backgroundColor: '#d1d5db', color: '#6b7280' }}>
-              Busy · Today
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="mx-auto text-lg leading-none" aria-hidden="true">💕</span>
-            <span className="w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-center"
-              style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: '#ffffff' }}>
-              Today
-            </span>
-          </>
-        )}
-        {/* + meetup button — full overlay on hover */}
-        {isOwn && canAddMeetup && (
-          <button
-            type="button"
-            aria-label="Add meetup"
-            onClick={(e) => { e.stopPropagation(); onNewMeetup?.(date); }}
-            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
-            style={{ background: 'rgba(0,0,0,0.15)' }}
-          >
-            <span className="text-white text-xl font-bold leading-none">+</span>
-          </button>
-        )}
+          <span className="mt-auto w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-center"
+            style={{ backgroundColor: '#d1d5db', color: '#6b7280' }}>
+            Busy
+          </span>
+        ) : hasMeetup ? (
+          <div className="flex flex-col gap-0.5 w-full mt-auto">
+            {shownMeetups.map(m => (
+              <MeetupChip key={m.id} m={m} date={date} onMeetupClick={onMeetupClick} />
+            ))}
+            {extraCount > 0 && (
+              <span className="text-[8px] font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>+{extraCount} more</span>
+            )}
+          </div>
+        ) : null}
+        {addButton}
         {/* Availability toggle for today cell */}
         {isOwn && (
           <button
@@ -124,23 +161,12 @@ export function DayCell({ data, isToday = false, isOwn = false, meetupCount = 0,
 
   const cellStyle: CSSProperties = { minHeight: '72px', height: '100%', ...STATUS_STYLES[status] };
 
-  // The inner content (day number, busy label, stickers, event label)
-  // Wrapped in a flex-1 relative container so the + button is centered within
-  // the content area only, not displaced by the availability toggle.
+  // Inner content: day number, busy label, stickers, and up to 3 meetup chips.
   const innerContent = (
     <div className="relative flex flex-col items-start gap-1 w-full flex-1 min-h-0">
       {/* Day number row */}
       <div className="flex items-center justify-between w-full">
         <span className="text-[10px] md:text-xs" style={DAY_NUMBER_STYLES[status]}>{day}</span>
-        {/* Meetup count dots */}
-        {meetupCount > 0 && (
-          <div className="flex gap-0.5">
-            {Array.from({ length: Math.min(meetupCount, 3) }).map((_, i) => (
-              <span key={i} className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: status === 'pending' ? '#c084fc' : 'var(--color-primary)' }} />
-            ))}
-          </div>
-        )}
       </div>
 
       {isBusy && (
@@ -157,38 +183,14 @@ export function DayCell({ data, isToday = false, isOwn = false, meetupCount = 0,
       )}
 
       {hasMeetup && (
-        // Bug 11.4: clickable event label that fires onMeetupClick separately from cell click
-        <button
-          type="button"
-          aria-label={`View meetup: ${eventLabel}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onMeetupClick?.({ date, eventLabel: eventLabel!, status });
-          }}
-          className="mt-auto w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-medium leading-tight text-left hover:opacity-80 transition-opacity"
-          style={status === 'accepted'
-            ? { backgroundColor: 'var(--color-primary)', color: '#fff' }
-            : { backgroundColor: '#ede9fe', color: '#7c3aed' }}>
-          {eventLabel}
-        </button>
-      )}
-
-      {/* + button only shows when no meetup on this day — prevents blocking meetup label clicks */}
-      {isOwn && canAddMeetup && !hasMeetup && (
-        <button
-          type="button"
-          aria-label="New meetup"
-          onClick={(e) => { e.stopPropagation(); onNewMeetup?.(date); }}
-          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10"
-          style={{ borderRadius: 'inherit' }}
-        >
-          <span
-            className="flex h-6 w-6 items-center justify-center rounded-full shadow-sm"
-            style={{ backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '14px', lineHeight: 1 }}
-          >
-            +
-          </span>
-        </button>
+        <div className="mt-auto flex flex-col gap-0.5 w-full">
+          {shownMeetups.map(m => (
+            <MeetupChip key={m.id} m={m} date={date} onMeetupClick={onMeetupClick} />
+          ))}
+          {extraCount > 0 && (
+            <span className="text-[8px] font-semibold pl-1" style={{ color: 'var(--text)' }}>+{extraCount} more</span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -203,6 +205,7 @@ export function DayCell({ data, isToday = false, isOwn = false, meetupCount = 0,
         style={cellStyle}
       >
         {innerContent}
+        {addButton}
 
         {/* Availability toggle — shows current state, reveals action on hover */}
         <button
