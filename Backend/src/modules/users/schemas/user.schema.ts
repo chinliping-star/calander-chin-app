@@ -56,6 +56,22 @@ export class User {
   @Prop({ default: false })
   is_admin: boolean;
 
+  /** Moderation status (admin panel). active = normal. */
+  @Prop({ enum: ['active', 'suspended', 'blocked'], default: 'active' })
+  status: string;
+
+  /** When a suspension expires (null = not suspended / permanent block). */
+  @Prop({ default: null })
+  suspended_until: Date | null;
+
+  /** Reason for the current suspension/block (admin note). */
+  @Prop({ default: '' })
+  moderation_reason: string;
+
+  /** Display role for admin panel — access control itself is via env allowlist. */
+  @Prop({ enum: ['user', 'moderator', 'admin'], default: 'user' })
+  role: string;
+
   @Prop({ default: Date.now })
   created_at: Date;
 

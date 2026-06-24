@@ -45,4 +45,21 @@ export class SupportService {
       needs_agent: dto.needsAgent ?? false,
     });
   }
+
+  // ── Admin ───────────────────────────────────────────────────────────────────
+
+  async adminListTickets({ page = 1, limit = 20, status = '' }: { page?: number; limit?: number; status?: string }) {
+    const filter: Record<string, unknown> = {};
+    if (status === 'open' || status === 'resolved') filter.status = status;
+    const [items, total] = await Promise.all([
+      this.ticketModel.find(filter).sort({ created_at: -1 }).skip((page - 1) * limit).limit(limit).lean().exec(),
+      this.ticketModel.countDocuments(filter),
+    ]);
+    return { items, total, page, limit, pages: Math.ceil(total / limit) };
+  }
+
+  async resolveTicket(id: string): Promise<{ ok: boolean }> {
+    await this.ticketModel.findByIdAndUpdate(id, { $set: { status: 'resolved' } }).exec();
+    return { ok: true };
+  }
 }
