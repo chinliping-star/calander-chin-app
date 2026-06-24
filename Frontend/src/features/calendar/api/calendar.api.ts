@@ -14,6 +14,7 @@ export interface ApiMeetupUser {
   username: string;
   display_name: string;
   avatar_url?: string;
+  theme?: string;
 }
 
 export interface ApiMeetup {

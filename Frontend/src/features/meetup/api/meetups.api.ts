@@ -18,6 +18,7 @@ export interface UpdateMeetupPayload {
   title?: string;
   description?: string;
   location?: string;
+  participants?: string[];
 }
 
 export function useMeetupsApi() {

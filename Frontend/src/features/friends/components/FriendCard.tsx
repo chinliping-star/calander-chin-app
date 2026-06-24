@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFriendsApi } from '../api/friends.api.ts';
+import { themeColor } from '../../../lib/theme.ts';
 import type { FriendProfile } from '../types.ts';
 
 interface FriendCardProps {
@@ -117,11 +118,13 @@ export function FriendCard({ friend }: FriendCardProps) {
         aria-label={`View ${friend.displayName}'s profile`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative w-12 h-12 mb-3 shrink-0">
+        <div className="relative w-12 h-12 mb-3 shrink-0 rounded-full"
+          style={{ padding: '2.5px', background: themeColor(friend.theme) }}
+          title={`${friend.displayName}'s theme`}>
           <img
             src={friend.avatarUrl}
             alt={friend.displayName}
-            className="w-full h-full rounded-full object-cover object-top"
+            className="w-full h-full rounded-full object-cover object-top block"
             loading="lazy"
           />
           <span
