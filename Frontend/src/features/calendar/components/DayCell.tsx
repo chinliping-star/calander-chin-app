@@ -86,16 +86,18 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
 
   const ariaLabel = `${date}, ${statusLabel}${meetupCount ? `, ${meetupCount} meetup${meetupCount > 1 ? 's' : ''}` : ''}`;
 
-  // Small round "+" add button — sits top-right, doesn't cover meetup chips.
+  // Centered "+" add button — full-cell overlay, appears on hover.
   const addButton = isOwn && canAddMeetup ? (
     <button
       type="button"
       aria-label="New meetup"
       onClick={(e) => { e.stopPropagation(); onNewMeetup?.(date); }}
-      className="absolute top-1 right-1 z-20 flex h-5 w-5 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-      style={{ backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '13px', lineHeight: 1 }}
+      className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
+      style={{ background: 'rgba(255,127,177,0.08)' }}
     >
-      +
+      <span className="flex h-6 w-6 items-center justify-center rounded-full shadow-sm" style={{ backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '16px', lineHeight: 1 }}>
+        +
+      </span>
     </button>
   ) : null;
 

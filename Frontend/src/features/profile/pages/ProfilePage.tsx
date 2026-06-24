@@ -12,7 +12,7 @@ import {
 import { PostFeed } from '../../posts/components/PostFeed.tsx';
 import { NewPostModal } from '../../posts/components/NewPostModal.tsx';
 import { usePostsApi } from '../../posts/api/posts.api.ts';
-import { themeColor } from '../../../lib/theme.ts';
+import { themeColor, THEMES } from '../../../lib/theme.ts';
 import {
   UserPlus,
   MessageCircle,
@@ -771,9 +771,26 @@ export function ProfilePage() {
                   </span>
                 )}
               </div>
-              <p className="text-sm mt-0.5 mb-2" style={{ color: 'var(--text)' }}>
-                @{profileUser.username}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap mt-0.5 mb-2">
+                <p className="text-sm" style={{ color: 'var(--text)' }}>
+                  @{profileUser.username}
+                </p>
+                {!isOwnProfile && (() => {
+                  const friendTheme = (profileUser as User & { theme?: string }).theme;
+                  const meta = THEMES.find(t => t.id === friendTheme);
+                  if (!meta) return null;
+                  return (
+                    <span
+                      className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                      style={{ backgroundColor: meta.primary + '18', color: meta.primary, border: `1px solid ${meta.primary}55` }}
+                      title={`${displayName} is using the ${meta.label} theme`}
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.primary }} />
+                      {meta.label} theme
+                    </span>
+                  );
+                })()}
+              </div>
               {(profileUser as User & { bio?: string }).bio && (
                 <p className="text-sm leading-relaxed" style={{ color: 'var(--text-h)' }}>
                   {(profileUser as User & { bio?: string }).bio}
