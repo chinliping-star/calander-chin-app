@@ -10,6 +10,7 @@ import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guar
 import { CloudinaryProvider } from '../../common/cloudinary/cloudinary.provider';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { ActivityModule } from '../activity/activity.module';
+import { ReportsModule } from '../reports/reports.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ActivityModule } from '../activity/activity.module';
       { name: Friendship.name, schema: FriendshipSchema },
     ]),
     ActivityModule,
+    ReportsModule,
   ],
   providers: [PostsService, CloudinaryProvider, CloudinaryService, OptionalJwtAuthGuard],
   controllers: [PostsController],

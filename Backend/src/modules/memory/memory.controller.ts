@@ -30,7 +30,7 @@ export class MemoryController {
   @Post(':meetupId/photo')
   @UseInterceptors(FileInterceptor('photo', {
     storage: memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
     fileFilter: (_, file, cb) => {
       if (!file.mimetype.match(/^image\//)) return cb(new Error('Images only'), false);
       cb(null, true);

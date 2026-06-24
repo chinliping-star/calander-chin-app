@@ -66,6 +66,14 @@ export class MemoryService {
       throw new ForbiddenException('Can only add photos to accepted meetups');
     }
 
+    // Each participant may add up to 5 photos to a memory.
+    const myPhotoCount = (meetup.memory_photos as unknown as Array<{ added_by: Types.ObjectId }>)
+      .filter(p => p.added_by?.toString() === userObjId.toString())
+      .length;
+    if (myPhotoCount >= 5) {
+      throw new ForbiddenException('You can add at most 5 photos to this memory');
+    }
+
     const result = await this.cloudinaryService.uploadFile(file, 'helloxxx/memories') as { secure_url: string };
     meetup.memory_photos.push({
       url: result.secure_url,

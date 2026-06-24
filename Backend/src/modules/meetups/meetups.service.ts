@@ -62,8 +62,8 @@ export class MeetupsService {
       date: dto.date,
       status: { $in: ['pending', 'accepted'] },
     }).exec();
-    if (existingCount >= 3) {
-      throw new BadRequestException('This user already has 3 meetups on that date');
+    if (existingCount >= 4) {
+      throw new BadRequestException('This user already has 4 meetups on that date');
     }
 
     const extraParticipants = dto.participants
@@ -145,8 +145,8 @@ export class MeetupsService {
         status: { $in: ['pending', 'accepted'] },
         _id: { $ne: meetup._id },
       }).exec();
-      if (existingCount >= 3) {
-        throw new BadRequestException('This user already has 3 meetups on that date');
+      if (existingCount >= 4) {
+        throw new BadRequestException('This user already has 4 meetups on that date');
       }
     }
 
@@ -156,6 +156,56 @@ export class MeetupsService {
     if (dto.description !== undefined) meetup.description = dto.description;
     if (dto.location    !== undefined) meetup.location    = dto.location;
 
+    // Re-invite friends: dto.participants is the full extra-invitee set.
+    if (dto.participants !== undefined) {
+      const proposerId = meetup.proposer_id.toString();
+      const ownerId    = meetup.owner_id.toString();
+      const wanted = new Set<string>([
+        proposerId,
+        ownerId,
+        ...dto.participants,
+      ]);
+
+      const previousInvitees = new Set(
+        meetup.participants.map((p) => p.toString()).filter((id) => id !== proposerId),
+      );
+
+      meetup.participants = Array.from(wanted).map((id) => new Types.ObjectId(id));
+
+      // Keep RSVP rows for people still invited; drop the rest.
+      meetup.responses = meetup.responses.filter((r) => wanted.has(r.user_id.toString()));
+      // Add a pending RSVP row for any newly invited person (everyone except proposer).
+      const haveResponse = new Set(meetup.responses.map((r) => r.user_id.toString()));
+      const newlyInvited: string[] = [];
+      for (const id of wanted) {
+        if (id === proposerId) continue;
+        if (!haveResponse.has(id)) {
+          meetup.responses.push({ user_id: new Types.ObjectId(id), status: 'pending' });
+          if (!previousInvitees.has(id)) newlyInvited.push(id);
+        }
+      }
+      meetup.markModified('responses');
+
+      // Recompute rollup status from the new response set.
+      const all = meetup.responses.map((r) => r.status);
+      if (all.some((s) => s === 'accepted')) meetup.status = 'accepted';
+      else if (all.length > 0 && all.every((s) => s === 'declined')) meetup.status = 'declined';
+      else meetup.status = 'pending';
+
+      // Notify freshly invited people.
+      for (const recipientId of newlyInvited) {
+        this.notifSvc.create({
+          userId:   new Types.ObjectId(recipientId),
+          actorId:  userObjId,
+          type:     'meetup_proposed',
+          title:    `You were invited: ${meetup.title}`,
+          body:     `On ${meetup.date}${meetup.time ? ' at ' + meetup.time : ''}`,
+          refId:    meetup._id as Types.ObjectId,
+          refModel: 'Meetup',
+        }).catch(() => {});
+      }
+    }
+
     await meetup.save();
     return this.findById(meetupId);
   }
@@ -164,10 +214,10 @@ export class MeetupsService {
     const userObjId = await this.resolveMongoId(clerkId);
     return this.meetupModel
       .find({ $or: [{ proposer_id: userObjId }, { owner_id: userObjId }, { participants: userObjId }] })
-      .populate('proposer_id', 'username display_name avatar_url')
-      .populate('owner_id',    'username display_name avatar_url')
-      .populate('participants', 'username display_name avatar_url')
-      .populate('responses.user_id', 'username display_name avatar_url')
+      .populate('proposer_id', 'username display_name avatar_url theme')
+      .populate('owner_id',    'username display_name avatar_url theme')
+      .populate('participants', 'username display_name avatar_url theme')
+      .populate('responses.user_id', 'username display_name avatar_url theme')
       .sort({ date: 1, time: 1 })
       .exec();
   }
@@ -175,10 +225,10 @@ export class MeetupsService {
   async findById(id: string): Promise<MeetupDocument> {
     const meetup = await this.meetupModel
       .findById(id)
-      .populate('proposer_id', 'username display_name avatar_url')
-      .populate('owner_id',    'username display_name avatar_url')
-      .populate('participants', 'username display_name avatar_url')
-      .populate('responses.user_id', 'username display_name avatar_url')
+      .populate('proposer_id', 'username display_name avatar_url theme')
+      .populate('owner_id',    'username display_name avatar_url theme')
+      .populate('participants', 'username display_name avatar_url theme')
+      .populate('responses.user_id', 'username display_name avatar_url theme')
       .exec();
     if (!meetup) throw new NotFoundException('Meetup not found');
     return meetup;
