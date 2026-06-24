@@ -18,6 +18,10 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SupportModule } from './modules/support/support.module';
 import { ShoutboxModule } from './modules/shoutbox/shoutbox.module';
 import { StickyNotesModule } from './modules/sticky-notes/sticky-notes.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -50,6 +54,10 @@ import { StickyNotesModule } from './modules/sticky-notes/sticky-notes.module';
     SupportModule,
     ShoutboxModule,
     StickyNotesModule,
+    AdminModule,
+    ReportsModule,
+    AnnouncementsModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}
