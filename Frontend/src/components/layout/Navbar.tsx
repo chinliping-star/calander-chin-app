@@ -6,9 +6,10 @@ import { Bell, Settings } from '../ui/Icon.tsx';
 import {
   MessageSquare, LogOut, User, CalendarDays, Users, Camera,
   BookOpen, BarChart2, Activity as ActivityIcon, DollarSign,
-  MoreHorizontal, X,
+  MoreHorizontal, X, ShieldAlert,
 } from 'lucide-react';
 import { cn } from '../../lib/utils.ts';
+import { useIsAdmin } from '../../features/admin/hooks/useIsAdmin.ts';
 import { Logo } from '../Logo.tsx';
 import { useAuthStore } from '../../store/auth.ts';
 import { useClerk } from '@clerk/clerk-react';
@@ -24,6 +25,7 @@ export function Navbar() {
   const { signOut } = useClerk();
   const chatApi = useChatApi();
   const notifApi = useNotificationsApi();
+  const { isAdmin } = useIsAdmin();
   const [notifOpen, setNotifOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -242,6 +244,18 @@ export function Navbar() {
                     <Settings size={14} />
                     Settings
                   </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setAvatarMenuOpen(false); navigate('/admin'); }}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm hover:opacity-70 transition-opacity focus-visible:outline-none"
+                      style={{ color: 'var(--color-primary-dark)' }}
+                    >
+                      <ShieldAlert size={14} />
+                      Admin Panel
+                    </button>
+                  )}
                   <div style={{ height: '1px', backgroundColor: 'var(--border)', margin: '4px 0' }} role="separator" />
                   <button
                     type="button"
