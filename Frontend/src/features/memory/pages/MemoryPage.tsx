@@ -21,13 +21,19 @@ interface PhotoView {
   id: string;
   url: string;
   addedBy: string;
+  addedById?: string;
 }
+
+// Per-user photo cap for a single memory.
+const MAX_PHOTOS_PER_USER = 5;
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 function photosOf(meetup: ApiMeetup): PhotoView[] {
   const arr: PhotoView[] = (meetup.memory_photos ?? []).map(p => ({
     id: p._id,
     url: p.url,
     addedBy: p.added_by?.display_name || p.added_by?.username || '',
+    addedById: p.added_by?._id,
   }));
   if (meetup.memory_photo_url && !arr.some(p => p.url === meetup.memory_photo_url)) {
     arr.unshift({ id: 'legacy', url: meetup.memory_photo_url, addedBy: 'host' });
@@ -136,8 +142,11 @@ function AlbumModal({ meetup, onClose }: {
   const [uploading, setUploading] = useState(false);
   const memoryApi = useMemoryApi();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const fileInputId = `album-file-${meetup._id}`;
   const photos = photosOf(meetup);
+  const myPhotoCount = photos.filter(p => p.addedById && p.addedById === user?._id).length;
+  const atMyLimit = myPhotoCount >= MAX_PHOTOS_PER_USER;
   const participants = [meetup.proposer_id, ...meetup.participants].filter(Boolean).filter((p, i, arr) => arr.findIndex(x => x._id === p._id) === i);
   const dayNum = parseInt(meetup.date.split('-')[2], 10);
   const mon = new Date(meetup.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
@@ -146,6 +155,14 @@ function AlbumModal({ meetup, onClose }: {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
+    if (atMyLimit) {
+      alert(`You can add at most ${MAX_PHOTOS_PER_USER} photos to this memory.`);
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      alert('Image too large — max 5 MB.');
+      return;
+    }
     setUploading(true);
     try {
       // Share to server so every invited participant sees it.
@@ -243,19 +260,24 @@ function AlbumModal({ meetup, onClose }: {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <span className="hidden sm:block text-[10px] font-semibold" style={{ color: 'var(--text)' }}>
+              {myPhotoCount}/{MAX_PHOTOS_PER_USER} · max 5MB
+            </span>
             {/* label triggers native file picker — no JS .click() needed */}
             <label
-              htmlFor={fileInputId}
+              htmlFor={atMyLimit ? undefined : fileInputId}
+              title={atMyLimit ? `Max ${MAX_PHOTOS_PER_USER} photos per person` : undefined}
               className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white cursor-pointer select-none transition-opacity hover:opacity-90 active:opacity-75"
               style={{
                 background: uploading ? 'var(--color-primary-dark)' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
                 boxShadow: '0 4px 12px var(--accent-border)',
-                pointerEvents: uploading ? 'none' : 'auto',
-                opacity: uploading ? 0.6 : 1,
+                pointerEvents: uploading || atMyLimit ? 'none' : 'auto',
+                opacity: uploading || atMyLimit ? 0.5 : 1,
+                cursor: atMyLimit ? 'not-allowed' : 'pointer',
               }}
             >
               {uploading ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-              {uploading ? 'Adding…' : 'Add Photo'}
+              {uploading ? 'Adding…' : atMyLimit ? 'Limit reached' : 'Add Photo'}
             </label>
             <button
               type="button"
@@ -326,7 +348,8 @@ function AlbumModal({ meetup, onClose }: {
                 </motion.div>
               ))}
 
-              {/* Add more tile — label opens picker natively */}
+              {/* Add more tile — label opens picker natively (hidden once at limit) */}
+              {!atMyLimit && (
               <label
                 htmlFor={fileInputId}
                 className="flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none transition-opacity hover:opacity-80 active:opacity-60"
@@ -347,6 +370,7 @@ function AlbumModal({ meetup, onClose }: {
                   {uploading ? 'Adding…' : 'Add'}
                 </span>
               </label>
+              )}
             </div>
           )}
         </div>
@@ -397,6 +421,10 @@ function MemoryCard({ meetup, cardIndex }: {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image too large — max 5 MB.');
+      return;
+    }
     try {
       // Share to server so every invited participant sees it.
       await memoryApi.uploadPhoto(meetup._id, file);
