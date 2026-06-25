@@ -102,6 +102,14 @@ export class UsersService {
     return user;
   }
 
+  async updateCover(clerkId: string, coverUrl: string): Promise<UserDocument> {
+    const user = await this.userModel
+      .findOneAndUpdate({ clerk_id: clerkId }, { $set: { banner_url: coverUrl } }, { new: true })
+      .exec();
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
   /**
    * Aggregated public profile data for the tabs on a user's profile page:
    * friends, recent meetups, interests, communities (clubs), and bookings
