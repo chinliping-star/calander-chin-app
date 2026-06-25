@@ -22,6 +22,7 @@ interface PhotoView {
   url: string;
   addedBy: string;
   addedById?: string;
+  addedByAvatar?: string;
 }
 
 // Per-user photo cap for a single memory.
@@ -34,6 +35,7 @@ function photosOf(meetup: ApiMeetup): PhotoView[] {
     url: p.url,
     addedBy: p.added_by?.display_name || p.added_by?.username || '',
     addedById: p.added_by?._id,
+    addedByAvatar: p.added_by?.avatar_url,
   }));
   if (meetup.memory_photo_url && !arr.some(p => p.url === meetup.memory_photo_url)) {
     arr.unshift({ id: 'legacy', url: meetup.memory_photo_url, addedBy: 'host' });
@@ -342,10 +344,25 @@ function AlbumModal({ meetup, onClose }: {
                 >
                   <img
                     src={p.url}
-                    alt=""
+                    alt={p.addedBy ? `Photo by ${p.addedBy}` : 'Memory photo'}
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
+                  {/* Uploader attribution — gradient strip at bottom */}
+                  {p.addedBy && (
+                    <div
+                      className="absolute inset-x-0 bottom-0 flex items-center gap-1 px-1.5 py-1"
+                      style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65), transparent)' }}
+                    >
+                      {p.addedByAvatar
+                        ? <img src={p.addedByAvatar} alt="" className="h-3.5 w-3.5 rounded-full object-cover shrink-0" />
+                        : <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[7px] font-bold shrink-0"
+                            style={{ backgroundColor: 'var(--color-primary)', color: '#fff' }}>
+                            {p.addedBy.charAt(0).toUpperCase()}
+                          </span>}
+                      <span className="text-[8px] font-semibold text-white truncate">{p.addedBy}</span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={e => { e.stopPropagation(); handleDelete(p.id); }}
