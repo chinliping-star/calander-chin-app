@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { Pencil, ChevronRight, MessageCircle, Mail, Phone, Check, Crown, AlertTriangle } from 'lucide-react';
+import { Pencil, ChevronRight, MessageCircle, Mail, Phone, Check, Crown, AlertTriangle, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
@@ -74,6 +74,7 @@ function ProfileSection() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
+  const [removeCover, setRemoveCover] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -94,7 +95,9 @@ function ProfileSection() {
         if (!res.ok) throw new Error('Avatar upload failed');
       }
       let bannerUrl: string | undefined;
-      if (coverFile) {
+      if (removeCover && !coverFile) {
+        bannerUrl = '';
+      } else if (coverFile) {
         const formData = new FormData();
         formData.append('cover', coverFile);
         const token = await getToken();
@@ -111,8 +114,9 @@ function ProfileSection() {
         display_name: displayName.trim(),
         username: username.trim(),
         ...(bio.trim() && { bio: bio.trim() }),
+        ...(removeCover && !coverFile && { banner_url: '' }),
       });
-      return bannerUrl ? { ...updated, banner_url: bannerUrl } : updated;
+      return bannerUrl !== undefined ? { ...updated, banner_url: bannerUrl } : updated;
     },
     onSuccess: (updated) => {
       updateUser(updated);
@@ -120,6 +124,7 @@ function ProfileSection() {
       setSaveError(null);
       setAvatarFile(null);
       setCoverFile(null);
+      setRemoveCover(false);
     },
     onError: (err: Error) => {
       setSaveError(err.message);
@@ -162,6 +167,7 @@ function ProfileSection() {
       } else {
         setCoverFile(file);
         setCoverPreview(url);
+        setRemoveCover(false);
         return;
       }
       setCoverFile(null);
@@ -181,7 +187,7 @@ function ProfileSection() {
     saveProfile();
   }
 
-  const coverSrc = coverPreview ?? storeUser?.banner_url ?? undefined;
+  const coverSrc = coverPreview ?? (removeCover ? undefined : storeUser?.banner_url) ?? undefined;
   const avatarSrc = avatarPreview ?? storeUser?.avatar_url ?? undefined;
   const initials = (storeUser?.display_name ?? storeUser?.username ?? '?')
     .charAt(0)
@@ -205,16 +211,30 @@ function ProfileSection() {
                   : { background: 'linear-gradient(135deg, var(--color-primary) 0%, #c084fc 60%, var(--color-secondary) 100%)' }),
               }}
             >
-              <button
-                type="button"
-                aria-label="Upload cover image"
-                onClick={() => coverRef.current?.click()}
-                className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
-                style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-              >
-                <Pencil size={12} />
-                {coverSrc ? 'Change cover' : 'Add cover'}
-              </button>
+              <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                {coverSrc && (
+                  <button
+                    type="button"
+                    aria-label="Remove cover image"
+                    onClick={() => { setRemoveCover(true); setCoverFile(null); setCoverPreview(null); setCoverError(null); }}
+                    className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
+                    style={{ backgroundColor: 'rgba(220,38,38,0.85)' }}
+                  >
+                    <Trash2 size={12} />
+                    Remove
+                  </button>
+                )}
+                <button
+                  type="button"
+                  aria-label="Upload cover image"
+                  onClick={() => coverRef.current?.click()}
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+                >
+                  <Pencil size={12} />
+                  {coverSrc ? 'Change cover' : 'Add cover'}
+                </button>
+              </div>
               <input
                 ref={coverRef}
                 type="file"
