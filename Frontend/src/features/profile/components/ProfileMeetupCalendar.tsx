@@ -11,12 +11,6 @@ import type { ProfileMeetup } from '../api/profile.api.ts';
 
 const WEEK_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-function formatLongDate(raw: string): string {
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-}
-
 /** Read-only detail popup for one of a friend's meetups. */
 function ProfileMeetupDetailModal({ meetup, onClose }: { meetup: ProfileMeetup; onClose: () => void }) {
   const pending = meetup.status === 'pending';
