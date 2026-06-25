@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, CalendarCheck, CalendarX, Users, MessageSquare, Bell, CheckCheck } from 'lucide-react';
+import { UserPlus, CalendarCheck, CalendarX, Users, MessageSquare, Bell, CheckCheck, Vote, PartyPopper } from 'lucide-react';
 import { useNotificationsApi } from '../api/notifications.api.ts';
 import type { Notification, NotificationType } from '../types';
 
@@ -10,6 +10,8 @@ const TYPE_ICON: Record<NotificationType, React.ElementType> = {
   meetup_proposed:   CalendarCheck,
   meetup_accepted:   CalendarCheck,
   meetup_declined:   CalendarX,
+  meetup_voted:      Vote,
+  meetup_confirmed:  PartyPopper,
   community_invite:  Users,
   community_post:    Users,
   message_received:  MessageSquare,
@@ -21,6 +23,8 @@ const TYPE_COLOR: Record<NotificationType, string> = {
   meetup_proposed:  '#7c3aed',
   meetup_accepted:  '#22c55e',
   meetup_declined:  '#ef4444',
+  meetup_voted:     '#8b5cf6',
+  meetup_confirmed: '#22c55e',
   community_invite: 'var(--color-primary)',
   community_post:   '#f59e0b',
   message_received: '#3b82f6',

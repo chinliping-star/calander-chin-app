@@ -13,6 +13,8 @@ import {
 import { MeetupsService } from './meetups.service';
 import { CreateMeetupDto } from './dto/create-meetup.dto';
 import { UpdateMeetupDto } from './dto/update-meetup.dto';
+import { CreateProposalDto } from './dto/create-proposal.dto';
+import { VoteSlotDto, LockSlotDto } from './dto/vote-slot.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -28,6 +30,35 @@ export class MeetupsController {
     @Body() dto: CreateMeetupDto,
   ) {
     return this.meetupsService.create(userId, dto);
+  }
+
+  @Post('proposal')
+  @HttpCode(HttpStatus.CREATED)
+  async createProposal(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: CreateProposalDto,
+  ) {
+    return this.meetupsService.createProposal(userId, dto);
+  }
+
+  @Patch(':id/vote')
+  @HttpCode(HttpStatus.OK)
+  async vote(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
+    @Body() dto: VoteSlotDto,
+  ) {
+    return this.meetupsService.voteSlot(id, userId, dto.slot_id);
+  }
+
+  @Patch(':id/lock')
+  @HttpCode(HttpStatus.OK)
+  async lock(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
+    @Body() dto: LockSlotDto,
+  ) {
+    return this.meetupsService.lockSlot(id, userId, dto.slot_id);
   }
 
   @Get()

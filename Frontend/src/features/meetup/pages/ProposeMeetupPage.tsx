@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Send, BookmarkPlus, BookOpen } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Send, BookmarkPlus, BookOpen, Loader2 } from 'lucide-react';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { MoodPicker } from '../components/MoodPicker.tsx';
 import { FriendSelector } from '../components/FriendSelector.tsx';
 import { ProposedSlot, useProposedSlots } from '../components/ProposedSlot.tsx';
+import { useMeetupsApi } from '../api/meetups.api.ts';
 import type { MoodTheme } from '../types.ts';
 import { useAuthStore } from '../../../store/auth.ts';
 
@@ -61,16 +63,39 @@ export function ProposeMeetupPage() {
     return () => clearTimeout(t);
   }, [toast]);
   const { user } = useAuthStore();
+  const meetupsApi = useMeetupsApi();
+  const qc = useQueryClient();
 
   const { slots, addSlot, removeSlot, updateSlot } = useProposedSlots(
     draft?.slots?.[0]?.date || prefillDate,
     draft?.slots,
   );
 
+  const sendProposal = useMutation({
+    mutationFn: () =>
+      meetupsApi.createProposal({
+        title: title.trim(),
+        description: intent.trim() || undefined,
+        slots: slots
+          .filter(s => s.date)
+          .map(s => ({ date: s.date, time: s.time || undefined, location: s.location || undefined })),
+        participants: selectedFriends,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['meetups'] });
+      setToast({ msg: `Proposal "${title}" sent! 🎉`, type: 'success' });
+      setTimeout(() => navigate('/friends?tab=proposals'), 1200);
+    },
+    onError: (e: Error) => setToast({ msg: e.message || 'Could not send proposal.', type: 'error' }),
+  });
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) { setToast({ msg: 'Please add a title before sending.', type: 'error' }); return; }
-    setToast({ msg: `Proposal "${title}" sent! 🎉`, type: 'success' });
+    if (selectedFriends.length === 0) { setToast({ msg: 'Invite at least one friend to vote.', type: 'error' }); return; }
+    const validSlots = slots.filter(s => s.date);
+    if (validSlots.length === 0) { setToast({ msg: 'Add at least one time slot with a date.', type: 'error' }); return; }
+    sendProposal.mutate();
   }
 
   function handleSaveDraft() {
@@ -230,11 +255,12 @@ export function ProposeMeetupPage() {
           type="submit"
           form="propose-form"
           onClick={handleSubmit}
-          className="flex items-center gap-2 px-8 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
+          disabled={sendProposal.isPending}
+          className="flex items-center gap-2 px-8 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60"
           style={{ backgroundColor: 'var(--color-primary)' }}
         >
-          <Send size={15} />
-          Send Proposal
+          {sendProposal.isPending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+          {sendProposal.isPending ? 'Sending…' : 'Send Proposal'}
         </button>
         <div className="flex items-center gap-3">
           <button

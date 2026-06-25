@@ -11,6 +11,7 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { CalendarDay, CalendarDayDocument } from '../calendar/schemas/calendar-day.schema';
 import { CreateMeetupDto } from './dto/create-meetup.dto';
 import { UpdateMeetupDto } from './dto/update-meetup.dto';
+import { CreateProposalDto } from './dto/create-proposal.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ActivityService } from '../activity/activity.service';
 
@@ -115,6 +116,169 @@ export class MeetupsService {
     }
 
     return meetup;
+  }
+
+  // ── Proposals (poll-style voting) ──────────────────────────────────────────
+
+  /** Create a poll meetup: invitees vote a slot before it becomes real. */
+  async createProposal(proposerClerkId: string, dto: CreateProposalDto): Promise<MeetupDocument> {
+    const proposerObjId = await this.resolveMongoId(proposerClerkId);
+
+    const extraParticipants = (dto.participants ?? []).map((id) => new Types.ObjectId(id));
+    const participantSet = new Set<string>([
+      proposerObjId.toString(),
+      ...extraParticipants.map((p) => p.toString()),
+    ]);
+
+    // One RSVP row per invited person (everyone except the proposer).
+    const responses = Array.from(participantSet)
+      .filter((id) => id !== proposerObjId.toString())
+      .map((id) => ({ user_id: new Types.ObjectId(id), status: 'pending' }));
+
+    // Top-level date is a placeholder (first slot) until a slot locks.
+    const firstSlot = dto.slots[0];
+
+    const meetup = new this.meetupModel({
+      proposer_id:    proposerObjId,
+      owner_id:       proposerObjId, // group poll — proposer hosts
+      date:           firstSlot.date,
+      time:           firstSlot.time ?? '',
+      title:          dto.title,
+      description:    dto.description,
+      location:       firstSlot.location ?? '',
+      participants:   Array.from(participantSet).map((id) => new Types.ObjectId(id)),
+      responses,
+      status:         'pending',
+      is_proposal:    true,
+      proposed_slots: dto.slots.map((s) => ({
+        date: s.date, time: s.time ?? '', location: s.location ?? '',
+      })),
+      slot_votes:     [],
+      locked_slot_id: null,
+    });
+
+    await meetup.save();
+
+    // Notify every invitee to vote.
+    for (const recipientId of participantSet) {
+      if (recipientId === proposerObjId.toString()) continue;
+      this.notifSvc.create({
+        userId:   new Types.ObjectId(recipientId),
+        actorId:  proposerObjId,
+        type:     'meetup_proposed',
+        title:    `Vote on a time: ${dto.title}`,
+        body:     `${dto.slots.length} time option${dto.slots.length > 1 ? 's' : ''} to pick from`,
+        refId:    meetup._id as Types.ObjectId,
+        refModel: 'Meetup',
+      }).catch(() => {});
+    }
+
+    return this.findById((meetup._id as Types.ObjectId).toString());
+  }
+
+  /** Record one invitee's single-select vote (re-voting moves it). */
+  async voteSlot(meetupId: string, clerkId: string, slotId: string): Promise<MeetupDocument> {
+    const meetup = await this.meetupModel.findById(meetupId).exec();
+    if (!meetup) throw new NotFoundException('Meetup not found');
+    if (!meetup.is_proposal) throw new BadRequestException('This meetup is not a proposal');
+    if (meetup.locked_slot_id) throw new BadRequestException('Voting has closed for this proposal');
+
+    const userObjId = await this.resolveMongoId(clerkId);
+
+    const isParticipant = meetup.participants.some((p) => p.toString() === userObjId.toString());
+    if (!isParticipant) throw new ForbiddenException('You were not invited to this proposal');
+
+    const slotExists = meetup.proposed_slots.some((s) => s._id.toString() === slotId);
+    if (!slotExists) throw new BadRequestException('Unknown slot');
+
+    // Single vote: drop any prior vote by this user, then add the new one.
+    meetup.slot_votes = meetup.slot_votes.filter((v) => v.user_id.toString() !== userObjId.toString());
+    meetup.slot_votes.push({ slot_id: new Types.ObjectId(slotId), user_id: userObjId });
+    meetup.markModified('slot_votes');
+    await meetup.save();
+
+    // Batched ping to proposer — one live notification, updated each vote.
+    const voterCount = new Set(meetup.slot_votes.map((v) => v.user_id.toString())).size;
+    const inviteeCount = meetup.participants.length - 1;
+    this.notifSvc.upsert({
+      userId:   meetup.proposer_id as Types.ObjectId,
+      actorId:  userObjId,
+      type:     'meetup_voted',
+      title:    `${voterCount}/${inviteeCount} voted on: ${meetup.title}`,
+      body:     'Tap to review and lock a time',
+      refId:    meetup._id as Types.ObjectId,
+      refModel: 'Meetup',
+    }).catch(() => {});
+
+    return this.findById(meetupId);
+  }
+
+  /** Proposer locks a slot (explicit slotId) or auto-locks the top-voted one. */
+  async lockSlot(meetupId: string, clerkId: string, slotId?: string): Promise<MeetupDocument> {
+    const meetup = await this.meetupModel.findById(meetupId).exec();
+    if (!meetup) throw new NotFoundException('Meetup not found');
+    if (!meetup.is_proposal) throw new BadRequestException('This meetup is not a proposal');
+    if (meetup.locked_slot_id) throw new BadRequestException('A slot is already locked');
+
+    const userObjId = await this.resolveMongoId(clerkId);
+    if (meetup.proposer_id.toString() !== userObjId.toString()) {
+      throw new ForbiddenException('Only the proposer can lock a slot');
+    }
+
+    // Resolve the winning slot id.
+    let winningId = slotId;
+    if (!winningId) {
+      // Auto: tally votes, pick the highest (ties → earliest slot in the list).
+      const tally = new Map<string, number>();
+      for (const v of meetup.slot_votes) {
+        const k = v.slot_id.toString();
+        tally.set(k, (tally.get(k) ?? 0) + 1);
+      }
+      let best = -1;
+      for (const slot of meetup.proposed_slots) {
+        const c = tally.get(slot._id.toString()) ?? 0;
+        if (c > best) { best = c; winningId = slot._id.toString(); }
+      }
+    }
+
+    const slot = meetup.proposed_slots.find((s) => s._id.toString() === winningId);
+    if (!slot) throw new BadRequestException('Unknown slot');
+
+    // Promote the slot to the real meetup.
+    meetup.date = slot.date;
+    meetup.time = slot.time;
+    meetup.location = slot.location;
+    meetup.locked_slot_id = slot._id;
+    meetup.is_proposal = false;
+    meetup.status = 'accepted';
+
+    // Whoever voted the winning slot counts as accepted.
+    const winnerVoters = new Set(
+      meetup.slot_votes
+        .filter((v) => v.slot_id.toString() === slot._id.toString())
+        .map((v) => v.user_id.toString()),
+    );
+    for (const r of meetup.responses) {
+      if (winnerVoters.has(r.user_id.toString())) r.status = 'accepted';
+    }
+    meetup.markModified('responses');
+    await meetup.save();
+
+    // Notify all invitees the time is confirmed.
+    for (const p of meetup.participants) {
+      if (p.toString() === userObjId.toString()) continue;
+      this.notifSvc.create({
+        userId:   p as Types.ObjectId,
+        actorId:  userObjId,
+        type:     'meetup_confirmed',
+        title:    `Confirmed: ${meetup.title}`,
+        body:     `${slot.date}${slot.time ? ' at ' + slot.time : ''}${slot.location ? ' · ' + slot.location : ''}`,
+        refId:    meetup._id as Types.ObjectId,
+        refModel: 'Meetup',
+      }).catch(() => {});
+    }
+
+    return this.findById(meetupId);
   }
 
   async update(

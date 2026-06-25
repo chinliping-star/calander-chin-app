@@ -29,4 +29,4 @@ export interface SuggestedPerson {
   mutualContext: string;
 }
 
-export type SidebarSection = 'all' | 'invites' | 'past' | 'archived';
+export type SidebarSection = 'all' | 'invites' | 'proposals' | 'past' | 'archived';

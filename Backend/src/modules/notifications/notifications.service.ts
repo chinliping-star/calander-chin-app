@@ -44,6 +44,36 @@ export class NotificationsService {
     });
   }
 
+  /**
+   * Batched notification: keep a single live notification per (user, type, ref).
+   * Re-firing updates its title/body and marks it unread again instead of
+   * spawning a new row — used for vote pings so 10 votes = 1 notification.
+   */
+  async upsert(payload: {
+    userId: Types.ObjectId;
+    actorId?: Types.ObjectId;
+    type: NotificationType;
+    title: string;
+    body?: string;
+    refId: Types.ObjectId;
+    refModel?: string;
+  }): Promise<void> {
+    await this.notifModel.findOneAndUpdate(
+      { user_id: payload.userId, type: payload.type, ref_id: payload.refId },
+      {
+        $set: {
+          actor_id:   payload.actorId,
+          title:      payload.title,
+          body:       payload.body ?? '',
+          ref_model:  payload.refModel ?? '',
+          is_read:    false,
+          created_at: new Date(),
+        },
+      },
+      { upsert: true, new: true },
+    ).exec();
+  }
+
   async getForUser(clerkId: string): Promise<NotificationDocument[]> {
     const userId = await this.resolveMongoIdOrNull(clerkId);
     if (!userId) return [];
