@@ -117,7 +117,7 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
       type="button"
       aria-label="New meetup"
       onClick={(e) => { e.stopPropagation(); onNewMeetup?.(date); }}
-      className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
+      className="absolute inset-0 z-20 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
       style={{ background: 'rgba(255,127,177,0.08)' }}
     >
       <span className="flex h-6 w-6 items-center justify-center rounded-full shadow-sm" style={{ backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '16px', lineHeight: 1 }}>
@@ -189,7 +189,7 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
             type="button"
             aria-label={todayBlocked ? 'Mark as free' : 'Mark as busy'}
             onClick={(e) => { e.stopPropagation(); onToggleAvailability?.(date, todayBlocked ? 'blocked' : 'available'); }}
-            className="absolute bottom-0.5 right-0.5 z-20 opacity-0 group-hover:opacity-100 transition-all text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+            className="absolute bottom-0.5 right-0.5 z-20 hidden sm:block opacity-0 group-hover:opacity-100 transition-all text-[9px] font-bold px-1.5 py-0.5 rounded-md"
             style={todayBlocked
               ? { backgroundColor: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }
               : { backgroundColor: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db' }
@@ -266,7 +266,7 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
             onToggleAvailability?.(date, isBlocked ? 'blocked' : 'available');
           }}
           className={cn(
-            'absolute bottom-0.5 right-0.5 transition-all text-[9px] font-bold px-1.5 py-0.5 rounded-md z-20',
+            'absolute bottom-0.5 right-0.5 transition-all text-[9px] font-bold px-1.5 py-0.5 rounded-md z-20 hidden sm:block',
             isBlocked
               ? 'opacity-80 group-hover:opacity-100 group-hover:scale-105'   // Busy state — always visible
               : 'opacity-0 group-hover:opacity-100 group-hover:scale-105',   // Free state — reveal on hover
