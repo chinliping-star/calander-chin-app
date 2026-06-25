@@ -1,5 +1,8 @@
 ﻿import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays, Crown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useClerk } from '@clerk/clerk-react';
 import { cn } from '../../../lib/utils.ts';
+import { useAuthStore } from '../../../store/auth.ts';
 
 export type SettingsSection = 'profile' | 'appearance' | 'calendar' | 'privacy' | 'notifications' | 'account' | 'subscription' | 'help';
 
@@ -20,6 +23,16 @@ const NAV_ITEMS: { key: SettingsSection; label: string; icon: React.FC<{ size?: 
 ];
 
 export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
+  const navigate = useNavigate();
+  const { clearAuth } = useAuthStore();
+  const { signOut } = useClerk();
+
+  async function handleLogout() {
+    clearAuth();
+    await signOut();
+    navigate('/login');
+  }
+
   return (
     <aside
       className="flex flex-col rounded-2xl p-5 gap-1"
@@ -72,6 +85,7 @@ export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
 
       <button
         type="button"
+        onClick={handleLogout}
         className="flex items-center gap-2.5 px-3 py-2.5 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
         style={{ color: 'var(--color-primary)' }}
       >
