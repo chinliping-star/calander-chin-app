@@ -71,16 +71,20 @@ function ProfileSection() {
   const [bio, setBio] = useState(storeUser?.bio ?? '');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
 
   const { mutate: saveProfile, isPending: isSaving, isSuccess: isSaved } = useMutation({
     mutationFn: async () => {
+      const BASE_URL = (import.meta.env as Record<string, string>)['VITE_API_URL'] ?? 'http://localhost:3000/api';
       if (avatarFile) {
         const formData = new FormData();
         formData.append('avatar', avatarFile);
         const token = await getToken();
-        const BASE_URL = (import.meta.env as Record<string, string>)['VITE_API_URL'] ?? 'http://localhost:3000/api';
         const res = await fetch(`${BASE_URL}/users/me/avatar`, {
           method: 'POST',
           credentials: 'include',
@@ -89,17 +93,33 @@ function ProfileSection() {
         });
         if (!res.ok) throw new Error('Avatar upload failed');
       }
-      return api.patch<{ display_name: string; username: string; bio?: string; avatar_url?: string }>('/users/me', {
+      let bannerUrl: string | undefined;
+      if (coverFile) {
+        const formData = new FormData();
+        formData.append('cover', coverFile);
+        const token = await getToken();
+        const res = await fetch(`${BASE_URL}/users/me/cover`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: formData,
+        });
+        if (!res.ok) throw new Error('Cover upload failed');
+        bannerUrl = ((await res.json()) as { banner_url?: string }).banner_url;
+      }
+      const updated = await api.patch<{ display_name: string; username: string; bio?: string; avatar_url?: string; banner_url?: string }>('/users/me', {
         display_name: displayName.trim(),
         username: username.trim(),
         ...(bio.trim() && { bio: bio.trim() }),
       });
+      return bannerUrl ? { ...updated, banner_url: bannerUrl } : updated;
     },
     onSuccess: (updated) => {
       updateUser(updated);
       qc.invalidateQueries({ queryKey: ['profile'] });
       setSaveError(null);
       setAvatarFile(null);
+      setCoverFile(null);
     },
     onError: (err: Error) => {
       setSaveError(err.message);
@@ -115,12 +135,53 @@ function ProfileSection() {
     reader.readAsDataURL(file);
   }
 
+  // Wide banner cover — 4:1 ratio (e.g. 1584×396 / 1600×400). Larger images
+  // are fine as long as the ratio matches (within a small tolerance).
+  const COVER_MIN_W = 1200;
+  const COVER_MIN_H = 300;
+  const COVER_RATIO = 4 / 1;      // 4:1
+  const RATIO_TOLERANCE = 0.06;  // ±6%
+
+  function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file after a rejection
+    if (!file) return;
+    setCoverError(null);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      const ratio = w / h;
+      const ratioOff = Math.abs(ratio - COVER_RATIO) / COVER_RATIO;
+
+      if (w < COVER_MIN_W || h < COVER_MIN_H) {
+        setCoverError(`Cover must be at least ${COVER_MIN_W}×${COVER_MIN_H}px. Yours is ${w}×${h}px.`);
+      } else if (ratioOff > RATIO_TOLERANCE) {
+        setCoverError(`Cover must use a 4:1 banner ratio (e.g. 1584×396 or 1600×400). Yours is ${w}×${h}px.`);
+      } else {
+        setCoverFile(file);
+        setCoverPreview(url);
+        return;
+      }
+      setCoverFile(null);
+      setCoverPreview(null);
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      setCoverError('Could not read that image.');
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaveError(null);
     saveProfile();
   }
 
+  const coverSrc = coverPreview ?? storeUser?.banner_url ?? undefined;
   const avatarSrc = avatarPreview ?? storeUser?.avatar_url ?? undefined;
   const initials = (storeUser?.display_name ?? storeUser?.username ?? '?')
     .charAt(0)
@@ -131,6 +192,43 @@ function ProfileSection() {
       <SectionCard>
         <SectionHeading id="profile-heading">Profile</SectionHeading>
         <form onSubmit={handleSave} className="flex flex-col gap-5">
+          {/* Cover image — Facebook-style 851×315 */}
+          <div>
+            <label style={smallLabel}>Cover Image</label>
+            <div
+              className="relative w-full overflow-hidden rounded-2xl"
+              style={{
+                aspectRatio: `4 / 1`,
+                border: '1px solid var(--border)',
+                ...(coverSrc
+                  ? { backgroundImage: `url(${coverSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                  : { background: 'linear-gradient(135deg, var(--color-primary) 0%, #c084fc 60%, var(--color-secondary) 100%)' }),
+              }}
+            >
+              <button
+                type="button"
+                aria-label="Upload cover image"
+                onClick={() => coverRef.current?.click()}
+                className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
+                style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+              >
+                <Pencil size={12} />
+                {coverSrc ? 'Change cover' : 'Add cover'}
+              </button>
+              <input
+                ref={coverRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                aria-label="Upload cover image"
+                onChange={handleCoverChange}
+              />
+            </div>
+            <p className="mt-1.5 text-xs" style={{ color: coverError ? '#dc2626' : 'var(--text)' }}>
+              {coverError ?? 'Wide banner ratio (4:1). At least 1200×300px, e.g. 1584×396 or 1600×400.'}
+            </p>
+          </div>
+
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
               {avatarSrc ? (

@@ -29,6 +29,8 @@ interface DayCellProps {
   onNewMeetup?: (date: string) => void;
   onToggleAvailability?: (date: string, current: 'available' | 'blocked') => void;
   onMeetupClick?: (info: MeetupClickInfo) => void;
+  /** Open the day-detail popup for this date (own + friend calendars). */
+  onDayOpen?: (date: string) => void;
 }
 
 const STATUS_STYLES: Record<string, CSSProperties> = {
@@ -88,7 +90,7 @@ function MeetupBars({ meetups, date, onMeetupClick }: {
   );
 }
 
-export function DayCell({ data, isToday = false, isOwn = false, meetups = [], onClick, onNewMeetup, onToggleAvailability, onMeetupClick }: DayCellProps) {
+export function DayCell({ data, isToday = false, isOwn = false, meetups = [], onClick, onNewMeetup, onToggleAvailability, onMeetupClick, onDayOpen }: DayCellProps) {
   if (!data.isCurrentMonth || data.day === 0) {
     return <div className="rounded-xl" style={{ minHeight: '56px', height: '100%', backgroundColor: 'transparent' }} aria-hidden="true" />;
   }
@@ -131,7 +133,8 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
         role="gridcell"
         aria-label={ariaLabel}
         aria-current="date"
-        className="relative flex flex-col items-start justify-start gap-1 rounded-xl p-1.5 group"
+        onClick={() => onDayOpen?.(date)}
+        className="relative flex flex-col items-start justify-start gap-1 rounded-xl p-1.5 group cursor-pointer"
         style={{
           minHeight: '56px', height: '100%',
           ...(todayBlocked
@@ -247,7 +250,8 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
       <div
         role="gridcell"
         aria-label={ariaLabel}
-        className="relative flex w-full flex-col items-start justify-start gap-1 rounded-xl p-1.5 group cursor-default"
+        onClick={() => onDayOpen?.(date)}
+        className="relative flex w-full flex-col items-start justify-start gap-1 rounded-xl p-1.5 group cursor-pointer"
         style={cellStyle}
       >
         {innerContent}
@@ -287,10 +291,10 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
       className="relative flex w-full flex-col items-start justify-start gap-1 rounded-xl p-1.5 group"
       style={{
         ...cellStyle,
-        cursor: !isBlocked && canAddMeetup ? 'pointer' : 'default',
+        cursor: 'pointer',
         opacity: isBlocked ? 0.7 : 1,
       }}
-      onClick={() => !isBlocked && !hasMeetup && onClick?.(data)}
+      onClick={() => (onDayOpen ? onDayOpen(date) : (!isBlocked && !hasMeetup && onClick?.(data)))}
     >
       {innerContent}
       {/* Propose meetup hint on hover for non-blocked, non-event days */}

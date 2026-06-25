@@ -104,4 +104,24 @@ export class UsersController {
     const result = await this.cloudinaryService.uploadFile(file, 'helloxxx/avatars');
     return this.usersService.updateAvatar(clerkId, (result as { secure_url: string }).secure_url);
   }
+
+  // Upload cover / banner image (Facebook-style cover, 851×315)
+  @UseGuards(JwtAuthGuard)
+  @Post('me/cover')
+  @UseInterceptors(FileInterceptor('cover', {
+    storage: memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_, file, cb) => {
+      if (!file.mimetype.match(/^image\//)) return cb(new Error('Images only'), false);
+      cb(null, true);
+    },
+  }))
+  @HttpCode(HttpStatus.OK)
+  async uploadCover(
+    @CurrentUser() clerkId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const result = await this.cloudinaryService.uploadFile(file, 'helloxxx/covers');
+    return this.usersService.updateCover(clerkId, (result as { secure_url: string }).secure_url);
+  }
 }

@@ -6,6 +6,7 @@ import { Clock, MapPin, LayoutGrid, AlignJustify, Calendar, X, Trash2, Pencil, C
 import { Skeleton } from '../../../components/ui/Skeleton.tsx';
 import { ChevronLeft, ChevronRight } from '../../../components/ui/Icon.tsx';
 import { DayCell } from './DayCell.tsx';
+import { DayDetailModal } from './DayDetailModal.tsx';
 import { useCalendarApi, type ApiMeetup, type ApiCalendarDay } from '../api/calendar.api.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
 import { InviteFriendsPicker } from '../../meetup/components/InviteFriendsPicker.tsx';
@@ -607,20 +608,112 @@ function MeetupList({ meetups, onMeetupClick }: { meetups: MeetupItem[]; onMeetu
   );
 }
 
+// ── All-meetups list (paginated 10/page) ────────────────────────────────────
+
+const PAGE_SIZE = 10;
+
+function AllMeetupsList({ meetups, onMeetupClick }: { meetups: MeetupItem[]; onMeetupClick?: (info: MeetupDetailInfo) => void }) {
+  const [page, setPage] = useState(0);
+
+  if (meetups.length === 0) return (
+    <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>No meetups yet</p>
+  );
+
+  const sorted = [...meetups].sort((a, b) => a.date.localeCompare(b.date));
+  const pageCount = Math.ceil(sorted.length / PAGE_SIZE);
+  const safePage = Math.min(page, pageCount - 1);
+  const shown = sorted.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {shown.map((m) => {
+        const bs = meetupBlockStyle(m);
+        const badge = m.attendance
+          ? ATTENDANCE_BADGE[m.attendance]
+          : m.status === 'pending'
+            ? { label: 'Pending', bg: '#ede9fe', color: '#7c3aed' }
+            : { label: 'Planned', bg: 'var(--color-primary)', color: '#ffffff' };
+        return (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onMeetupClick?.({ date: m.date, eventLabel: m.label, status: m.status })}
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:shadow-sm hover:opacity-80 w-full text-left"
+            style={{ backgroundColor: bs.bg, border: bs.border }}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+              style={{ backgroundColor: m.attendance ? ATTENDANCE_BADGE[m.attendance].bg : m.status === 'pending' ? '#c084fc' : 'var(--color-primary)' }}>
+              {m.day}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-h)' }}>{m.label}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px]" style={{ color: 'var(--text)' }}>{m.date}</span>
+                {m.time && (
+                  <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text)' }}>
+                    <Clock size={9} />{m.time}
+                  </span>
+                )}
+                {m.location && (
+                  <span className="flex items-center gap-1 text-[10px] truncate" style={{ color: 'var(--text)' }}>
+                    <MapPin size={9} />{m.location}
+                  </span>
+                )}
+              </div>
+            </div>
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0"
+              style={{ backgroundColor: badge.bg, color: badge.color }}>
+              {badge.label}
+            </span>
+          </button>
+        );
+      })}
+
+      {pageCount > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+            className="flex h-7 w-7 items-center justify-center rounded-full transition-all disabled:opacity-40 hover:opacity-80"
+            style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)', border: '1px solid var(--border)' }}
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>
+            Page {safePage + 1} of {pageCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))}
+            disabled={safePage >= pageCount - 1}
+            className="flex h-7 w-7 items-center justify-center rounded-full transition-all disabled:opacity-40 hover:opacity-80"
+            style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)', border: '1px solid var(--border)' }}
+            aria-label="Next page"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Monthly view ──────────────────────────────────────────────────────────────
 
 function MonthlyView({
-  year, month, today, overrides, meetups, isOwn, weekStartsOnMonday,
-  onNewMeetup, onToggleAvailability, onDayClick, onMeetupClick,
+  year, month, today, overrides, meetups, allMeetups, isOwn, weekStartsOnMonday,
+  onNewMeetup, onToggleAvailability, onMeetupClick, onDayOpen,
 }: {
   year: number; month: number; today: Date;
-  overrides: Record<string, DayOverride>; meetups: MeetupItem[];
+  overrides: Record<string, DayOverride>; meetups: MeetupItem[]; allMeetups: MeetupItem[];
   isOwn: boolean;
   weekStartsOnMonday: boolean;
   onNewMeetup?: (date: string) => void;
   onToggleAvailability?: (date: string, current: 'available' | 'blocked') => void;
-  onDayClick?: (date: string, currentStatus: DayStatus) => void;
   onMeetupClick?: (info: MeetupDetailInfo) => void;
+  onDayOpen?: (date: string) => void;
 }) {
   const WEEK_DAYS = weekStartsOnMonday ? WEEK_DAYS_MON : WEEK_DAYS_SUN;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -674,7 +767,7 @@ function MonthlyView({
               meetups={meetupsByDate[day.date] ?? []}
               onNewMeetup={onNewMeetup}
               onToggleAvailability={onToggleAvailability}
-              onClick={!isOwn ? (d) => onDayClick?.(d.date, d.status) : undefined}
+              onDayOpen={onDayOpen}
               onMeetupClick={onMeetupClick}
             />
           </div>
@@ -695,9 +788,9 @@ function MonthlyView({
       </div>
       <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--color-primary)' }}>
-          This Month's Meetups
+          All Meetups
         </p>
-        <MeetupList meetups={meetups} onMeetupClick={onMeetupClick} />
+        <AllMeetupsList meetups={allMeetups} onMeetupClick={onMeetupClick} />
       </div>
     </div>
   );
@@ -1015,6 +1108,8 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
 
   // Bug 11.4: meetup detail modal state
   const [activeMeetup, setActiveMeetup] = useState<MeetupDetailInfo | null>(null);
+  // Day-detail popup state (the clicked date)
+  const [activeDay, setActiveDay] = useState<string | null>(null);
 
   const qc = useQueryClient();
   const { user } = useAuthStore();
@@ -1055,6 +1150,23 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
   }));
 
+  // All meetups across every month — feeds the paginated "All Meetups" list.
+  const meetupsApi = useMeetupsApi();
+  const { data: allApiMeetups = [] } = useQuery({
+    queryKey: ['meetups'],
+    queryFn: () => meetupsApi.getMeetups(),
+    enabled: !!user?.username,
+    staleTime: 60_000,
+  });
+  const visibleAll = allApiMeetups.filter(m => {
+    const mine = m.responses?.find(r => r.user_id?._id === myId);
+    return !mine || mine.status !== 'declined';
+  });
+  const allMeetupList = buildMeetupList(visibleAll, timeFormat).map(m => ({
+    ...m,
+    attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
+  }));
+
   const markDay = useMutation({
     mutationFn: ({ date, status }: { date: string; status: DayStatus }) =>
       calendarApi.markDay(date, status),
@@ -1068,13 +1180,6 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     const next: DayStatus = current === 'blocked' ? 'available' : 'blocked';
     markDay.mutate({ date, status: next });
   }, [markDay]);
-
-  // Friend's day click — navigate to propose meetup
-  function handleDayClick(date: string, currentStatus: DayStatus) {
-    if (currentStatus !== 'blocked') {
-      navigate(`/meetups/propose?date=${date}`);
-    }
-  }
 
   // + button click on own calendar — navigate to new meetup
   const handleNewMeetup = useCallback((date: string) => {
@@ -1098,6 +1203,21 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
           info={activeMeetup}
           meetups={meetupList}
           onClose={() => setActiveMeetup(null)}
+        />
+      )}
+
+      {/* Day-detail popup */}
+      {activeDay && (
+        <DayDetailModal
+          date={activeDay}
+          meetups={meetupList.filter(m => m.date === activeDay)}
+          isOwn={isOwn}
+          isBlocked={overrides[activeDay]?.status === 'blocked'}
+          onClose={() => setActiveDay(null)}
+          onMeetupClick={(info) => { setActiveDay(null); setActiveMeetup(info); }}
+          onNewMeetup={(d) => navigate(`/meetups/new?date=${d}`)}
+          onPropose={(d) => navigate(`/meetups/propose?date=${d}`)}
+          onToggleAvailability={(d, cur) => { handleToggleAvailability(d, cur); setActiveDay(null); }}
         />
       )}
 
@@ -1168,12 +1288,12 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
           {view === 'monthly' && (
             <MonthlyView
               year={year} month={month} today={today}
-              overrides={overrides} meetups={meetupList}
+              overrides={overrides} meetups={meetupList} allMeetups={allMeetupList}
               isOwn={isOwn}
               weekStartsOnMonday={weekStartsOnMonday}
               onNewMeetup={handleNewMeetup}
               onToggleAvailability={handleToggleAvailability}
-              onDayClick={handleDayClick}
+              onDayOpen={setActiveDay}
               onMeetupClick={handleMeetupClick}
             />
           )}

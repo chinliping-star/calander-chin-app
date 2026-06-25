@@ -93,7 +93,9 @@ export class MeetupsService {
       is_private:   dto.is_private ?? false,
       participants: Array.from(participantSet).map((id) => new Types.ObjectId(id)),
       responses,
-      status:       'pending',
+      // Solo meetup (owner == proposer, no extra invitees) has no one to accept,
+      // so confirm it immediately. Otherwise it waits on invitees.
+      status:       responses.length === 0 ? 'accepted' : 'pending',
     });
 
     await meetup.save();

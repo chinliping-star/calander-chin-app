@@ -27,6 +27,7 @@ export function NewMeetupPage() {
   const meetupsApi = useMeetupsApi();
   const { user } = useAuthStore();
   const [values, setValues] = useState<NewMeetupFormValues>({ ...INITIAL_VALUES, date: prefillDate });
+  const [mode, setMode] = useState<'friends' | 'solo'>('friends');
 
   // Check meetup count for selected date (max 3)
   const { data: allMeetups = [] } = useQuery({
@@ -59,7 +60,7 @@ export function NewMeetupPage() {
     if (!values.title.trim()) next.title = 'Please add a meetup title.';
     if (!values.date) next.date = 'Please pick a date.';
     if (!values.time) next.time = 'Please pick a time.';
-    if (values.invitedFriendIds.length === 0) next.invitedFriendIds = 'Invite at least one friend.';
+    if (mode === 'friends' && values.invitedFriendIds.length === 0) next.invitedFriendIds = 'Invite at least one friend.';
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -68,6 +69,21 @@ export function NewMeetupPage() {
     e.preventDefault();
     setSubmitError(null);
     if (!validate()) return;
+
+    if (mode === 'solo') {
+      // Personal event — owner is the creator, no invitees.
+      if (!user?._id) { setSubmitError('You must be signed in.'); return; }
+      createMeetup.mutate({
+        owner_id: user._id,
+        date: values.date,
+        time: values.time,
+        title: values.title.trim(),
+        description: values.details || undefined,
+        location: values.location || undefined,
+      });
+      return;
+    }
+
     const [owner_id, ...rest] = values.invitedFriendIds;
     createMeetup.mutate({
       owner_id,
@@ -241,15 +257,52 @@ export function NewMeetupPage() {
               </div>
             </div>
 
-            {/* Invite Friends */}
+            {/* Who's coming — solo vs friends */}
             <div>
-              <InviteFriendsPicker
-                selected={values.invitedFriendIds}
-                onChange={(ids) => set('invitedFriendIds', ids)}
-              />
-              {errors.invitedFriendIds && (
-                <p className="mt-1.5 text-xs" style={{ color: 'var(--color-primary)' }} role="alert">
-                  {errors.invitedFriendIds}
+              <label style={labelStyle}>Who's coming?</label>
+              <div
+                className="flex items-center gap-1 p-1 rounded-full w-fit"
+                style={{ backgroundColor: 'var(--color-tertiary)', border: '1px solid var(--border)' }}
+                role="group"
+                aria-label="Meetup audience"
+              >
+                {([
+                  { key: 'friends', label: 'With friends' },
+                  { key: 'solo', label: 'Just me' },
+                ] as const).map(opt => {
+                  const active = mode === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setMode(opt.key)}
+                      aria-pressed={active}
+                      className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2"
+                      style={active
+                        ? { backgroundColor: 'var(--color-primary)', color: '#ffffff' }
+                        : { color: 'var(--text)' }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {mode === 'friends' ? (
+                <div className="mt-4">
+                  <InviteFriendsPicker
+                    selected={values.invitedFriendIds}
+                    onChange={(ids) => set('invitedFriendIds', ids)}
+                  />
+                  {errors.invitedFriendIds && (
+                    <p className="mt-1.5 text-xs" style={{ color: 'var(--color-primary)' }} role="alert">
+                      {errors.invitedFriendIds}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs" style={{ color: 'var(--text)' }}>
+                  A personal event on your calendar — confirmed right away, no invites.
                 </p>
               )}
             </div>
