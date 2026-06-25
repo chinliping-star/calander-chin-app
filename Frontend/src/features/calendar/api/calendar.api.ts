@@ -32,7 +32,24 @@ export interface ApiMeetup {
   responses?: ApiMeetupResponse[];
   memory_photo_url?: string;
   memory_photos?: ApiMemoryPhoto[];
+  // Proposal / voting (poll-style meetups)
+  is_proposal?: boolean;
+  proposed_slots?: ApiProposedSlot[];
+  slot_votes?: ApiSlotVote[];
+  locked_slot_id?: string | null;
   created_at: string;
+}
+
+export interface ApiProposedSlot {
+  _id: string;
+  date: string;
+  time: string;
+  location: string;
+}
+
+export interface ApiSlotVote {
+  slot_id: string;
+  user_id: string;
 }
 
 export interface ApiMeetupResponse {

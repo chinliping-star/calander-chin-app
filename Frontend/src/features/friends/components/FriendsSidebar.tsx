@@ -1,4 +1,4 @@
-﻿import { Users, Mail, Calendar, Archive, HelpCircle, LogOut, UserPlus } from 'lucide-react';
+﻿import { Users, Mail, Calendar, Archive, HelpCircle, LogOut, UserPlus, Vote } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useClerk } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
@@ -26,8 +26,10 @@ export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebar
   });
 
   const today = new Date().toISOString().split('T')[0];
-  const upcomingCount = meetups.filter(m => m.date >= today && m.status === 'accepted').length;
-  const pendingCount = meetups.filter(m => m.status === 'pending').length;
+  const upcomingCount = meetups.filter(m => m.date >= today && m.status === 'accepted' && !m.is_proposal).length;
+  const pendingCount = meetups.filter(m => m.status === 'pending' && !m.is_proposal).length;
+  // Open proposals I'm part of (still voting/unlocked).
+  const proposalCount = meetups.filter(m => m.is_proposal && !m.locked_slot_id).length;
 
   const NAV_ITEMS: {
     key: SidebarSection;
@@ -35,10 +37,11 @@ export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebar
     icon: React.FC<{ size?: number; className?: string }>;
     badge?: number;
   }[] = [
-    { key: 'all',      label: 'All Friends',  icon: Users },
-    { key: 'invites',  label: 'Invites',       icon: Mail, badge: pendingCount || undefined },
-    { key: 'past',     label: 'Past Meetups',  icon: Calendar },
-    { key: 'archived', label: 'Archived',      icon: Archive },
+    { key: 'all',       label: 'All Friends',   icon: Users },
+    { key: 'invites',   label: 'Invites',       icon: Mail, badge: pendingCount || undefined },
+    { key: 'proposals', label: 'Proposals',     icon: Vote, badge: proposalCount || undefined },
+    { key: 'past',      label: 'Past Meetups',  icon: Calendar },
+    { key: 'archived',  label: 'Archived',      icon: Archive },
   ];
 
   async function handleLogout() {

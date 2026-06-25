@@ -4,6 +4,8 @@ export type NotificationType =
   | 'meetup_proposed'
   | 'meetup_accepted'
   | 'meetup_declined'
+  | 'meetup_voted'
+  | 'meetup_confirmed'
   | 'community_invite'
   | 'community_post'
   | 'message_received';

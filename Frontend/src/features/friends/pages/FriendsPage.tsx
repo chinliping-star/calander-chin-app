@@ -11,6 +11,7 @@ import { FriendCard } from '../components/FriendCard.tsx';
 import { PeopleYouMayKnow } from '../components/PeopleYouMayKnow.tsx';
 import { useFriendsApi, type ApiFriend } from '../api/friends.api.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
+import { ProposalCard } from '../../meetup/components/ProposalCard.tsx';
 import { useAuthStore } from '../../../store/auth.ts';
 import type { SidebarSection, FriendProfile } from '../types.ts';
 
@@ -41,8 +42,10 @@ function InvitesPanel() {
   });
 
   // Show an invite only while MY own RSVP is pending — independent of others.
+  // Proposals (poll-style) live in their own tab, so exclude them here.
   const pending = meetups.filter(m =>
-    m.proposer_id._id !== user?._id &&
+    !m.is_proposal &&
+    m.proposer_id?._id !== user?._id &&
     m.responses?.find(r => r.user_id?._id === user?._id)?.status === 'pending',
   );
   const [responded, setResponded] = useState<Map<string, 'accepted' | 'declined'>>(new Map());
@@ -90,15 +93,15 @@ function InvitesPanel() {
             style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(74,62,78,0.06)' }}
           >
             <img
-              src={inv.proposer_id.avatar_url || `https://i.pravatar.cc/150?u=${inv.proposer_id.username}`}
-              alt={inv.proposer_id.display_name}
+              src={inv.proposer_id?.avatar_url || `https://i.pravatar.cc/150?u=${inv.proposer_id?.username ?? 'user'}`}
+              alt={inv.proposer_id?.display_name ?? 'User'}
               className="h-11 w-11 rounded-full object-cover shrink-0"
               width={44} height={44}
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold truncate" style={{ color: 'var(--text-h)' }}>{inv.title}</p>
               <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text)' }}>
-                Invited by <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{inv.proposer_id.display_name}</span>
+                Invited by <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{inv.proposer_id?.display_name ?? 'Someone'}</span>
               </p>
               <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text)' }}>
                 <Clock size={11} />
@@ -136,8 +139,8 @@ function InvitesPanel() {
                 style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)' }}
               >
                 <img
-                  src={inv.proposer_id.avatar_url || `https://i.pravatar.cc/150?u=${inv.proposer_id.username}`}
-                  alt={inv.proposer_id.display_name}
+                  src={inv.proposer_id?.avatar_url || `https://i.pravatar.cc/150?u=${inv.proposer_id?.username ?? 'user'}`}
+                  alt={inv.proposer_id?.display_name ?? 'User'}
                   className="h-8 w-8 rounded-full object-cover"
                   width={32} height={32}
                 />
@@ -153,6 +156,56 @@ function InvitesPanel() {
               </div>
             ))}
           </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── Proposals (poll-style voting) ─────────────────────────────────────────────
+
+function ProposalsPanel() {
+  const meetupsApi = useMeetupsApi();
+  const { user } = useAuthStore();
+  const { data: meetups = [], isLoading } = useQuery({
+    queryKey: ['meetups'],
+    queryFn: () => meetupsApi.getMeetups(),
+    staleTime: 30_000,
+  });
+
+  // Open polls (still voting) first, then recently-locked ones for context.
+  const proposals = meetups.filter(m => m.is_proposal);
+  const open = proposals.filter(m => !m.locked_slot_id);
+  const recentlyLocked = proposals.filter(m => m.locked_slot_id);
+
+  return (
+    <section aria-labelledby="proposals-heading">
+      <div className="mb-5">
+        <h2 id="proposals-heading" style={{ color: 'var(--text-h)', margin: '0 0 4px', fontSize: '20px' }}>Proposals</h2>
+        <p className="text-sm" style={{ color: 'var(--text)' }}>
+          {isLoading ? 'Loading...' : `${open.length} open poll${open.length !== 1 ? 's' : ''} — vote a time`}
+        </p>
+      </div>
+
+      {isLoading && (
+        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-primary)' }} /></div>
+      )}
+
+      {!isLoading && proposals.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: 'var(--text)' }}>
+          <Inbox size={40} style={{ opacity: 0.3 }} />
+          <p className="text-sm font-medium">No proposals yet</p>
+          <p className="text-xs">Propose a meetup with a few time options and let friends vote.</p>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        {open.map(m => <ProposalCard key={m._id} meetup={m} myId={user?._id ?? ''} />)}
+        {recentlyLocked.length > 0 && (
+          <>
+            <p className="text-xs font-bold uppercase tracking-widest px-1 mt-4" style={{ color: 'var(--text)' }}>Confirmed</p>
+            {recentlyLocked.map(m => <ProposalCard key={m._id} meetup={m} myId={user?._id ?? ''} />)}
+          </>
         )}
       </div>
     </section>
@@ -191,15 +244,15 @@ function PastMeetupsPanel() {
             style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(74,62,78,0.06)' }}
           >
             <img
-              src={m.proposer_id.avatar_url || `https://i.pravatar.cc/150?u=${m.proposer_id.username}`}
-              alt={m.proposer_id.display_name}
+              src={m.proposer_id?.avatar_url || `https://i.pravatar.cc/150?u=${m.proposer_id?.username ?? 'user'}`}
+              alt={m.proposer_id?.display_name ?? 'User'}
               className="h-11 w-11 rounded-full object-cover shrink-0"
               width={44} height={44}
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold truncate" style={{ color: 'var(--text-h)' }}>{m.title}</p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text)' }}>
-                with <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{m.proposer_id.display_name}</span>
+                with <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{m.proposer_id?.display_name ?? 'Someone'}</span>
                 {m.location ? ` · ${m.location}` : ''}
               </p>
               <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text)' }}>
@@ -393,6 +446,11 @@ export function FriendsPage() {
       setShowAddFriend(true);
       setSearchParams({}, { replace: true });
     }
+    const tab = searchParams.get('tab');
+    if (tab === 'proposals' || tab === 'invites' || tab === 'past' || tab === 'archived') {
+      setActiveSection(tab);
+      setSearchParams({}, { replace: true });
+    }
   }, [searchParams, setSearchParams]);
 
   const friendsApi = useFriendsApi();
@@ -423,9 +481,10 @@ export function FriendsPage() {
         </div>
 
         <div className="flex-1 flex flex-col gap-8 min-w-0">
-          {activeSection === 'invites'  && <InvitesPanel />}
-          {activeSection === 'past'     && <PastMeetupsPanel />}
-          {activeSection === 'archived' && <ArchivedPanel />}
+          {activeSection === 'invites'   && <InvitesPanel />}
+          {activeSection === 'proposals' && <ProposalsPanel />}
+          {activeSection === 'past'      && <PastMeetupsPanel />}
+          {activeSection === 'archived'  && <ArchivedPanel />}
           {activeSection === 'all' && (<>
             <PendingRequests />
 
@@ -467,7 +526,7 @@ export function FriendsPage() {
                 </div>
 
                 <div
-                  className="flex items-center gap-0.5 p-1 rounded-full flex-shrink-0"
+                  className="flex items-center gap-0.5 p-1 rounded-full shrink-0"
                   style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)' }}
                   role="group" aria-label="View mode"
                 >
