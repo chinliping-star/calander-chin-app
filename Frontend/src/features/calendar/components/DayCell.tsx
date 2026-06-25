@@ -68,9 +68,29 @@ function MeetupChip({ m, date, onMeetupClick }: {
   );
 }
 
+// Compact meetup indicators for small screens — mini bars, no text.
+function MeetupBars({ meetups, date, onMeetupClick }: {
+  meetups: DayCellMeetup[]; date: string; onMeetupClick?: (info: MeetupClickInfo) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 w-full mt-auto sm:hidden">
+      {meetups.map(m => (
+        <button
+          key={m.id}
+          type="button"
+          aria-label={`View meetup: ${m.label}`}
+          onClick={(e) => { e.stopPropagation(); onMeetupClick?.({ date, eventLabel: m.label, status: m.status }); }}
+          className="h-1.5 w-full rounded-full"
+          style={{ backgroundColor: m.status === 'accepted' ? 'var(--color-primary)' : '#c084fc' }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function DayCell({ data, isToday = false, isOwn = false, meetups = [], onClick, onNewMeetup, onToggleAvailability, onMeetupClick }: DayCellProps) {
   if (!data.isCurrentMonth || data.day === 0) {
-    return <div className="rounded-xl" style={{ minHeight: '72px', height: '100%', backgroundColor: 'transparent' }} aria-hidden="true" />;
+    return <div className="rounded-xl" style={{ minHeight: '56px', height: '100%', backgroundColor: 'transparent' }} aria-hidden="true" />;
   }
 
   const { status, stickers, day, date } = data;
@@ -113,7 +133,7 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
         aria-current="date"
         className="relative flex flex-col items-start justify-start gap-1 rounded-xl p-1.5 group"
         style={{
-          minHeight: '72px', height: '100%',
+          minHeight: '56px', height: '100%',
           ...(todayBlocked
             ? { backgroundColor: '#e5e7eb', border: '2px solid #d1d5db' }
             : {
@@ -134,14 +154,30 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
             Busy
           </span>
         ) : hasMeetup ? (
-          <div className="flex flex-col gap-0.5 w-full mt-auto">
-            {shownMeetups.map(m => (
-              <MeetupChip key={m.id} m={m} date={date} onMeetupClick={onMeetupClick} />
-            ))}
-            {extraCount > 0 && (
-              <span className="text-[8px] font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>+{extraCount} more</span>
-            )}
-          </div>
+          <>
+            {/* Desktop: text chips */}
+            <div className="hidden sm:flex sm:flex-col sm:gap-0.5 w-full mt-auto">
+              {shownMeetups.map(m => (
+                <MeetupChip key={m.id} m={m} date={date} onMeetupClick={onMeetupClick} />
+              ))}
+              {extraCount > 0 && (
+                <span className="text-[8px] font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>+{extraCount} more</span>
+              )}
+            </div>
+            {/* Mobile: compact bars (white on the filled today cell) */}
+            <div className="flex flex-col gap-0.5 w-full mt-auto sm:hidden">
+              {shownMeetups.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-label={`View meetup: ${m.label}`}
+                  onClick={(e) => { e.stopPropagation(); onMeetupClick?.({ date, eventLabel: m.label, status: m.status }); }}
+                  className="h-1.5 w-full rounded-full"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
+                />
+              ))}
+            </div>
+          </>
         ) : null}
         {addButton}
         {/* Availability toggle for today cell */}
@@ -164,7 +200,7 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
     );
   }
 
-  const cellStyle: CSSProperties = { minHeight: '72px', height: '100%', ...STATUS_STYLES[status] };
+  const cellStyle: CSSProperties = { minHeight: '56px', height: '100%', ...STATUS_STYLES[status] };
 
   // Inner content: day number, busy label, stickers, and up to 3 meetup chips.
   const innerContent = (
@@ -188,14 +224,19 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
       )}
 
       {hasMeetup && (
-        <div className="mt-auto flex flex-col gap-0.5 w-full">
-          {shownMeetups.map(m => (
-            <MeetupChip key={m.id} m={m} date={date} onMeetupClick={onMeetupClick} />
-          ))}
-          {extraCount > 0 && (
-            <span className="text-[8px] font-semibold pl-1" style={{ color: 'var(--text)' }}>+{extraCount} more</span>
-          )}
-        </div>
+        <>
+          {/* Desktop: text chips */}
+          <div className="mt-auto hidden sm:flex sm:flex-col sm:gap-0.5 w-full">
+            {shownMeetups.map(m => (
+              <MeetupChip key={m.id} m={m} date={date} onMeetupClick={onMeetupClick} />
+            ))}
+            {extraCount > 0 && (
+              <span className="text-[8px] font-semibold pl-1" style={{ color: 'var(--text)' }}>+{extraCount} more</span>
+            )}
+          </div>
+          {/* Mobile: compact bars */}
+          <MeetupBars meetups={shownMeetups} date={date} onMeetupClick={onMeetupClick} />
+        </>
       )}
     </div>
   );

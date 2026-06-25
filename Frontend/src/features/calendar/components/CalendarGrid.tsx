@@ -660,7 +660,11 @@ function MonthlyView({
           </div>
         ))}
       </div>
-      <div ref={gridRef} className="relative grid grid-cols-7 gap-1 flex-1" role="grid" style={{ gridAutoRows: '1fr' }}>
+      <div
+        ref={gridRef}
+        className="relative grid grid-cols-7 gap-1 lg:flex-1 [grid-auto-rows:minmax(52px,auto)] lg:[grid-auto-rows:minmax(80px,1fr)]"
+        role="grid"
+      >
         {cells.map((day, idx) => (
           <div key={day.date || `pad-${idx}`} className="relative">
             <DayCell
@@ -749,7 +753,9 @@ function WeeklyView({
       <p className="text-[10px] font-semibold uppercase tracking-widest text-center" style={{ color: 'var(--text)' }}>
         Week of {weekLabel}
       </p>
-      <div className="grid grid-cols-7 gap-1.5 flex-1">
+      {/* Mobile: horizontal scroll so each day column stays readable; desktop: full 7-col grid */}
+      <div className="-mx-1 overflow-x-auto px-1 lg:mx-0 lg:overflow-visible lg:px-0">
+      <div className="grid grid-cols-7 gap-1.5 flex-1 min-w-[560px] lg:min-w-0">
         {weekDays.map((date, i) => {
           const day = date.getDate();
           const sameMonth = date.getMonth() === month && date.getFullYear() === year;
@@ -845,6 +851,7 @@ function WeeklyView({
             </div>
           );
         })}
+      </div>
       </div>
       <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--color-primary)' }}>
