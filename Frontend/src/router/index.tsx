@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react';
+import { DocumentTitle } from '../components/layout/DocumentTitle.tsx';
 import { AuthGuard } from '../features/auth/components/AuthGuard.tsx';
 import { PublicGuard } from '../features/auth/components/PublicGuard.tsx';
 import { LoginPage } from '../features/auth/pages/LoginPage.tsx';
@@ -29,7 +30,20 @@ import { AdminAudit } from '../features/admin/pages/AdminAudit.tsx';
 import { AdminSettings } from '../features/admin/pages/AdminSettings.tsx';
 import { AdminFeedback } from '../features/admin/pages/AdminFeedback.tsx';
 
+// Root layout — animated per-page document title sits above every route.
+function RootLayout() {
+  return (
+    <>
+      <DocumentTitle />
+      <Outlet />
+    </>
+  );
+}
+
 export const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
   // Public — authenticated users bounced away from auth pages
   { path: '/login',        element: <PublicGuard><LoginPage /></PublicGuard> },
   { path: '/register',     element: <PublicGuard><RegisterPage /></PublicGuard> },
@@ -70,6 +84,8 @@ export const router = createBrowserRouter([
       { path: '/meetups/propose/saved', element: <SavedDraftsPage /> },
       { path: '/:username',          element: <ProfilePage /> },
       { path: '/:username/calendar', element: <CalendarPage /> },
+    ],
+  },
     ],
   },
 ]);
