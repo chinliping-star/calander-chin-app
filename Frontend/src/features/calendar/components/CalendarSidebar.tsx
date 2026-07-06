@@ -83,18 +83,17 @@ export function CalendarSidebar() {
 
         {/* Stats row */}
         <div
-          className="w-full grid grid-cols-3 gap-1 rounded-xl py-2.5 px-1"
+          className="w-full grid grid-cols-2 gap-1 rounded-xl py-2.5 px-1"
           style={{ backgroundColor: 'var(--color-neutral)' }}
         >
           {[
             { label: 'Friends',  value: friends.length },
             { label: 'Meetups',  value: acceptedMeetups },
-            { label: 'Photos',   value: 0 },
           ].map((stat, i) => (
             <div
               key={stat.label}
               className="flex flex-col items-center gap-0.5"
-              style={i === 1 ? { borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)' } : {}}
+              style={i === 1 ? { borderLeft: '1px solid var(--border)' } : {}}
             >
               <span className="text-sm font-bold leading-none" style={{ color: 'var(--color-primary)' }}>
                 {stat.value}
