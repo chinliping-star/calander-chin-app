@@ -1,10 +1,12 @@
 import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { MessageCircle } from 'lucide-react';
 import { UserPlus } from '../../../components/ui/Icon.tsx';
 import { useAuthStore } from '../../../store/auth.ts';
 import { useFriendsApi } from '../../friends/api/friends.api.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
+import { Shoutbox } from '../../friends/components/Shoutbox.tsx';
 import { themeColor } from '../../../lib/theme.ts';
 
 const CARD_STYLE: CSSProperties = {
@@ -173,6 +175,23 @@ export function CalendarSidebar() {
           </div>
         )}
       </div>
+
+      {/* Shoutbox — docked card */}
+      <section
+        className="rounded-2xl p-5"
+        style={CARD_STYLE}
+        aria-labelledby="sidebar-shoutbox-heading"
+      >
+        <h2
+          id="sidebar-shoutbox-heading"
+          className="mb-3 flex items-center gap-1.5 text-sm font-semibold"
+          style={{ color: 'var(--text-h)' }}
+        >
+          <MessageCircle size={14} style={{ color: 'var(--color-primary)' }} />
+          Shoutbox
+        </h2>
+        <Shoutbox hideHeading />
+      </section>
 
       {/* Propose meetup CTA */}
       <button

@@ -2,10 +2,8 @@ import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell } from '../../../components/ui/Icon.tsx';
-import { MessageCircle } from 'lucide-react';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
 import { useAuthStore } from '../../../store/auth.ts';
-import { Shoutbox } from '../../friends/components/Shoutbox.tsx';
 
 const BADGE_COLORS = [
   'var(--color-primary)',
@@ -219,22 +217,6 @@ export function ComingUpPanel() {
         + New Meetup
       </button>
 
-      {/* Shoutbox — docked card */}
-      <section
-        className="rounded-2xl p-5"
-        style={CARD_STYLE}
-        aria-labelledby="shoutbox-heading"
-      >
-        <h2
-          id="shoutbox-heading"
-          className="mb-3 flex items-center gap-1.5 font-semibold"
-          style={{ color: 'var(--text-h)', fontSize: '14px', margin: '0 0 12px' }}
-        >
-          <MessageCircle size={14} style={{ color: 'var(--color-primary)' }} />
-          Shoutbox
-        </h2>
-        <Shoutbox hideHeading />
-      </section>
     </aside>
   );
 }

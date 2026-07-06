@@ -268,8 +268,7 @@ export function StickyNotesLayer() {
     [deleteMutation],
   );
 
-  // Sticky notes are an admin-only tool for now — hidden from normal users.
-  if (!user || !user.is_admin) return null;
+  if (!user) return null;
 
   // Show a note when visible AND (not locked OR locked to this page)
   const visibleNotes = notes.filter(
