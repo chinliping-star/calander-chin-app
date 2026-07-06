@@ -13,8 +13,8 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { UpdateStickyNoteDto } from './dto/sticky-note.dto';
 import { effectivePremium } from '../../common/feature-flags';
 
-const FREE_LIMIT = 1;
-const PREMIUM_LIMIT = 2;
+const FREE_LIMIT = 30;
+const PREMIUM_LIMIT = 30;
 
 @Injectable()
 export class StickyNotesService {
@@ -28,10 +28,6 @@ export class StickyNotesService {
   private async resolveUser(clerkId: string): Promise<UserDocument> {
     const user = await this.userModel.findOne({ clerk_id: clerkId }).exec();
     if (!user) throw new NotFoundException('User profile not found');
-    // Sticky notes are an admin-only tool for now.
-    if (!user.is_admin) {
-      throw new ForbiddenException('Sticky notes are available to admins only');
-    }
     return user;
   }
 
