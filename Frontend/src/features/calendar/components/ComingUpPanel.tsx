@@ -135,7 +135,7 @@ export function ComingUpPanel() {
           <Bell size={14} className="opacity-60" />
           {pendingRequests.length > 0 && (
             <span
-              className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white"
+              className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white"
               style={{ backgroundColor: 'var(--color-primary)' }}
               aria-label={`${pendingRequests.length} pending requests`}
             >
