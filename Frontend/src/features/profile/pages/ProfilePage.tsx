@@ -390,8 +390,8 @@ function InterestsTab({ interests }: { interests: string[] }) {
 // ── Tab bar ───────────────────────────────────────────────────────────────────
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; access: 'public' | 'friends' | 'premium' }[] = [
-  { id: 'overview',   label: 'Overview',   icon: <BookOpen size={14} />,  access: 'public' },
   { id: 'meetups',    label: 'Meetups',    icon: <Calendar size={14} />,  access: 'friends' },
+  { id: 'overview',   label: 'Overview',   icon: <BookOpen size={14} />,  access: 'public' },
   { id: 'friends',    label: 'Friends',    icon: <Users size={14} />,     access: 'public' },
   { id: 'interests',  label: 'Interests',  icon: <Tag size={14} />,       access: 'public' },
   { id: 'posts',      label: 'Posts',      icon: <Star size={14} />,      access: 'public' },
@@ -402,7 +402,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; access: 'public' 
 export function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('meetups');
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
