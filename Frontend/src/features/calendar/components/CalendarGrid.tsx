@@ -616,7 +616,7 @@ function AllMeetupsList({ meetups, onMeetupClick }: { meetups: MeetupItem[]; onM
   const [page, setPage] = useState(0);
 
   if (meetups.length === 0) return (
-    <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>No meetups yet</p>
+    <p className="text-xs text-center py-4" style={{ color: 'var(--text)' }}>No meetups this month</p>
   );
 
   const sorted = [...meetups].sort((a, b) => a.date.localeCompare(b.date));
@@ -788,7 +788,7 @@ function MonthlyView({
       </div>
       <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--color-primary)' }}>
-          All Meetups
+          This Month's Meetups
         </p>
         <AllMeetupsList meetups={allMeetups} onMeetupClick={onMeetupClick} />
       </div>
@@ -1162,10 +1162,14 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     const mine = m.responses?.find(r => r.user_id?._id === myId);
     return !mine || mine.status !== 'declined';
   });
-  const allMeetupList = buildMeetupList(visibleAll, timeFormat).map(m => ({
-    ...m,
-    attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
-  }));
+  // Only the viewed month's meetups feed the list — older months stay visible
+  // on the calendar grid but drop out of the list automatically.
+  const allMeetupList = buildMeetupList(visibleAll, timeFormat)
+    .filter(m => m.date.startsWith(monthStr))
+    .map(m => ({
+      ...m,
+      attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
+    }));
 
   const markDay = useMutation({
     mutationFn: ({ date, status }: { date: string; status: DayStatus }) =>
