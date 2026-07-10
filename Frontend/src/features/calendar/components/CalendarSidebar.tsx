@@ -73,12 +73,21 @@ export function CalendarSidebar() {
           <p className="text-xs" style={{ color: 'var(--text)' }}>
             @{username}
           </p>
-          <span
-            className="mt-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
-            style={{ backgroundColor: '#f3e8ff', color: '#7c3aed' }}
-          >
-            ✦ cutie planner
-          </span>
+          {user?.bio ? (
+            <p
+              className="mt-1.5 w-full px-1 text-[11px] leading-relaxed line-clamp-3 text-center"
+              style={{ color: 'var(--text)' }}
+            >
+              {user.bio}
+            </p>
+          ) : (
+            <span
+              className="mt-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+              style={{ backgroundColor: '#f3e8ff', color: '#7c3aed' }}
+            >
+              ✦ cutie planner
+            </span>
+          )}
         </div>
 
         {/* Stats row */}
