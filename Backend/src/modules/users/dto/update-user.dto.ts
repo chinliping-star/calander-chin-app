@@ -6,7 +6,7 @@ export class UpdateUserDto {
   @IsOptional() @IsString() @MaxLength(50)  first_name?: string;
   @IsOptional() @IsString() @MaxLength(50)  last_name?: string;
   @IsOptional() @IsString() @MaxLength(60)  country?: string;
-  @IsOptional() @IsString() @MaxLength(500) bio?: string;
+  @IsOptional() @IsString() @MaxLength(1000) @Matches(/^(?:\s*\S+){0,100}\s*$/, { message: 'Bio must be 100 words or fewer' }) bio?: string;
   @IsOptional() @IsString()                 theme?: string;
   @IsOptional() @IsString()                 banner_url?: string;
   @IsOptional() @IsString()                 avatar_url?: string;
