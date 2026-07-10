@@ -60,6 +60,9 @@ function SectionHeading({ id, children }: { id: string; children: React.ReactNod
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
+const BIO_WORD_LIMIT = 100;
+const countWords = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
+
 function ProfileSection() {
   const { user: storeUser, updateUser } = useAuthStore();
   const api = useApi();
@@ -69,6 +72,7 @@ function ProfileSection() {
   const [displayName, setDisplayName] = useState(storeUser?.display_name ?? '');
   const [username, setUsername] = useState(storeUser?.username ?? '');
   const [bio, setBio] = useState(storeUser?.bio ?? '');
+  const bioWordCount = countWords(bio);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -329,10 +333,25 @@ function ProfileSection() {
               id="bio"
               rows={3}
               value={bio}
-              onChange={e => setBio(e.target.value)}
+              onChange={e => {
+                const next = e.target.value;
+                if (countWords(next) <= BIO_WORD_LIMIT) {
+                  setBio(next);
+                } else {
+                  setBio(next.trim().split(/\s+/).slice(0, BIO_WORD_LIMIT).join(' '));
+                }
+              }}
               placeholder="Tell your friends a little about yourself..."
+              aria-describedby="bio-word-count"
               style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.6' }}
             />
+            <p
+              id="bio-word-count"
+              className="mt-1 text-right text-xs"
+              style={{ color: bioWordCount >= BIO_WORD_LIMIT ? '#dc2626' : 'var(--text)' }}
+            >
+              {bioWordCount}/{BIO_WORD_LIMIT} words
+            </p>
           </div>
 
           {saveError && (
