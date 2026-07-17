@@ -54,21 +54,15 @@ export class ChatService {
       throw new BadRequestException('Cannot chat with yourself');
     }
 
-    // Return existing if already exists
-    const existing = await this.convModel.findOne({
-      type: 'private',
-      participants: { $all: [meObjId, themObjId], $size: 2 },
-    }).exec();
+    // Atomic upsert on pair_key — safe under concurrent/duplicate requests
+    // (e.g. a double-click), unlike a find-then-create check.
+    const pairKey = [meObjId.toString(), themObjId.toString()].sort().join('_');
+    const conv = await this.convModel.findOneAndUpdate(
+      { pair_key: pairKey },
+      { $setOnInsert: { type: 'private', participants: [meObjId, themObjId], pair_key: pairKey } },
+      { upsert: true, new: true },
+    ).exec();
 
-    if (existing) {
-      return this.populateConv(this.convModel.findById(existing._id)).exec() as Promise<ConversationDocument>;
-    }
-
-    const conv = new this.convModel({
-      type: 'private',
-      participants: [meObjId, themObjId],
-    });
-    await conv.save();
     return this.populateConv(this.convModel.findById(conv._id)).exec() as Promise<ConversationDocument>;
   }
 
