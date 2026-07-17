@@ -116,8 +116,9 @@ export function ChatPage() {
                 {searchResults.map(u => (
                   <button
                     key={u._id}
+                    disabled={createPrivate.isPending}
                     onClick={() => createPrivate.mutate(u._id)}
-                    className="flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors w-full"
+                    className="flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors w-full disabled:opacity-50 disabled:pointer-events-none"
                     style={{ color: 'var(--text-h)' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-bg)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}

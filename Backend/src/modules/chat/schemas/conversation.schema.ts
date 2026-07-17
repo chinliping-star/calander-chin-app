@@ -36,7 +36,12 @@ export class Conversation {
 
   @Prop({ default: Date.now })
   created_at: Date;
+
+  /** Sorted "id_id" of the two participants — private conversations only. Enforces one conversation per pair even under concurrent create requests. */
+  @Prop()
+  pair_key?: string;
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);
 ConversationSchema.index({ participants: 1 });
+ConversationSchema.index({ pair_key: 1 }, { unique: true, sparse: true });
