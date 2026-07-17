@@ -84,11 +84,15 @@ export class UsersService {
     return user;
   }
 
-  async searchUsers(query: string, limit = 10): Promise<UserDocument[]> {
+  async searchUsers(query: string, excludeClerkId?: string, limit = 10): Promise<UserDocument[]> {
     if (!query || query.trim().length < 1) return [];
     const regex = new RegExp(query.trim(), 'i');
     return this.userModel
-      .find({ $or: [{ username: regex }, { display_name: regex }], deleted_at: null })
+      .find({
+        $or: [{ username: regex }, { display_name: regex }],
+        deleted_at: null,
+        ...(excludeClerkId ? { clerk_id: { $ne: excludeClerkId } } : {}),
+      })
       .select('username display_name avatar_url _id')
       .limit(limit)
       .exec();
