@@ -25,7 +25,7 @@ export function usePresence() {
 
       socket = io(`${SOCKET_URL}/chat`, {
         auth: { token },
-        transports: ['websocket'],
+        transports: ['websocket', 'polling'],
         reconnectionAttempts: 3,
         timeout: 8000,
       });
