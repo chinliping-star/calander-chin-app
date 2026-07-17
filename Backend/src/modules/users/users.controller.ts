@@ -18,10 +18,11 @@ export class UsersController {
   ) {}
 
   // Search users by username/display_name — must be before :username param
+  @UseGuards(JwtAuthGuard)
   @Get('search')
   @HttpCode(HttpStatus.OK)
-  async searchUsers(@Query('q') q: string) {
-    return this.usersService.searchUsers(q ?? '');
+  async searchUsers(@Query('q') q: string, @CurrentUser() clerkId: string) {
+    return this.usersService.searchUsers(q ?? '', clerkId);
   }
 
   // Public — no auth needed
