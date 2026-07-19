@@ -62,7 +62,7 @@ function MeetupChip({ m, date, onMeetupClick }: {
       type="button"
       aria-label={`View meetup: ${m.label}`}
       onClick={(e) => { e.stopPropagation(); onMeetupClick?.({ date, eventLabel: m.label, status: m.status }); }}
-      className="w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-medium leading-tight text-left hover:opacity-80 transition-opacity"
+      className="relative z-30 w-full truncate rounded-full px-1.5 py-0.5 text-[9px] font-medium leading-tight text-left hover:opacity-80 transition-opacity"
       style={style}
     >
       {m.label}
@@ -82,7 +82,7 @@ function MeetupBars({ meetups, date, onMeetupClick }: {
           type="button"
           aria-label={`View meetup: ${m.label}`}
           onClick={(e) => { e.stopPropagation(); onMeetupClick?.({ date, eventLabel: m.label, status: m.status }); }}
-          className="h-1.5 w-full rounded-full"
+          className="relative z-30 h-1.5 w-full rounded-full"
           style={{ backgroundColor: m.status === 'accepted' ? 'var(--color-primary)' : '#c084fc' }}
         />
       ))}
@@ -175,7 +175,7 @@ export function DayCell({ data, isToday = false, isOwn = false, meetups = [], on
                   type="button"
                   aria-label={`View meetup: ${m.label}`}
                   onClick={(e) => { e.stopPropagation(); onMeetupClick?.({ date, eventLabel: m.label, status: m.status }); }}
-                  className="h-1.5 w-full rounded-full"
+                  className="relative z-30 h-1.5 w-full rounded-full"
                   style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
                 />
               ))}

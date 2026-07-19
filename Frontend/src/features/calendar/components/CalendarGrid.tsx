@@ -22,7 +22,21 @@ import { useAnalyticsApi } from '../../analytics/api/analytics.api.ts';
 const WEEK_DAYS_MON = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
 const WEEK_DAYS_SUN = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
-const HOURS = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM'];
+const HOURS = [
+  '12 AM','1 AM','2 AM','3 AM','4 AM','5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM',
+  '12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM',
+];
+
+// Hour-of-day (0-23) from "6 AM", "4:30 PM", "16:30", etc. — null if unparseable.
+function hourOf(time: string): number | null {
+  const m = time.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const mer = m[3]?.toUpperCase();
+  if (mer === 'AM' && h === 12) h = 0;
+  else if (mer === 'PM' && h !== 12) h += 12;
+  return h;
+}
 
 // Attendance badge styles (override Planned/Pending once marked)
 const ATTENDANCE_BADGE: Record<'attended' | 'missed' | 'skipped', { label: string; bg: string; color: string }> = {
@@ -799,10 +813,10 @@ function MonthlyView({
 // ── Weekly view ───────────────────────────────────────────────────────────────
 
 function WeeklyView({
-  year, month, today, overrides, meetups, weekStartsOnMonday, timeFormat,
+  year, month, today, currentDate, overrides, meetups, weekStartsOnMonday, timeFormat,
   isOwn, onNewMeetup, onToggleAvailability, onMeetupClick,
 }: {
-  year: number; month: number; today: Date;
+  year: number; month: number; today: Date; currentDate: Date;
   overrides: Record<string, DayOverride>; meetups: MeetupItem[];
   weekStartsOnMonday: boolean;
   timeFormat: '12h' | '24h';
@@ -818,8 +832,8 @@ function WeeklyView({
     meetupsByDay[m.day].push(m);
   });
 
-  const refDay = (year === today.getFullYear() && month === today.getMonth()) ? today.getDate() : 1;
-  const refDate = new Date(year, month, refDay);
+  const refDay = currentDate.getDate();
+  const refDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), refDay);
   const dow = refDate.getDay(); // 0=Sun
 
   let weekStartOffset: number;
@@ -897,7 +911,7 @@ function WeeklyView({
                     key={m.label}
                     type="button"
                     onClick={() => onMeetupClick?.({ date: m.date, eventLabel: m.label, status: m.status })}
-                    className="w-full text-left rounded-lg px-1.5 py-1 transition-opacity hover:opacity-75"
+                    className="relative z-20 w-full text-left rounded-lg px-1.5 py-1 transition-opacity hover:opacity-75"
                     style={{ backgroundColor: bs.bg, border: bs.border }}
                   >
                     <p className="text-[9px] font-bold truncate" style={{ color: bs.text }}>
@@ -959,19 +973,20 @@ function WeeklyView({
 // ── Daily view ────────────────────────────────────────────────────────────────
 
 function DailyView({
-  today, meetups, timeFormat, isOwn, onNewMeetup, overrides, onToggleAvailability, onMeetupClick,
+  date, meetups, timeFormat, isOwn, onNewMeetup, overrides, onToggleAvailability, onMeetupClick,
 }: {
-  today: Date; meetups: MeetupItem[]; timeFormat: '12h' | '24h';
+  date: Date; meetups: MeetupItem[]; timeFormat: '12h' | '24h';
   isOwn?: boolean;
   onNewMeetup?: (date: string) => void;
   overrides?: Record<string, DayOverride>;
   onToggleAvailability?: (date: string, current: 'available' | 'blocked') => void;
   onMeetupClick?: (info: MeetupDetailInfo) => void;
 }) {
-  const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
-  const monthLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const todayMeetups = meetups.filter(m => m.day === today.getDate());
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const monthLabel = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const isToday = date.toDateString() === new Date().toDateString();
+  const todayMeetups = meetups.filter(m => m.day === date.getDate());
+  const todayStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
   const todayOverride = overrides?.[todayStr];
   const isTodayBlocked = todayOverride?.status === 'blocked';
 
@@ -985,8 +1000,8 @@ function DailyView({
         <div className="w-20" />
         <div className="text-center">
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.75)' }}>{dayName}</p>
-          <p className="text-3xl font-bold text-white leading-none">{today.getDate()}</p>
-          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>{monthLabel} · Today</p>
+          <p className="text-3xl font-bold text-white leading-none">{date.getDate()}</p>
+          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>{monthLabel}{isToday ? ' · Today' : ''}</p>
         </div>
         <div className="w-20 flex flex-col items-end gap-1.5">
           {isOwn && (
@@ -1026,10 +1041,7 @@ function DailyView({
       <div className="flex flex-col gap-0 overflow-y-auto flex-1" style={{ maxHeight: '420px', opacity: isTodayBlocked ? 0.4 : 1, pointerEvents: isTodayBlocked ? 'none' : 'auto' }}>
         {hourSlots.map((hourLabel, idx) => {
           const rawHour = HOURS[idx];
-          const meetup = todayMeetups.find(m =>
-            m.time === rawHour || m.time === hourLabel ||
-            m.time.startsWith(rawHour.replace(' AM','').replace(' PM',''))
-          ) ?? null;
+          const meetup = todayMeetups.find(m => hourOf(m.time) === hourOf(rawHour)) ?? null;
           return (
             <div key={rawHour} className="flex gap-3 items-start py-2 border-b" style={{ borderColor: 'var(--border)' }}>
               <span className="text-[10px] font-semibold w-14 shrink-0 pt-0.5 text-right"
@@ -1037,7 +1049,10 @@ function DailyView({
                 {hourLabel}
               </span>
               {meetup ? (
-                <div className="flex-1 rounded-xl px-3 py-2"
+                <button
+                  type="button"
+                  onClick={() => onMeetupClick?.({ date: meetup.date, eventLabel: meetup.label, status: meetup.status })}
+                  className="flex-1 rounded-xl px-3 py-2 text-left transition-opacity hover:opacity-75"
                   style={{
                     backgroundColor: meetupBlockStyle(meetup).bg,
                     border: meetupBlockStyle(meetup).border,
@@ -1053,7 +1068,7 @@ function DailyView({
                     </div>
                   )}
                   <p className="text-[10px] mt-0.5" style={{ color: 'var(--text)' }}>with {meetup.with}</p>
-                </div>
+                </button>
               ) : (
                 <div
                   onClick={() => isOwn && !isTodayBlocked && onNewMeetup?.(todayStr)}
@@ -1103,7 +1118,7 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
   // Bug 10.1: default view comes from saved preference
   const [view, setView] = useState<ViewMode>(() => PREF_VIEW_MAP[defaultView] ?? 'monthly');
   const today = new Date();
-  const [currentDate, setCurrentDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [currentDate, setCurrentDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()));
   const navigate = useNavigate();
 
   // Bug 11.4: meetup detail modal state
@@ -1195,8 +1210,15 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     setActiveMeetup(info);
   }, []);
 
-  const prevMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
-  const nextMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  // Arrows step by the active view's unit: day, week, or month
+  const stepPeriod = (dir: -1 | 1) => setCurrentDate(d => {
+    if (view === 'daily') return new Date(d.getFullYear(), d.getMonth(), d.getDate() + dir);
+    if (view === 'weekly') return new Date(d.getFullYear(), d.getMonth(), d.getDate() + dir * 7);
+    return new Date(d.getFullYear(), d.getMonth() + dir, 1);
+  });
+  const prevPeriod = () => stepPeriod(-1);
+  const nextPeriod = () => stepPeriod(1);
+  const periodLabel = view === 'daily' ? 'day' : view === 'weekly' ? 'week' : 'month';
 
   return (
     <section className="flex flex-col gap-4 flex-1 h-full" aria-label={`Calendar for ${monthName} ${year}`}>
@@ -1227,7 +1249,7 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
 
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
-        <button type="button" aria-label="Previous month" onClick={prevMonth}
+        <button type="button" aria-label={`Previous ${periodLabel}`} onClick={prevPeriod}
           className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:scale-110 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2"
           style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)', border: '1px solid var(--border)' }}>
           <ChevronLeft size={16} />
@@ -1236,7 +1258,7 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
         <div className="text-center flex-1">
           <div className="flex items-baseline justify-center gap-2">
             <h2 className="font-bold leading-none tracking-tight" style={{ color: 'var(--text-h)', fontSize: '26px', margin: 0 }}>
-              {view === 'daily' ? `${monthName} ${today.getDate()}` : monthName}
+              {view === 'daily' ? `${monthName} ${currentDate.getDate()}` : monthName}
             </h2>
             <span className="font-semibold" style={{ color: 'var(--color-primary)', fontSize: '16px' }}>{year}</span>
           </div>
@@ -1245,7 +1267,7 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
           </p>
         </div>
 
-        <button type="button" aria-label="Next month" onClick={nextMonth}
+        <button type="button" aria-label={`Next ${periodLabel}`} onClick={nextPeriod}
           className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:scale-110 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2"
           style={{ backgroundColor: 'var(--color-tertiary)', color: 'var(--color-primary)', border: '1px solid var(--border)' }}>
           <ChevronRight size={16} />
@@ -1303,7 +1325,7 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
           )}
           {view === 'weekly' && (
             <WeeklyView
-              year={year} month={month} today={today}
+              year={year} month={month} today={today} currentDate={currentDate}
               overrides={overrides} meetups={meetupList}
               weekStartsOnMonday={weekStartsOnMonday}
               timeFormat={timeFormat}
@@ -1315,7 +1337,7 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
           )}
           {view === 'daily' && (
             <DailyView
-              today={today} meetups={meetupList} timeFormat={timeFormat}
+              date={currentDate} meetups={meetupList} timeFormat={timeFormat}
               isOwn={isOwn}
               onNewMeetup={handleNewMeetup}
               overrides={overrides}

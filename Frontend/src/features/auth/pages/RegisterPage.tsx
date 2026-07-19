@@ -170,7 +170,7 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 export function RegisterPage() {
-  const { signUp, isLoaded } = useSignUp();
+  const { signUp, isLoaded, setActive } = useSignUp();
   const navigate = useNavigate();
 
   const [step, setStep]           = useState<'form' | 'verify'>('form');
@@ -223,6 +223,10 @@ export function RegisterPage() {
     try {
       const result = await signUp.attemptEmailAddressVerification({ code });
       if (result.status === 'complete') {
+        // Activate the session before navigating — without this getToken()
+        // returns null on /onboarding and every API call fails with 401
+        // ("Session expired") until the user hard-refreshes the page.
+        await setActive({ session: result.createdSessionId });
         navigate('/onboarding');
       } else {
         setError('Verification incomplete. Try again.');
@@ -237,8 +241,10 @@ export function RegisterPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4">
-      {/* Overlay on top — clerk-captcha must stay in DOM while loading */}
-      {(loading && step === 'form' || googleLoading) && <CreatingOverlay />}
+      {/* Overlay only for the Google redirect flow. During email sign-up the
+          Clerk captcha (#clerk-captcha) may need user interaction, so nothing
+          must cover it — the submit button shows its own "Creating…" state. */}
+      {googleLoading && <CreatingOverlay />}
       <AuthAnimatedBg />
       <div
         className="relative w-full max-w-md rounded-3xl p-10 flex flex-col gap-6"

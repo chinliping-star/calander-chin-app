@@ -92,6 +92,9 @@ export function LoginPage() {
     try {
       const result = await signIn.create({ identifier: email, password });
       if (result.status === 'complete') {
+        // Activate the new Clerk session before navigating, otherwise the
+        // route guard still sees a signed-out user and bounces back here
+        await setActive({ session: result.createdSessionId });
         // Navigate to a protected route — AuthGuard fetches profile and
         // redirects to calendar (existing user) or onboarding (new user)
         navigate('/friends');
