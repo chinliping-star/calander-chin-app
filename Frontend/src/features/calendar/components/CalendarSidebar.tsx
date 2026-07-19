@@ -15,6 +15,12 @@ const CARD_STYLE: CSSProperties = {
   boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
 };
 
+// First few words of the bio for the compact sidebar pill.
+function bioPreview(bio: string, words = 4): string {
+  const parts = bio.trim().split(/\s+/);
+  return parts.slice(0, words).join(' ') + (parts.length > words ? '…' : '');
+}
+
 export function CalendarSidebar() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -78,7 +84,7 @@ export function CalendarSidebar() {
             className="mt-1 max-w-full truncate rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
             style={{ backgroundColor: '#f3e8ff', color: '#7c3aed' }}
           >
-            {user?.bio ? `✦ ${user.bio}` : '✦ cutie planner'}
+            {user?.bio ? `✦ ${bioPreview(user.bio)}` : '✦ cutie planner'}
           </span>
         </div>
 
