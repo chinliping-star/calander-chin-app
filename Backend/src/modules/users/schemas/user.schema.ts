@@ -50,6 +50,31 @@ export class User {
   @Prop({ default: 'pastel-pink' })
   theme: string;
 
+  /**
+   * Privacy toggles. Missing field (older accounts) = defaults below, which
+   * mirror the app's original all-public behaviour.
+   */
+  @Prop({
+    type: {
+      private_account: { type: Boolean, default: false }, // true → calendar + meetups friends-only
+      friend_requests: { type: Boolean, default: true },  // false → nobody can send requests
+      discoverability: { type: Boolean, default: true },  // false → hidden from search
+      show_meetups: { type: Boolean, default: true },     // false → meetup history hidden from profile
+      // What a FRIEND sees of the friend list: mutual friends only, or all.
+      // Strangers never see the friend list. Owner always sees everything.
+      friend_list: { type: String, enum: ['mutual', 'all'], default: 'mutual' },
+    },
+    _id: false,
+    default: () => ({}),
+  })
+  privacy: {
+    private_account?: boolean;
+    friend_requests?: boolean;
+    discoverability?: boolean;
+    show_meetups?: boolean;
+    friend_list?: 'mutual' | 'all';
+  };
+
   @Prop({ default: false })
   is_premium: boolean;
 

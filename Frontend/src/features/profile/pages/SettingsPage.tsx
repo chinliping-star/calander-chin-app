@@ -634,29 +634,101 @@ function CalendarSection() {
 
 // ─── Privacy ──────────────────────────────────────────────────────────────────
 
+const PRIVACY_DEFAULTS = {
+  private_account: false,
+  friend_requests: true,
+  discoverability: true,
+  show_meetups: true,
+  friend_list: 'mutual',
+} as const;
+
+type PrivacyValues = {
+  private_account: boolean;
+  friend_requests: boolean;
+  discoverability: boolean;
+  show_meetups: boolean;
+  friend_list: 'mutual' | 'all';
+};
+
 function PrivacySection() {
-  const [privateAccount, setPrivateAccount] = useState(true);
-  const [friendRequests, setFriendRequests] = useState(false);
-  const [discoverability, setDiscoverability] = useState(true);
-  const [showMeetups, setShowMeetups] = useState(true);
-  const [showFriends, setShowFriends] = useState(false);
+  const { user, updateUser } = useAuthStore();
+  const api = useApi();
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const current: PrivacyValues = { ...PRIVACY_DEFAULTS, ...user?.privacy };
+
+  const save = useMutation({
+    mutationFn: (patch: Partial<PrivacyValues>) =>
+      api.patch<{ privacy?: Partial<PrivacyValues> }>('/users/me', { privacy: patch }),
+    onSuccess: (updated) => {
+      if (updated.privacy) updateUser({ privacy: updated.privacy });
+      setSaveError(null);
+    },
+    onError: (err: Error) => {
+      updateUser({ privacy: { ...current } }); // revert the optimistic change
+      setSaveError(err.message || 'Could not save. Try again.');
+    },
+  });
+
+  function set<K extends keyof PrivacyValues>(key: K, value: PrivacyValues[K]) {
+    updateUser({ privacy: { ...current, [key]: value } }); // optimistic
+    save.mutate({ [key]: value });
+  }
 
   return (
     <section aria-labelledby="privacy-heading">
       <SectionCard>
         <SectionHeading id="privacy-heading">Privacy</SectionHeading>
         <div className="flex flex-col divide-y" style={{ borderColor: 'var(--border)' }}>
-          <ToggleSwitch id="private-account" checked={privateAccount} onChange={setPrivateAccount}
+          <ToggleSwitch id="private-account" checked={current.private_account} onChange={v => set('private_account', v)}
             label="Private Account" description="Only friends can see your calendar and past meetups." />
-          <ToggleSwitch id="friend-requests" checked={friendRequests} onChange={setFriendRequests}
+          <ToggleSwitch id="friend-requests" checked={current.friend_requests} onChange={v => set('friend_requests', v)}
             label="Friend Requests" description="Allow anyone to send you friend requests." />
-          <ToggleSwitch id="discoverability" checked={discoverability} onChange={setDiscoverability}
-            label="Discoverability" description="Show your profile in 'Discover' for people nearby." />
-          <ToggleSwitch id="show-meetups" checked={showMeetups} onChange={setShowMeetups}
+          <ToggleSwitch id="discoverability" checked={current.discoverability} onChange={v => set('discoverability', v)}
+            label="Discoverability" description="Show your profile in search and 'Discover'." />
+          <ToggleSwitch id="show-meetups" checked={current.show_meetups} onChange={v => set('show_meetups', v)}
             label="Show Past Meetups" description="Let friends see your meetup history on your profile." />
-          <ToggleSwitch id="show-friends" checked={showFriends} onChange={setShowFriends}
-            label="Public Friend List" description="Anyone can see who you are friends with." />
+
+          {/* Friend list visibility — friends see mutual-only or all; strangers never see it */}
+          <div className="flex items-start justify-between gap-4 py-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-h)' }}>Friend List</p>
+              <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--text)' }}>
+                What friends see of your friend list. People who aren't your friends never see it.
+              </p>
+            </div>
+            <div
+              className="flex items-center gap-0.5 p-1 rounded-full shrink-0"
+              style={{ backgroundColor: 'var(--color-tertiary)', border: '1px solid var(--border)' }}
+              role="group"
+              aria-label="Friend list visibility"
+            >
+              {([
+                { key: 'mutual', label: 'Mutual only' },
+                { key: 'all', label: 'All friends' },
+              ] as const).map(opt => {
+                const active = current.friend_list === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => set('friend_list', opt.key)}
+                    aria-pressed={active}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2"
+                    style={active
+                      ? { backgroundColor: 'var(--color-primary)', color: '#ffffff' }
+                      : { color: 'var(--text)' }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
+        <p className="text-xs mt-3" style={{ color: saveError ? '#dc2626' : 'var(--text)' }}>
+          {saveError ?? (save.isPending ? 'Saving…' : 'Changes save automatically.')}
+        </p>
       </SectionCard>
     </section>
   );

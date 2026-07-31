@@ -227,7 +227,7 @@ function InterestsRailCard({ interests, onViewAll }: { interests: string[]; onVi
   );
 }
 
-function MeetupsTab({ meetups }: { meetups: ProfileMeetup[] }) {
+function MeetupsTab({ meetups, friendId }: { meetups: ProfileMeetup[]; friendId?: string }) {
   return (
     <section aria-labelledby="meetups-tab-heading" className="flex flex-col gap-6">
       {/* Calendar view of their meetups */}
@@ -235,7 +235,7 @@ function MeetupsTab({ meetups }: { meetups: ProfileMeetup[] }) {
         <h3 className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text)' }}>
           Calendar
         </h3>
-        <ProfileMeetupCalendar meetups={meetups} />
+        <ProfileMeetupCalendar meetups={meetups} friendId={friendId} />
       </div>
 
       <h3 id="meetups-tab-heading" className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
@@ -687,7 +687,7 @@ export function ProfilePage() {
               className="rounded-2xl p-6"
               style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(74,62,78,0.06)' }}
             >
-              {activeTab === 'meetups'   && <MeetupsTab meetups={tabMeetups} />}
+              {activeTab === 'meetups'   && <MeetupsTab meetups={tabMeetups} friendId={!isOwnProfile ? profileUser._id : undefined} />}
               {activeTab === 'friends'   && <FriendsTab friends={tabFriends} />}
               {activeTab === 'interests' && <InterestsTab interests={interests} />}
               {activeTab === 'posts' && (

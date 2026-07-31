@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { CalendarDay, CalendarDayDocument } from './schemas/calendar-day.schema';
 import { Meetup, MeetupDocument } from '../meetups/schemas/meetup.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import { Friendship, FriendshipDocument } from '../friendships/schemas/friendship.schema';
 import { MarkDayDto } from './dto/mark-day.dto';
 import { UpdateStickersDto } from './dto/update-stickers.dto';
 
@@ -16,17 +17,45 @@ export class CalendarService {
     private readonly meetupModel: Model<MeetupDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    @InjectModel(Friendship.name)
+    private readonly friendshipModel: Model<FriendshipDocument>,
   ) {}
 
-  async getMonthCalendar(username: string, month: string) {
+  async getMonthCalendar(username: string, month: string, viewerClerkId?: string) {
     // month = YYYY-MM
     const user = await this.userModel
       .findOne({ username: username.toLowerCase() })
-      .select('_id username display_name avatar_url theme')
+      .select('_id username display_name avatar_url theme privacy')
       .exec();
 
     if (!user) {
       throw new NotFoundException(`User @${username} not found`);
+    }
+
+    // Private account → calendar contents are friends-only. Strangers (and
+    // guests) get the user header but an empty month (no days, no meetups).
+    if (user.privacy?.private_account === true) {
+      const viewer = viewerClerkId
+        ? await this.userModel.findOne({ clerk_id: viewerClerkId }).select('_id').exec()
+        : null;
+      const viewerId = viewer?._id as Types.ObjectId | undefined;
+      const isSelf = !!viewerId && viewerId.toString() === user._id.toString();
+      if (!isSelf) {
+        const isFriend = !!viewerId && !!(await this.friendshipModel
+          .findOne({
+            status: 'accepted',
+            $or: [
+              { requester_id: user._id, recipient_id: viewerId },
+              { requester_id: viewerId, recipient_id: user._id },
+            ],
+          })
+          .select('_id')
+          .exec());
+        if (!isFriend) {
+          const { privacy: _p, ...publicUser } = user.toObject();
+          return { user: publicUser, days: [], meetups: [], private: true };
+        }
+      }
     }
 
     const startDate = `${month}-01`;

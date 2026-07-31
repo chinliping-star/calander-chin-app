@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { X, Clock, MapPin, Plus, Send } from 'lucide-react';
+import { X, Clock, MapPin, Plus } from 'lucide-react';
 
 export interface DayMeetupRow {
   id: string;
@@ -156,7 +156,7 @@ export function DayDetailModal({
               className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
               style={{ background: 'var(--color-primary)' }}
             >
-              <Send size={14} /> Propose meetup
+              <Plus size={15} /> Plan meetup
             </button>
           )}
         </div>

@@ -120,6 +120,16 @@ export class FriendshipsService {
       throw new BadRequestException('Cannot send friend request to yourself');
     }
 
+    const recipient = await this.userModel
+      .findById(recipientObjId)
+      .select('privacy')
+      .lean()
+      .exec();
+    if (!recipient) throw new NotFoundException('User not found');
+    if ((recipient as { privacy?: { friend_requests?: boolean } }).privacy?.friend_requests === false) {
+      throw new ForbiddenException('This user is not accepting friend requests');
+    }
+
     const existing = await this.friendshipModel
       .findOne({
         $or: [
@@ -133,6 +143,9 @@ export class FriendshipsService {
       if (existing.status === 'accepted') throw new ConflictException('Already friends');
       if (existing.status === 'pending')  throw new ConflictException('Request already pending');
       if (existing.status === 'blocked')  throw new ForbiddenException('Cannot send request');
+      // 'removed' — leftover row from an old unfriend. The unique index on
+      // (requester, recipient) would reject a fresh insert, so clear it first.
+      await this.friendshipModel.deleteOne({ _id: existing._id }).exec();
     }
 
     const friendship = new this.friendshipModel({

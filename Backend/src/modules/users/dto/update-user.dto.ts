@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsArray, IsBoolean, MaxLength, Matches } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsBoolean, IsIn, MaxLength, Matches, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class PrivacyDto {
+  @IsOptional() @IsBoolean() private_account?: boolean;
+  @IsOptional() @IsBoolean() friend_requests?: boolean;
+  @IsOptional() @IsBoolean() discoverability?: boolean;
+  @IsOptional() @IsBoolean() show_meetups?: boolean;
+  @IsOptional() @IsIn(['mutual', 'all']) friend_list?: 'mutual' | 'all';
+}
 
 export class UpdateUserDto {
   @IsOptional() @IsString() @MaxLength(30) @Matches(/^[a-z0-9_\.]+$/, { message: 'Username may only contain lowercase letters, numbers, underscores, and dots' }) username?: string;
@@ -13,6 +22,7 @@ export class UpdateUserDto {
   @IsOptional() @IsArray() @IsString({ each: true }) interests?: string[];
   @IsOptional() @IsArray() @IsString({ each: true }) hobbies?: string[];
   @IsOptional() @IsBoolean() is_premium?: boolean;
+  @IsOptional() @ValidateNested() @Type(() => PrivacyDto) privacy?: PrivacyDto;
 }
 
 export class OnboardingDto {

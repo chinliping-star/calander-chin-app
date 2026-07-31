@@ -14,7 +14,8 @@ const INTERESTS = [
 
 const COUNTRIES = [
   'Pakistan', 'India', 'United States', 'United Kingdom', 'Canada',
-  'Australia', 'UAE', 'Saudi Arabia', 'Germany', 'France', 'Turkey', 'Other',
+  'Australia', 'UAE', 'Saudi Arabia', 'Germany', 'France', 'Turkey',
+  'Singapore', 'Malaysia', 'Other',
 ];
 
 const HEARD_ABOUT = [
@@ -205,7 +206,7 @@ export function OnboardingPage() {
                     type="text"
                     value={form.username}
                     onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, '') }))}
-                    placeholder="chin.star"
+                    placeholder="username"
                     maxLength={30}
                     className="w-full rounded-xl pl-8 pr-10 py-3 text-sm focus:outline-none transition-all"
                     style={{ border: `2px solid ${usernameAvailable === false ? '#fca5a5' : usernameAvailable ? '#6ee7b7' : 'var(--border)'}`, backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)' }}
@@ -219,12 +220,12 @@ export function OnboardingPage() {
 
               {/* First + Last name */}
               <div className="grid grid-cols-2 gap-3">
-                {field('First name', 'first_name', { placeholder: 'Chin', required: true })}
-                {field('Last name', 'last_name', { placeholder: 'Star', required: true })}
+                {field('First name', 'first_name', { placeholder: 'First name', required: true })}
+                {field('Last name', 'last_name', { placeholder: 'Last name', required: true })}
               </div>
 
-              {field('Display name', 'display_name', { placeholder: 'Chin ✨', required: true })}
-              {field('Email', 'email', { type: 'email', placeholder: 'chin@example.com', required: true })}
+              {field('Display name', 'display_name', { placeholder: 'Your name ✨', required: true })}
+              {field('Email', 'email', { type: 'email', placeholder: 'you@example.com', required: true })}
               {field('Phone number', 'phone', { type: 'tel', placeholder: '+92 300 0000000' })}
 
               {/* Country */}
