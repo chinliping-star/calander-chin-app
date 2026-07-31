@@ -77,8 +77,14 @@ export class UsersService {
       if (taken) throw new ConflictException('Username already taken');
       dto = { ...dto, username: lower };
     }
+    // Flatten privacy to dot-notation so toggling one key keeps the others.
+    const { privacy, ...rest } = dto;
+    const set: Record<string, unknown> = { ...rest };
+    if (privacy) {
+      for (const [k, v] of Object.entries(privacy)) set[`privacy.${k}`] = v;
+    }
     const user = await this.userModel
-      .findOneAndUpdate({ clerk_id: clerkId }, { $set: dto }, { new: true })
+      .findOneAndUpdate({ clerk_id: clerkId }, { $set: set }, { new: true })
       .exec();
     if (!user) throw new NotFoundException('User not found');
     return user;
@@ -91,6 +97,7 @@ export class UsersService {
       .find({
         $or: [{ username: regex }, { display_name: regex }],
         deleted_at: null,
+        'privacy.discoverability': { $ne: false }, // opted-out users stay hidden
         ...(excludeClerkId ? { clerk_id: { $ne: excludeClerkId } } : {}),
       })
       .select('username display_name avatar_url _id')
@@ -115,20 +122,58 @@ export class UsersService {
   }
 
   /**
-   * Aggregated public profile data for the tabs on a user's profile page:
+   * Aggregated profile data for the tabs on a user's profile page:
    * friends, recent meetups, interests, communities (clubs), and bookings
-   * (events the user has RSVP'd "going" to). Public — no viewer context.
+   * (events the user has RSVP'd "going" to). Viewer-aware: the owner's
+   * privacy settings decide what a given viewer receives.
    */
-  async getProfileData(username: string) {
+  async getProfileData(username: string, viewerClerkId?: string) {
     const user = await this.userModel
       .findOne({ username: username.toLowerCase(), deleted_at: null })
-      .select('_id interests')
+      .select('_id interests privacy')
       .lean()
       .exec();
     if (!user) throw new NotFoundException(`User @${username} not found`);
     const userId = user._id as Types.ObjectId;
 
+    // ── Viewer context: self / accepted friend / stranger ───────────────────
+    let isSelf = false;
+    let isFriend = false;
+    let viewerId: Types.ObjectId | null = null;
+    if (viewerClerkId) {
+      const viewer = await this.userModel
+        .findOne({ clerk_id: viewerClerkId, deleted_at: null })
+        .select('_id')
+        .lean()
+        .exec();
+      if (viewer) {
+        viewerId = viewer._id as Types.ObjectId;
+        isSelf = viewerId.toString() === userId.toString();
+        if (!isSelf) {
+          isFriend = !!(await this.friendshipModel
+            .findOne({
+              status: 'accepted',
+              $or: [
+                { requester_id: userId, recipient_id: viewerId },
+                { requester_id: viewerId, recipient_id: userId },
+              ],
+            })
+            .select('_id')
+            .lean()
+            .exec());
+        }
+      }
+    }
+
+    // Missing privacy field (older accounts) = original all-public behaviour.
+    const privacy = (user as { privacy?: User['privacy'] }).privacy ?? {};
+    const meetupsVisible =
+      isSelf ||
+      (privacy.show_meetups !== false && (privacy.private_account !== true || isFriend));
+
     // ── Friends (accepted both directions) ──────────────────────────────────
+    // Always fetched for the count; the visible LIST follows the rule:
+    // self → all · friend → mutual friends only · stranger/guest → none.
     const friendships = await this.friendshipModel
       .find({ $or: [{ requester_id: userId }, { recipient_id: userId }], status: 'accepted' })
       .populate('requester_id', 'username display_name avatar_url _id')
@@ -149,14 +194,40 @@ export class UsersService {
       }];
     });
 
-    // ── Meetups (accepted), with the counterpart relative to this user ──────
-    const meetupDocs = await this.meetupModel
-      .find({ status: 'accepted', $or: [{ proposer_id: userId }, { owner_id: userId }, { participants: userId }] })
-      .populate('proposer_id', 'username display_name avatar_url _id')
-      .populate('owner_id', 'username display_name avatar_url _id')
-      .sort({ date: -1 })
-      .lean()
-      .exec();
+    // Visible friend list: self → all · friend → per friend_list setting
+    // ('all' or mutual-only, default mutual) · stranger/guest → none.
+    let visibleFriends: typeof friends = [];
+    if (isSelf) {
+      visibleFriends = friends;
+    } else if (isFriend && viewerId) {
+      if (privacy.friend_list === 'all') {
+        visibleFriends = friends;
+      } else {
+        const viewerFriendships = await this.friendshipModel
+          .find({ status: 'accepted', $or: [{ requester_id: viewerId }, { recipient_id: viewerId }] })
+          .select('requester_id recipient_id')
+          .lean()
+          .exec();
+        const vid = viewerId.toString();
+        const viewerFriendIds = new Set(
+          viewerFriendships.map((f) =>
+            (f.requester_id.toString() === vid ? f.recipient_id : f.requester_id).toString(),
+          ),
+        );
+        visibleFriends = friends.filter((fr) => viewerFriendIds.has(fr._id.toString()));
+      }
+    }
+
+    // ── Meetups (accepted + pending), with the counterpart relative to this user ──
+    const meetupDocs = meetupsVisible
+      ? await this.meetupModel
+          .find({ status: { $in: ['accepted', 'pending'] }, $or: [{ proposer_id: userId }, { owner_id: userId }, { participants: userId }] })
+          .populate('proposer_id', 'username display_name avatar_url _id')
+          .populate('owner_id', 'username display_name avatar_url _id')
+          .sort({ date: -1 })
+          .lean()
+          .exec()
+      : [];
     const meetups = meetupDocs.flatMap((m) => {
       const proposer = m.proposer_id as unknown as PopulatedUser | null;
       const owner = m.owner_id as unknown as PopulatedUser | null;
@@ -169,6 +240,8 @@ export class UsersService {
         time: m.time,
         location: m.location ?? '',
         status: m.status,
+        description: m.description ?? '',
+        proposer_id: proposer?._id ?? null,
         with: counterpart
           ? {
               username: counterpart.username,
@@ -213,7 +286,7 @@ export class UsersService {
     return {
       interests: user.interests ?? [],
       counts: { friends: friends.length, meetups: meetups.length, communities: communities.length },
-      friends,
+      friends: visibleFriends,
       meetups,
       communities,
       bookings,

@@ -7,6 +7,7 @@ import { memoryStorage } from 'multer';
 import { UsersService } from './users.service';
 import { UpdateUserDto, OnboardingDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 
@@ -32,11 +33,16 @@ export class UsersController {
     return this.usersService.findByUsername(username);
   }
 
-  // Public — aggregated tab data for the profile page
+  // Aggregated tab data for the profile page. Auth optional — the owner's
+  // privacy settings decide what a guest vs friend vs self receives.
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':username/profile-data')
   @HttpCode(HttpStatus.OK)
-  async getProfileData(@Param('username') username: string) {
-    return this.usersService.getProfileData(username);
+  async getProfileData(
+    @Param('username') username: string,
+    @CurrentUser() viewerClerkId?: string,
+  ) {
+    return this.usersService.getProfileData(username, viewerClerkId);
   }
 
   // Check if username is available (for onboarding form)

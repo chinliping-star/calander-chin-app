@@ -5,6 +5,7 @@ import { CalendarService } from './calendar.service';
 import { CalendarDay, CalendarDaySchema } from './schemas/calendar-day.schema';
 import { Meetup, MeetupSchema } from '../meetups/schemas/meetup.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
+import { Friendship, FriendshipSchema } from '../friendships/schemas/friendship.schema';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
       { name: CalendarDay.name, schema: CalendarDaySchema },
       { name: Meetup.name, schema: MeetupSchema },
       { name: User.name, schema: UserSchema },
+      { name: Friendship.name, schema: FriendshipSchema },
     ]),
   ],
   controllers: [CalendarController],

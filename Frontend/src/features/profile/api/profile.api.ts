@@ -14,6 +14,9 @@ export interface ProfileMeetup {
   time: string;
   location: string;
   status: string;
+  description?: string;
+  /** Who planned the meetup — edit/delete are offered when this is the viewer. */
+  proposer_id?: string | null;
   with: {
     username: string;
     display_name: string;

@@ -23,10 +23,15 @@ export function NewMeetupPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const prefillDate = searchParams.get('date') ?? '';
+  const prefillFriend = searchParams.get('friend');
   const qc = useQueryClient();
   const meetupsApi = useMeetupsApi();
   const { user } = useAuthStore();
-  const [values, setValues] = useState<NewMeetupFormValues>({ ...INITIAL_VALUES, date: prefillDate });
+  const [values, setValues] = useState<NewMeetupFormValues>({
+    ...INITIAL_VALUES,
+    date: prefillDate,
+    invitedFriendIds: prefillFriend ? [prefillFriend] : [],
+  });
   const [mode, setMode] = useState<'friends' | 'solo'>('friends');
 
   // Check meetup count for selected date (max 3)

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { LayoutGrid, Activity, Search, Clock, Archive, CheckCircle, XCircle, Inbox, Star, Loader2, X } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/Skeleton.tsx';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
@@ -403,11 +403,19 @@ function AddFriendModal({ onClose }: { onClose: () => void }) {
           )}
           {filtered.map(person => (
             <div key={person._id} className="flex items-center gap-3 p-3 rounded-xl" style={{ border: '1px solid var(--border)' }}>
-              <img src={person.avatar_url || `https://i.pravatar.cc/150?u=${person.username}`} alt={person.display_name} className="h-10 w-10 rounded-full object-cover shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold truncate" style={{ color: 'var(--text-h)' }}>{person.display_name}</p>
-                <p className="text-xs" style={{ color: 'var(--text)' }}>@{person.username}</p>
-              </div>
+              <Link
+                to={`/${person.username}`}
+                onClick={onClose}
+                className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 rounded-lg"
+                style={{ textDecoration: 'none' }}
+                aria-label={`View ${person.display_name}'s profile`}
+              >
+                <img src={person.avatar_url || `https://i.pravatar.cc/150?u=${person.username}`} alt={person.display_name} className="h-10 w-10 rounded-full object-cover shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate" style={{ color: 'var(--text-h)' }}>{person.display_name}</p>
+                  <p className="text-xs" style={{ color: 'var(--text)' }}>@{person.username}</p>
+                </div>
+              </Link>
               <button
                 type="button"
                 onClick={() => !sentIds.has(person._id) && sendReq.mutate(person._id)}

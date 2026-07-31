@@ -25,9 +25,10 @@ export class CalendarController {
   async getMonth(
     @Param('username') username: string,
     @Query('month') month: string,
+    @CurrentUser() viewerClerkId: string,
   ) {
     const currentMonth = month || new Date().toISOString().slice(0, 7);
-    return this.calendarService.getMonthCalendar(username, currentMonth);
+    return this.calendarService.getMonthCalendar(username, currentMonth, viewerClerkId);
   }
 
   @Patch('day')

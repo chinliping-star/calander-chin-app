@@ -1,3 +1,12 @@
+export interface UserPrivacy {
+  private_account?: boolean;
+  friend_requests?: boolean;
+  discoverability?: boolean;
+  show_meetups?: boolean;
+  /** What friends see of your friend list — strangers never see it. */
+  friend_list?: 'mutual' | 'all';
+}
+
 export interface User {
   _id?: string;
   username: string;
@@ -12,6 +21,7 @@ export interface User {
   is_premium?: boolean;
   is_admin?: boolean;
   clerk_id?: string;
+  privacy?: UserPrivacy;
 }
 
 export type DayStatus = 'available' | 'blocked' | 'accepted' | 'pending';

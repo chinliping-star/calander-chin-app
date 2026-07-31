@@ -7,6 +7,11 @@ import type { User } from '../../../types/index.ts';
 
 type ApiStatus = 'idle' | 'loading' | 'no-profile' | 'error';
 
+// The persisted store can hold a stale user (e.g. cover/avatar changed on
+// another device). Refresh it from the server once per page load — background
+// only, the cached user still renders immediately.
+let refreshedThisLoad = false;
+
 function Spinner() {
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -48,6 +53,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         }
       });
   }, [isLoaded, isSignedIn, cachedUser, _hasHydrated]);
+
+  // Background refresh of a cached (possibly stale) user — no spinner, no block
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !_hasHydrated || !cachedUser || refreshedThisLoad) return;
+    refreshedThisLoad = true;
+    get<User | null>('/users/me/profile')
+      .then(user => { if (user) setAuth(user, ''); })
+      .catch(() => { /* keep cached user; next load retries */ });
+  }, [isLoaded, isSignedIn, _hasHydrated, cachedUser]);
 
   if (!isLoaded || !_hasHydrated) return <Spinner />;
   if (!isSignedIn) return <Navigate to="/login" state={{ from: location }} replace />;
