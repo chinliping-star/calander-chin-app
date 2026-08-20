@@ -1,6 +1,6 @@
 import {
   Controller, Get, Patch, Post, Delete, Param, Body, Query,
-  UseGuards, UploadedFile, UseInterceptors, HttpCode, HttpStatus,
+  UseGuards, UploadedFile, UseInterceptors, HttpCode, HttpStatus, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -99,7 +99,9 @@ export class UsersController {
     storage: memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (_, file, cb) => {
-      if (!file.mimetype.match(/^image\//)) return cb(new Error('Images only'), false);
+      if (!file.mimetype.match(/^image\//)) {
+        return cb(new BadRequestException('Only image files are allowed.'), false);
+      }
       cb(null, true);
     },
   }))
@@ -119,7 +121,9 @@ export class UsersController {
     storage: memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (_, file, cb) => {
-      if (!file.mimetype.match(/^image\//)) return cb(new Error('Images only'), false);
+      if (!file.mimetype.match(/^image\//)) {
+        return cb(new BadRequestException('Only image files are allowed.'), false);
+      }
       cb(null, true);
     },
   }))

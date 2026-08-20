@@ -22,6 +22,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     ReportsModule,
     AnnouncementsModule,
     SettingsModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

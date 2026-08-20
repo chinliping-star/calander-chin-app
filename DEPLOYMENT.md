@@ -192,6 +192,10 @@ curl -i -X OPTIONS \
   -H "Origin: https://<your>.vercel.app" \
   -H "Access-Control-Request-Method: GET" \
   https://<railway>.up.railway.app/api/users/me/profile
+
+# Image uploads (avatar / cover / memories) will work?
+# want {"ok":true,"cloudName":"..."} — anything else means the CLOUDINARY_* vars are wrong
+curl -s https://<railway>.up.railway.app/api/health/cloudinary
 ```
 Then open the Vercel site, hard-refresh (`Ctrl+Shift+R`) on a deep link
 (`/friends`), and confirm the network tab shows `200`s to the Railway `/api`.
@@ -210,3 +214,4 @@ Then open the Vercel site, hard-refresh (`Ctrl+Shift+R`) on a deep link
 | Deep-link refresh 404 on Vercel | missing SPA rewrites | keep `vercel.json` rewrites |
 | Crashed deploy never recovers after fix | retry policy exhausted | manual **Redeploy** |
 | Existing user sees onboarding after login | hardcoded onboarding redirect / unguarded `/onboarding` | redirect to `/friends`, guard onboarding |
+| Avatar / cover upload returns 500 | `CLOUDINARY_*` vars missing or wrong on Railway | hit `/api/health/cloudinary`, fix the vars, redeploy |

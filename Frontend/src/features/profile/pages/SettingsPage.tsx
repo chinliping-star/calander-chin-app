@@ -36,6 +36,26 @@ const smallLabel: React.CSSProperties = {
   marginBottom: '6px',
 };
 
+/** Must stay in sync with the multer `fileSize` limit on the backend upload routes. */
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+function tooLargeMessage(file: File): string {
+  const mb = (file.size / (1024 * 1024)).toFixed(1);
+  return `That image is ${mb} MB. Please use one under 5 MB.`;
+}
+
+/** Surfaces the server's own reason for a failed upload instead of a generic message. */
+async function uploadErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await res.json()) as { message?: string | string[] };
+    const message = Array.isArray(body.message) ? body.message.join(', ') : body.message;
+    if (message) return message;
+  } catch {
+    // Non-JSON body (proxy error page, empty response) — fall through to the generic message.
+  }
+  return `${fallback} (${res.status})`;
+}
+
 function SectionCard({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -96,7 +116,7 @@ function ProfileSection() {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: formData,
         });
-        if (!res.ok) throw new Error('Avatar upload failed');
+        if (!res.ok) throw new Error(await uploadErrorMessage(res, 'Avatar upload failed'));
       }
       let bannerUrl: string | undefined;
       if (removeCover && !coverFile) {
@@ -111,7 +131,7 @@ function ProfileSection() {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: formData,
         });
-        if (!res.ok) throw new Error('Cover upload failed');
+        if (!res.ok) throw new Error(await uploadErrorMessage(res, 'Cover upload failed'));
         bannerUrl = ((await res.json()) as { banner_url?: string }).banner_url;
       }
       const updated = await api.patch<{ display_name: string; username: string; bio?: string; avatar_url?: string; banner_url?: string }>('/users/me', {
@@ -137,7 +157,13 @@ function ProfileSection() {
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file after a rejection
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setSaveError(tooLargeMessage(file));
+      return;
+    }
+    setSaveError(null);
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
@@ -155,6 +181,12 @@ function ProfileSection() {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-selecting the same file after a rejection
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setCoverError(tooLargeMessage(file));
+      setCoverFile(null);
+      setCoverPreview(null);
+      return;
+    }
     setCoverError(null);
     const url = URL.createObjectURL(file);
     const img = new Image();
