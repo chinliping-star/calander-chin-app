@@ -4,8 +4,38 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import * as streamifier from 'streamifier';
+
+export interface Fingerprint {
+  length: number;
+  hash: string;
+  /** True when the value carries surrounding quotes or whitespace — a common paste mistake. */
+  padded: boolean;
+}
+
+export interface PingResult {
+  ok: boolean;
+  cloudName?: string;
+  error?: string;
+  apiKey?: Fingerprint;
+  apiSecret?: Fingerprint;
+}
+
+/**
+ * Identifies a credential without revealing it: its length, whether it was
+ * pasted with stray quotes/whitespace, and a truncated hash that can be
+ * reproduced locally from the intended value to confirm a match.
+ */
+function fingerprint(value?: string): Fingerprint | undefined {
+  if (typeof value !== 'string') return undefined;
+  return {
+    length: value.length,
+    hash: createHash('sha256').update(value).digest('hex').slice(0, 12),
+    padded: value !== value.trim().replace(/^["']|["']$/g, ''),
+  };
+}
 
 @Injectable()
 export class CloudinaryService {
@@ -24,18 +54,29 @@ export class CloudinaryService {
     return missing;
   }
 
-  /** Calls Cloudinary's /ping so bad credentials fail loudly instead of on first upload. */
-  async ping(): Promise<{ ok: boolean; cloudName?: string; error?: string }> {
+  /**
+   * Calls Cloudinary's /ping so bad credentials fail loudly instead of on first
+   * upload. On failure it also fingerprints the configured key/secret, so a wrong
+   * value deployed to the host can be compared against the intended one without
+   * ever exposing the credential itself.
+   */
+  async ping(): Promise<PingResult> {
     const missing = this.missingConfigKeys();
     if (missing.length) {
       return { ok: false, error: `missing env vars: ${missing.join(', ')}` };
     }
-    const cloudName = cloudinary.config().cloud_name;
+    const { cloud_name: cloudName, api_key, api_secret } = cloudinary.config();
     try {
       await cloudinary.api.ping();
       return { ok: true, cloudName };
     } catch (error) {
-      return { ok: false, cloudName, error: this.describe(error) };
+      return {
+        ok: false,
+        cloudName,
+        error: this.describe(error),
+        apiKey: fingerprint(api_key),
+        apiSecret: fingerprint(api_secret),
+      };
     }
   }
 
