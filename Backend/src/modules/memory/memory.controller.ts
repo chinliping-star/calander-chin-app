@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -32,7 +33,9 @@ export class MemoryController {
     storage: memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
     fileFilter: (_, file, cb) => {
-      if (!file.mimetype.match(/^image\//)) return cb(new Error('Images only'), false);
+      if (!file.mimetype.match(/^image\//)) {
+        return cb(new BadRequestException('Only image files are allowed.'), false);
+      }
       cb(null, true);
     },
   }))
