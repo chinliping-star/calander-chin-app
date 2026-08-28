@@ -352,11 +352,7 @@ export class MeetupsService {
       }
       meetup.markModified('responses');
 
-      // Recompute rollup status from the new response set.
-      const all = meetup.responses.map((r) => r.status);
-      if (all.some((s) => s === 'accepted')) meetup.status = 'accepted';
-      else if (all.length > 0 && all.every((s) => s === 'declined')) meetup.status = 'declined';
-      else meetup.status = 'pending';
+      this.recomputeStatus(meetup);
 
       // Notify freshly invited people.
       for (const recipientId of newlyInvited) {
@@ -422,9 +418,24 @@ export class MeetupsService {
     resp.status = status;
     meetup.markModified('responses');
 
+    this.recomputeStatus(meetup);
+  }
+
+  /**
+   * Derives the rollup `status` from the RSVP rows:
+   *   accepted  → at least one invitee accepted, or there is no one to ask
+   *   declined  → every invitee declined
+   *   pending   → still awaiting someone
+   *
+   * The no-invitee case must stay `accepted` to match how `create` confirms a
+   * solo meetup. Treating it as pending sent an already-confirmed meetup back
+   * for approval the moment its title or date was edited.
+   */
+  private recomputeStatus(meetup: MeetupDocument): void {
     const all = meetup.responses.map(r => r.status);
-    if (all.some(s => s === 'accepted')) meetup.status = 'accepted';
-    else if (all.length > 0 && all.every(s => s === 'declined')) meetup.status = 'declined';
+    if (all.length === 0) meetup.status = 'accepted';
+    else if (all.some(s => s === 'accepted')) meetup.status = 'accepted';
+    else if (all.every(s => s === 'declined')) meetup.status = 'declined';
     else meetup.status = 'pending';
   }
 
