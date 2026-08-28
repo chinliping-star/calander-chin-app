@@ -140,10 +140,24 @@ function CreatingOverlay() {
   );
 }
 
+/**
+ * Clerk rejects anything shorter than this with a 422, so the meter must never
+ * call a too-short password "Strong" — the account cannot be created at all.
+ * Keep in sync with the minimum password length in the Clerk dashboard.
+ */
+const MIN_PASSWORD_LENGTH = 15;
+
 function getStrength(pw: string): { score: number; label: string; color: string } {
+  if (pw.length > 0 && pw.length < MIN_PASSWORD_LENGTH) {
+    return {
+      score: 1,
+      label: `Too short — ${MIN_PASSWORD_LENGTH - pw.length} more character${pw.length === MIN_PASSWORD_LENGTH - 1 ? '' : 's'}`,
+      color: '#ef4444',
+    };
+  }
   let score = 0;
-  if (pw.length >= 8)  score++;
-  if (pw.length >= 12) score++;
+  if (pw.length >= MIN_PASSWORD_LENGTH) score++;
+  if (pw.length >= 20) score++;
   if (/[A-Z]/.test(pw)) score++;
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
@@ -200,7 +214,10 @@ export function RegisterPage() {
     e.preventDefault();
     if (!isLoaded) return;
     if (password !== confirm) { setError('Passwords do not match.'); return; }
-    if (password.length < 8)  { setError('Password must be 8+ characters.'); return; }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be ${MIN_PASSWORD_LENGTH} characters or more.`);
+      return;
+    }
     setError('');
     setLoading(true);
     try {
