@@ -4,6 +4,22 @@ import { useSignIn } from '@clerk/clerk-react';
 import { AuthAnimatedBg } from '../components/AuthAnimatedBg.tsx';
 import { Logo } from '../../../components/Logo.tsx';
 
+/** Turns a non-complete Clerk sign-in status into the step the user has to take. */
+function signInBlockedMessage(status: string | null): string {
+  switch (status) {
+    case 'needs_second_factor':
+      return 'This device needs a verification code. Check the email or authenticator app linked to your account.';
+    case 'needs_first_factor':
+      return 'That password was not accepted. Use "Forgot password?" if you are unsure of it.';
+    case 'needs_new_password':
+      return 'Your password must be reset before you can sign in. Use "Forgot password?" below.';
+    case 'needs_identifier':
+      return 'Enter the email address you signed up with.';
+    default:
+      return 'Sign-in could not be completed. Please try again, or use "Forgot password?".';
+  }
+}
+
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -99,7 +115,10 @@ export function LoginPage() {
         // redirects to calendar (existing user) or onboarding (new user)
         navigate('/friends');
       } else {
-        setError('Login incomplete. Try again.');
+        // Clerk stops short of a session when it still needs something from the
+        // user — most often a second factor on a device it has not seen before.
+        // "Try again" sent people in circles, so name the actual step.
+        setError(signInBlockedMessage(result.status));
       }
     } catch (err: unknown) {
       const clerkErr = err as { errors?: { code?: string; message: string }[] };
