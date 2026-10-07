@@ -29,19 +29,26 @@ function timeAgo(iso: string): string {
 interface ShoutboxProps {
   /** hide the internal heading (e.g. when host provides its own title bar) */
   hideHeading?: boolean;
+  /**
+   * When set, box becomes a private thread between the viewer and this one
+   * friend. No other friend can read or post in it.
+   */
+  friendId?: string;
+  /** heading text override */
+  title?: string;
 }
 
-export function Shoutbox({ hideHeading = false }: ShoutboxProps) {
+export function Shoutbox({ hideHeading = false, friendId, title }: ShoutboxProps) {
   const { user } = useAuthStore();
   const api = useShoutboxApi();
   const qc = useQueryClient();
   const [draft, setDraft] = useState('');
 
-  const queryKey = ['shoutbox-feed'];
+  const queryKey = friendId ? ['shoutbox-private', friendId] : ['shoutbox-feed'];
 
-  const { data: messages = [], isLoading } = useQuery({
+  const { data: messages = [], isLoading, isError } = useQuery({
     queryKey,
-    queryFn: () => api.getFeed(),
+    queryFn: () => (friendId ? api.getPrivateFeed(friendId) : api.getFeed()),
     enabled: !!user,
     staleTime: 10_000,
     refetchInterval: 15_000,
@@ -49,7 +56,8 @@ export function Shoutbox({ hideHeading = false }: ShoutboxProps) {
   });
 
   const postMutation = useMutation({
-    mutationFn: (body: string) => api.postShout(body),
+    mutationFn: (body: string) =>
+      friendId ? api.postPrivateShout(friendId, body) : api.postShout(body),
     onSuccess: () => {
       setDraft('');
       qc.invalidateQueries({ queryKey });
@@ -57,7 +65,8 @@ export function Shoutbox({ hideHeading = false }: ShoutboxProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.deleteShout(id),
+    mutationFn: (id: string) =>
+      friendId ? api.deletePrivateShout(id) : api.deleteShout(id),
     onSuccess: () => qc.invalidateQueries({ queryKey }),
   });
 
@@ -78,7 +87,7 @@ export function Shoutbox({ hideHeading = false }: ShoutboxProps) {
           style={{ color: 'var(--text-h)' }}
         >
           <MessageCircle size={14} />
-          Shoutbox
+          {title ?? 'Shoutbox'}
         </h3>
       )}
 
@@ -94,6 +103,10 @@ export function Shoutbox({ hideHeading = false }: ShoutboxProps) {
         {isLoading ? (
           <p className="text-xs m-auto" style={{ color: 'var(--text)' }}>
             Loading…
+          </p>
+        ) : isError ? (
+          <p className="text-xs m-auto text-center px-3" style={{ color: 'var(--text)' }}>
+            Couldn't load shouts. Try again later.
           </p>
         ) : messages.length === 0 ? (
           <div className="m-auto flex flex-col items-center gap-1 text-center px-3">

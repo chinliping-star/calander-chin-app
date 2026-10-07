@@ -32,4 +32,27 @@ export class ShoutboxController {
   deleteShout(@CurrentUser() clerkId: string, @Param('id') id: string) {
     return this.shoutboxService.deleteShout(clerkId, id);
   }
+
+  /** Private thread between the logged-in user and one friend. */
+  @Get('private/:friendId')
+  getPrivateFeed(
+    @CurrentUser() clerkId: string,
+    @Param('friendId') friendId: string,
+  ) {
+    return this.shoutboxService.getPrivateFeed(clerkId, friendId);
+  }
+
+  @Post('private/:friendId')
+  postPrivateShout(
+    @CurrentUser() clerkId: string,
+    @Param('friendId') friendId: string,
+    @Body() dto: PostShoutDto,
+  ) {
+    return this.shoutboxService.postPrivateShout(clerkId, friendId, dto);
+  }
+
+  @Delete('private/message/:id')
+  deletePrivateShout(@CurrentUser() clerkId: string, @Param('id') id: string) {
+    return this.shoutboxService.deletePrivateShout(clerkId, id);
+  }
 }

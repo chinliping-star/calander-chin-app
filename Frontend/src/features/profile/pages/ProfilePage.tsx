@@ -26,7 +26,9 @@ import {
   BookOpen,
   Flag,
   ArrowRight,
+  X,
 } from 'lucide-react';
+import { Shoutbox } from '../../friends/components/Shoutbox.tsx';
 import { AppShell } from '../../../components/layout/AppShell.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { useAuthStore } from '../../../store/auth.ts';
@@ -313,9 +315,57 @@ function MeetupsTab({ meetups, friendId }: { meetups: ProfileMeetup[]; friendId?
   );
 }
 
-function FriendsTab({ friends }: { friends: ProfileFriend[] }) {
+/** Private shout card — only the viewer and one friend can see it. */
+function PrivateShoutCard({ friendId, friendName, onClose }: { friendId: string; friendName: string; onClose?: () => void }) {
+  return (
+    <div
+      className="rounded-2xl p-4 mb-5"
+      style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--border)' }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text)' }}>
+          <Lock size={11} aria-hidden="true" />
+          Only you and {friendName} can see this.
+        </p>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-6 w-6 items-center justify-center rounded-full transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2"
+            style={{ color: 'var(--text)' }}
+            aria-label="Close shoutout"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      <Shoutbox key={friendId} friendId={friendId} title={`Shoutout with ${friendName}`} />
+    </div>
+  );
+}
+
+interface FriendsTabProps {
+  friends: ProfileFriend[];
+  isOwnProfile: boolean;
+  /** Profile owner, when the viewer is their friend (enables private shoutout). */
+  shoutWith?: { _id: string; name: string } | null;
+}
+
+function FriendsTab({ friends, isOwnProfile, shoutWith }: FriendsTabProps) {
+  // Own profile: pick one friend to open a private shoutout with
+  const [selected, setSelected] = useState<ProfileFriend | null>(null);
+
   return (
     <section aria-labelledby="friends-tab-heading">
+      {shoutWith && <PrivateShoutCard friendId={shoutWith._id} friendName={shoutWith.name} />}
+      {isOwnProfile && selected && (
+        <PrivateShoutCard
+          friendId={selected._id}
+          friendName={selected.display_name || selected.username}
+          onClose={() => setSelected(null)}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h3 id="friends-tab-heading" className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>
           Friends
@@ -328,28 +378,50 @@ function FriendsTab({ friends }: { friends: ProfileFriend[] }) {
         <EmptyState message="No friends yet." />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {friends.map(friend => (
-            <Link
-              key={friend._id}
-              to={`/${friend.username}`}
-              className="flex flex-col items-center gap-2 rounded-2xl p-4 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2"
-              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
-            >
-              <div className="relative">
-                <img
-                  src={friend.avatar_url || `https://i.pravatar.cc/150?u=${friend.username}`}
-                  alt={friend.display_name}
-                  className="h-14 w-14 rounded-full object-cover"
-                  width={56}
-                  height={56}
-                />
+          {friends.map(friend => {
+            const isSelected = selected?._id === friend._id;
+            return (
+              <div
+                key={friend._id}
+                className="flex flex-col items-center gap-2 rounded-2xl p-4 transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: 'var(--bg)',
+                  border: isSelected ? '1.5px solid var(--color-primary)' : '1px solid var(--border)',
+                }}
+              >
+                <Link
+                  to={`/${friend.username}`}
+                  className="flex flex-col items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2"
+                >
+                  <img
+                    src={friend.avatar_url || `https://i.pravatar.cc/150?u=${friend.username}`}
+                    alt={friend.display_name}
+                    className="h-14 w-14 rounded-full object-cover"
+                    width={56}
+                    height={56}
+                  />
+                  <p className="text-xs font-bold text-center leading-tight" style={{ color: 'var(--text-h)' }}>
+                    {friend.display_name}
+                  </p>
+                  <p className="text-[10px]" style={{ color: 'var(--text)' }}>@{friend.username}</p>
+                </Link>
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => setSelected(isSelected ? null : friend)}
+                    aria-pressed={isSelected}
+                    className="flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-opacity hover:opacity-80 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+                    style={isSelected
+                      ? { backgroundColor: 'var(--color-primary)', color: '#fff' }
+                      : { backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}
+                  >
+                    <MessageCircle size={11} aria-hidden="true" />
+                    Shoutout
+                  </button>
+                )}
               </div>
-              <p className="text-xs font-bold text-center leading-tight" style={{ color: 'var(--text-h)' }}>
-                {friend.display_name}
-              </p>
-              <p className="text-[10px]" style={{ color: 'var(--text)' }}>@{friend.username}</p>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
@@ -688,7 +760,13 @@ export function ProfilePage() {
               style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(74,62,78,0.06)' }}
             >
               {activeTab === 'meetups'   && <MeetupsTab meetups={tabMeetups} friendId={!isOwnProfile ? profileUser._id : undefined} />}
-              {activeTab === 'friends'   && <FriendsTab friends={tabFriends} />}
+              {activeTab === 'friends'   && (
+                <FriendsTab
+                  friends={tabFriends}
+                  isOwnProfile={isOwnProfile}
+                  shoutWith={!isOwnProfile && isFriend && profileUser._id ? { _id: profileUser._id, name: displayName } : null}
+                />
+              )}
               {activeTab === 'interests' && <InterestsTab interests={interests} />}
               {activeTab === 'posts' && (
                 <div className="flex flex-col gap-4">

@@ -4,6 +4,10 @@ import {
   ShoutboxMessage,
   ShoutboxMessageSchema,
 } from './schemas/shoutbox-message.schema';
+import {
+  PrivateShout,
+  PrivateShoutSchema,
+} from './schemas/private-shout.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import {
   Friendship,
@@ -16,6 +20,7 @@ import { ShoutboxController } from './shoutbox.controller';
   imports: [
     MongooseModule.forFeature([
       { name: ShoutboxMessage.name, schema: ShoutboxMessageSchema },
+      { name: PrivateShout.name, schema: PrivateShoutSchema },
       { name: User.name, schema: UserSchema },
       { name: Friendship.name, schema: FriendshipSchema },
     ]),
