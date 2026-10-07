@@ -24,5 +24,13 @@ export function useShoutboxApi() {
     postShout: (body: string) => api.post<ShoutMessage>('/shoutbox', { body }),
     deleteShout: (id: string) =>
       api.delete<{ deleted: boolean }>(`/shoutbox/message/${id}`),
+
+    /** Private thread: only the viewer and this one friend */
+    getPrivateFeed: (friendId: string) =>
+      api.get<ShoutMessage[]>(`/shoutbox/private/${friendId}`),
+    postPrivateShout: (friendId: string, body: string) =>
+      api.post<ShoutMessage>(`/shoutbox/private/${friendId}`, { body }),
+    deletePrivateShout: (id: string) =>
+      api.delete<{ deleted: boolean }>(`/shoutbox/private/message/${id}`),
   };
 }
