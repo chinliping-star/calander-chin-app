@@ -3,6 +3,8 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
+  Body,
   Param,
   UploadedFile,
   UseGuards,
@@ -16,6 +18,7 @@ import { memoryStorage } from 'multer';
 import { MemoryService } from './memory.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SetUploadersDto } from './dto/set-uploaders.dto';
 
 @Controller('memory')
 @UseGuards(JwtAuthGuard)
@@ -46,6 +49,16 @@ export class MemoryController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.memoryService.uploadPhoto(clerkId, meetupId, file);
+  }
+
+  @Patch(':meetupId/uploaders')
+  @HttpCode(HttpStatus.OK)
+  async setUploaders(
+    @CurrentUser() clerkId: string,
+    @Param('meetupId') meetupId: string,
+    @Body() dto: SetUploadersDto,
+  ) {
+    return this.memoryService.setUploaders(clerkId, meetupId, dto.mode, dto.user_ids ?? []);
   }
 
   @Delete(':meetupId/photo/:photoId')

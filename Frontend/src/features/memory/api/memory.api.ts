@@ -40,6 +40,9 @@ export function useMemoryApi() {
       return authFetch<ApiMeetup>('POST', `/memory/${meetupId}/photo`, form);
     },
 
+    setUploaders: (meetupId: string, mode: 'everyone' | 'selected', userIds: string[]) =>
+      authFetch<ApiMeetup>('PATCH', `/memory/${meetupId}/uploaders`, JSON.stringify({ mode, user_ids: userIds })),
+
     deletePhoto: (meetupId: string, photoId: string) =>
       authFetch<ApiMeetup>('DELETE', `/memory/${meetupId}/photo/${photoId}`),
   };

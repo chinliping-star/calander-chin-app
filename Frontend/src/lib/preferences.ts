@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type CursorStyle = 'default' | 'star' | 'heart' | 'flower' | 'sparkle';
+export type CursorStyle = 'default' | 'star' | 'heart' | 'flower' | 'sparkle'
+  | 'butterfly' | 'rainbow' | 'kitty' | 'teddy' | 'cherry' | 'moon';
 export type WeekStart = 'monday' | 'sunday';
 export type DefaultCalendarView = 'month' | 'week' | 'day';
 export type TimeFormat = '12h' | '24h';
@@ -18,6 +19,12 @@ export const CURSORS: CursorMeta[] = [
   { id: 'heart',    label: 'Heart',    emoji: '❤️' },
   { id: 'flower',   label: 'Flower',   emoji: '🌸' },
   { id: 'sparkle',  label: 'Sparkle',  emoji: '✨' },
+  { id: 'butterfly', label: 'Butterfly', emoji: '🦋' },
+  { id: 'rainbow',   label: 'Rainbow',   emoji: '🌈' },
+  { id: 'kitty',     label: 'Kitty',     emoji: '🐱' },
+  { id: 'teddy',     label: 'Teddy',     emoji: '🧸' },
+  { id: 'cherry',    label: 'Cherry',    emoji: '🍒' },
+  { id: 'moon',      label: 'Moon',      emoji: '🌙' },
 ];
 
 interface PreferencesState {

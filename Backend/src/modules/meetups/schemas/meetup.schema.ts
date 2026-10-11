@@ -105,6 +105,14 @@ export class Meetup {
   })
   memory_photos: { url: string; added_by: Types.ObjectId; added_at: Date }[];
 
+  /** Who may add memory photos. 'everyone' = all participants (default);
+   * 'selected' = only the creator (proposer) + memory_uploaders. */
+  @Prop({ enum: ['everyone', 'selected'], default: 'everyone' })
+  memory_upload_mode: string;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  memory_uploaders: Types.ObjectId[];
+
   @Prop({ default: Date.now })
   created_at: Date;
 }

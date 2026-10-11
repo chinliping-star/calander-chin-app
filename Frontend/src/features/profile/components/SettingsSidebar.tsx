@@ -1,5 +1,5 @@
-﻿import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays, Crown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+﻿import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays, Crown, BarChart2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useClerk } from '@clerk/clerk-react';
 import { cn } from '../../../lib/utils.ts';
 import { useAuthStore } from '../../../store/auth.ts';
@@ -78,6 +78,17 @@ export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
               </li>
             );
           })}
+          {/* Analytics moved out of the main navbar — it lives here now */}
+          <li>
+            <Link
+              to="/analytics"
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-full text-sm font-medium transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+              style={{ color: 'var(--text)' }}
+            >
+              <BarChart2 size={15} />
+              Analytics
+            </Link>
+          </li>
         </ul>
       </nav>
 

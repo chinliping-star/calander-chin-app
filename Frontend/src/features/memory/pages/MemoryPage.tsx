@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Lock, ImageIcon, X,
-  Plus, Loader2, Sparkles,
+  Plus, Loader2, Sparkles, Search, Users,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
@@ -28,6 +28,28 @@ interface PhotoView {
 // Per-user photo cap for a single memory.
 const MAX_PHOTOS_PER_USER = 5;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+/** Mirrors the backend rule: creator always; others per memory_upload_mode. */
+function canUploadTo(meetup: ApiMeetup, myId?: string): boolean {
+  if (!myId) return false;
+  if (meetup.proposer_id?._id === myId) return true;
+  if ((meetup.memory_upload_mode ?? 'everyone') === 'everyone') return true;
+  return (meetup.memory_uploaders ?? []).includes(myId);
+}
+
+/** Search by meetup title, location, date, or anyone who was there. */
+function matchesSearch(meetup: ApiMeetup, q: string): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  const people = [meetup.proposer_id, meetup.owner_id, ...(meetup.participants ?? [])].filter(Boolean);
+  const haystack = [
+    meetup.title,
+    meetup.location ?? '',
+    meetup.date,
+    ...people.flatMap(p => [p.display_name, p.username]),
+  ].join(' ').toLowerCase();
+  return haystack.includes(needle);
+}
 
 function photosOf(meetup: ApiMeetup): PhotoView[] {
   const arr: PhotoView[] = (meetup.memory_photos ?? []).map(p => ({
@@ -149,6 +171,10 @@ function AlbumModal({ meetup, onClose }: {
   const photos = photosOf(meetup);
   const myPhotoCount = photos.filter(p => p.addedById && p.addedById === user?._id).length;
   const atMyLimit = myPhotoCount >= MAX_PHOTOS_PER_USER;
+  const canUpload = canUploadTo(meetup, user?._id);
+  const blocked = atMyLimit || !canUpload;
+  const isCreator = !!user?._id && meetup.proposer_id?._id === user._id;
+  const [managing, setManaging] = useState(false);
   const participants = [meetup.proposer_id, ...meetup.participants].filter(Boolean).filter((p, i, arr) => arr.findIndex(x => x._id === p._id) === i);
   const dayNum = parseInt(meetup.date.split('-')[2], 10);
   const mon = new Date(meetup.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
@@ -157,6 +183,7 @@ function AlbumModal({ meetup, onClose }: {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
+    if (!canUpload) return;
     if (atMyLimit) {
       alert(`You can add at most ${MAX_PHOTOS_PER_USER} photos to this memory.`);
       return;
@@ -271,24 +298,36 @@ function AlbumModal({ meetup, onClose }: {
           </div>
 
           <div className="flex items-center justify-between gap-2 shrink-0 sm:justify-end">
+            {isCreator && (
+              <button
+                type="button"
+                onClick={() => setManaging(v => !v)}
+                aria-expanded={managing}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+                style={{ backgroundColor: managing ? 'var(--accent-bg)' : 'var(--color-neutral)', color: 'var(--color-primary-dark)' }}
+              >
+                <Users size={12} />
+                Who can add
+              </button>
+            )}
             <span className="text-[10px] font-semibold" style={{ color: 'var(--text)' }}>
-              {myPhotoCount}/{MAX_PHOTOS_PER_USER} · max 5MB
+              {canUpload ? `${myPhotoCount}/${MAX_PHOTOS_PER_USER} · max 5MB` : 'View only'}
             </span>
             {/* label triggers native file picker — no JS .click() needed */}
             <label
-              htmlFor={atMyLimit ? undefined : fileInputId}
-              title={atMyLimit ? `Max ${MAX_PHOTOS_PER_USER} photos per person` : undefined}
+              htmlFor={blocked ? undefined : fileInputId}
+              title={!canUpload ? 'The meetup creator has not allowed you to add photos' : atMyLimit ? `Max ${MAX_PHOTOS_PER_USER} photos per person` : undefined}
               className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white cursor-pointer select-none transition-opacity hover:opacity-90 active:opacity-75"
               style={{
                 background: uploading ? 'var(--color-primary-dark)' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
                 boxShadow: '0 4px 12px var(--accent-border)',
-                pointerEvents: uploading || atMyLimit ? 'none' : 'auto',
-                opacity: uploading || atMyLimit ? 0.5 : 1,
-                cursor: atMyLimit ? 'not-allowed' : 'pointer',
+                pointerEvents: uploading || blocked ? 'none' : 'auto',
+                opacity: uploading || blocked ? 0.5 : 1,
+                cursor: blocked ? 'not-allowed' : 'pointer',
               }}
             >
-              {uploading ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-              {uploading ? 'Adding…' : atMyLimit ? 'Limit reached' : 'Add Photo'}
+              {uploading ? <Loader2 size={12} className="animate-spin" /> : !canUpload ? <Lock size={12} /> : <Plus size={12} />}
+              {uploading ? 'Adding…' : !canUpload ? 'Not allowed' : atMyLimit ? 'Limit reached' : 'Add Photo'}
             </label>
             <button
               type="button"
@@ -310,6 +349,11 @@ function AlbumModal({ meetup, onClose }: {
           onChange={handleModalFile}
         />
 
+        {/* Creator: choose who can add photos */}
+        {isCreator && managing && (
+          <UploaderManager meetup={meetup} onDone={() => setManaging(false)} />
+        )}
+
         {/* Photo grid */}
         <div className="overflow-y-auto flex-1 p-4">
           {photos.length === 0 ? (
@@ -326,7 +370,9 @@ function AlbumModal({ meetup, onClose }: {
               </div>
               <div>
                 <p className="font-semibold" style={{ color: 'var(--text-h)' }}>No photos yet</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--text)' }}>Tap "Add Photo" to capture this memory</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text)' }}>
+                  {canUpload ? 'Tap "Add Photo" to capture this memory' : 'Only people the creator picked can add photos'}
+                </p>
               </div>
             </motion.div>
           ) : (
@@ -375,7 +421,7 @@ function AlbumModal({ meetup, onClose }: {
               ))}
 
               {/* Add more tile — label opens picker natively (hidden once at limit) */}
-              {!atMyLimit && (
+              {!blocked && (
               <label
                 htmlFor={fileInputId}
                 className="flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none transition-opacity hover:opacity-80 active:opacity-60"
@@ -403,6 +449,125 @@ function AlbumModal({ meetup, onClose }: {
       </motion.div>
     </>,
     document.body,
+  );
+}
+
+// ── Uploader manager (creator only) ──────────────────────────────────────────
+
+function UploaderManager({ meetup, onDone }: { meetup: ApiMeetup; onDone: () => void }) {
+  const memoryApi = useMemoryApi();
+  const queryClient = useQueryClient();
+  const [mode, setMode] = useState<'everyone' | 'selected'>(meetup.memory_upload_mode ?? 'everyone');
+  const [picked, setPicked] = useState<Set<string>>(new Set(meetup.memory_uploaders ?? []));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Everyone except the creator (the creator can always add).
+  const others = [meetup.owner_id, ...meetup.participants]
+    .filter(Boolean)
+    .filter((p, i, arr) => arr.findIndex(x => x._id === p._id) === i)
+    .filter(p => p._id !== meetup.proposer_id?._id);
+
+  function toggle(id: string) {
+    setPicked(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await memoryApi.setUploaders(meetup._id, mode, mode === 'selected' ? [...picked] : []);
+      await queryClient.invalidateQueries({ queryKey: ['memory', 'album'] });
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="px-5 py-4 flex flex-col gap-3 shrink-0" style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--color-neutral)' }}>
+      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text)' }}>Who can add photos</p>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Who can add photos">
+        {([
+          { value: 'everyone', label: 'Everyone in the meetup' },
+          { value: 'selected', label: 'Only people I pick' },
+        ] as const).map(o => (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={mode === o.value}
+            onClick={() => setMode(o.value)}
+            className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+            style={{
+              borderColor: mode === o.value ? 'var(--color-primary)' : 'var(--border)',
+              backgroundColor: mode === o.value ? 'var(--accent-bg)' : 'var(--bg)',
+              color: mode === o.value ? 'var(--color-primary)' : 'var(--text)',
+            }}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'selected' && (
+        others.length === 0 ? (
+          <p className="text-xs" style={{ color: 'var(--text)' }}>No other people in this meetup.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2" role="list">
+            {others.map(p => {
+              const on = picked.has(p._id);
+              return (
+                <li key={p._id}>
+                  <label
+                    className="flex items-center gap-2 rounded-full border pl-1 pr-3 py-1 text-xs font-medium cursor-pointer transition-all hover:opacity-80 has-[:focus-visible]:ring-2"
+                    style={{
+                      borderColor: on ? 'var(--color-primary)' : 'var(--border)',
+                      backgroundColor: on ? 'var(--accent-bg)' : 'var(--bg)',
+                      color: 'var(--text-h)',
+                    }}
+                  >
+                    <input type="checkbox" checked={on} onChange={() => toggle(p._id)} className="sr-only" />
+                    <ParticipantAvatar user={p} size={22} border="1.5px solid var(--bg)" />
+                    {p.display_name || p.username}
+                    {on && <span aria-hidden="true" style={{ color: 'var(--color-primary)' }}>✓</span>}
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )
+      )}
+      <p className="text-[11px]" style={{ color: 'var(--text)' }}>You (the creator) can always add photos.</p>
+
+      {error && <p className="text-xs" role="alert" style={{ color: '#dc2626' }}>{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onDone}
+          className="px-4 py-2 rounded-full text-xs font-semibold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+          style={{ color: 'var(--text)' }}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50"
+          style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))' }}
+        >
+          {saving && <Loader2 size={12} className="animate-spin" />}
+          Save
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -437,6 +602,8 @@ function MemoryCard({ meetup, cardIndex }: {
   const [hovered, setHovered]       = useState(false);
   const [albumOpen, setAlbumOpen]   = useState(false);
 
+  const { user } = useAuthStore();
+  const canUpload = canUploadTo(meetup, user?._id);
   const participants = [meetup.proposer_id, ...meetup.participants].filter(Boolean).filter((p, i, arr) => arr.findIndex(x => x._id === p._id) === i);
   const dayNum    = parseInt(meetup.date.split('-')[2], 10);
   const monthName = new Date(meetup.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
@@ -471,7 +638,7 @@ function MemoryCard({ meetup, cardIndex }: {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={() => {
-          if (hasPhotos) setAlbumOpen(true);
+          if (hasPhotos || !canUpload) setAlbumOpen(true);
           else fileRef.current?.click();
         }}
       >
@@ -643,6 +810,7 @@ export function MemoryPage() {
   const memoryApi = useMemoryApi();
   const { user } = useAuthStore();
   const premium = effectivePremium(user?.is_premium);
+  const [search, setSearch] = useState('');
 
   const { data: meetups = [], isLoading } = useQuery({
     queryKey: ['memory', 'album'],
@@ -654,6 +822,7 @@ export function MemoryPage() {
   const totalPhotos = meetups.reduce((acc, m) => acc + photosOf(m).length, 0);
 
   const meetupsWithPhotos = meetups.filter(m => photosOf(m).length > 0).length;
+  const visible = meetups.filter(m => matchesSearch(m, search));
 
   return (
     <AppShell>
@@ -730,11 +899,40 @@ export function MemoryPage() {
       )}
 
       {premium && !isLoading && meetups.length > 0 && (
+        <div className="mx-auto w-full" style={{ maxWidth: 900 }}>
+          <label htmlFor="memory-search" className="sr-only">Search memories</label>
+          <div className="relative">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text)' }} />
+            <input
+              id="memory-search"
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by event or friend name…"
+              className="w-full rounded-full py-2.5 pl-11 pr-4 text-sm outline-none focus-visible:ring-2"
+              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
+            />
+          </div>
+          {search.trim() && (
+            <p className="mt-2 px-2 text-xs" style={{ color: 'var(--text)' }} aria-live="polite">
+              {visible.length} {visible.length === 1 ? 'memory' : 'memories'} found
+            </p>
+          )}
+        </div>
+      )}
+
+      {premium && !isLoading && meetups.length > 0 && visible.length === 0 && (
+        <p className="py-16 text-center text-sm" style={{ color: 'var(--text)' }}>
+          No memories match "{search.trim()}".
+        </p>
+      )}
+
+      {premium && !isLoading && visible.length > 0 && (
         <div
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mx-auto w-full justify-items-center"
           style={{ gap: '40px', paddingTop: 24, paddingBottom: 48, maxWidth: 900 }}
         >
-          {meetups.map((m, i) => (
+          {visible.map((m, i) => (
             <div key={m._id} className="w-full" style={{ maxWidth: 240 }}>
               <MemoryCard meetup={m} cardIndex={i} />
             </div>

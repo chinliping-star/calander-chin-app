@@ -118,7 +118,7 @@ export class ShoutboxService {
       throw new BadRequestException('Invalid friend id');
     }
     if (viewerId.toString() === friendId) {
-      throw new BadRequestException('Cannot shout to yourself');
+      throw new BadRequestException('Cannot send a message to yourself');
     }
 
     const friendObjectId = new Types.ObjectId(friendId);
@@ -132,7 +132,7 @@ export class ShoutboxService {
       })
       .exec();
     if (!friendship) {
-      throw new ForbiddenException('You can only shout with friends');
+      throw new ForbiddenException('You can only message friends');
     }
 
     const pairKey = [viewerId.toString(), friendId].sort().join('_');

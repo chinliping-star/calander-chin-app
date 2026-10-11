@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Settings } from '../ui/Icon.tsx';
 import {
   MessageSquare, LogOut, User, CalendarDays, Users, Camera,
-  BookOpen, BarChart2, Activity as ActivityIcon, DollarSign,
+  BookOpen, Activity as ActivityIcon, DollarSign,
   MoreHorizontal, X, ShieldAlert,
 } from 'lucide-react';
 import { cn } from '../../lib/utils.ts';
@@ -86,7 +86,6 @@ export function Navbar() {
     { label: 'Memories',    href: '/memory',    secondary: true },
     { label: 'Diary',       href: '/diary',     secondary: true },
     { label: 'Pricing',     href: '/pricing',   secondary: true },
-    { label: 'Analytics',   href: '/analytics', secondary: true },
     { label: 'Activity',    href: '/activity',  secondary: true },
   ];
 
@@ -101,7 +100,6 @@ export function Navbar() {
   // Items in "More" drawer
   const MOBILE_MORE_LINKS = [
     { label: 'Diary',     href: '/diary',      Icon: BookOpen },
-    { label: 'Analytics', href: '/analytics',  Icon: BarChart2 },
     { label: 'Activity',  href: '/activity',   Icon: ActivityIcon },
     { label: 'Pricing',   href: '/pricing',    Icon: DollarSign },
     { label: 'Settings',  href: '/settings',   Icon: Settings },
