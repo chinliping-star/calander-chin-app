@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsArray, IsMongoId, ArrayMaxSize } from 'class-validator';
+import { IsIn, IsOptional, IsArray, IsMongoId, ArrayMaxSize, IsBoolean } from 'class-validator';
 
 export class SetUploadersDto {
   @IsIn(['everyone', 'selected'])
@@ -6,4 +6,9 @@ export class SetUploadersDto {
 
   @IsOptional() @IsArray() @ArrayMaxSize(100) @IsMongoId({ each: true })
   user_ids?: string[];
+}
+
+export class SetArchivedDto {
+  @IsBoolean()
+  archived: boolean;
 }

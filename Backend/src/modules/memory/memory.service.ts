@@ -11,6 +11,9 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { effectivePremium } from '../../common/feature-flags';
 
+/** Album row: meetup fields + whether the current viewer archived it. */
+export type AlbumMeetup = Record<string, unknown> & { archived: boolean };
+
 @Injectable()
 export class MemoryService {
   constructor(
@@ -164,11 +167,30 @@ export class MemoryService {
     return this.populated(meetupId);
   }
 
-  async getAlbum(clerkId: string): Promise<MeetupDocument[]> {
+  /** Archive / unarchive a memory for the current user only. */
+  async setArchived(clerkId: string, meetupId: string, archived: boolean): Promise<{ archived: boolean }> {
+    const user = await this.resolveUser(clerkId);
+    if (!Types.ObjectId.isValid(meetupId)) throw new NotFoundException('Meetup not found');
+    const meetup = await this.meetupModel.findById(meetupId).exec();
+    if (!meetup) throw new NotFoundException('Meetup not found');
+
+    const userObjId = user._id as Types.ObjectId;
+    this.assertParticipant(meetup, userObjId);
+
+    await this.meetupModel.updateOne(
+      { _id: meetup._id },
+      archived
+        ? { $addToSet: { memory_archived_by: userObjId } }
+        : { $pull: { memory_archived_by: userObjId } },
+    ).exec();
+    return { archived };
+  }
+
+  async getAlbum(clerkId: string): Promise<AlbumMeetup[]> {
     const user = await this.resolveUser(clerkId);
     const userObjId = user._id as Types.ObjectId;
 
-    return this.meetupModel
+    const meetups = await this.meetupModel
       .find({
         $or: [
           { proposer_id: userObjId },
@@ -181,7 +203,17 @@ export class MemoryService {
       .populate('owner_id',    'username display_name avatar_url')
       .populate('participants', 'username display_name avatar_url')
       .populate('memory_photos.added_by', 'username display_name avatar_url')
+      .select('+memory_archived_by')
       .sort({ date: -1 })
+      .lean()
       .exec();
+
+    // Replace the archived-by list with a yes/no for this viewer only,
+    // so nobody learns who else archived a memory.
+    const me = userObjId.toString();
+    return meetups.map(({ memory_archived_by, ...m }) => ({
+      ...(m as Record<string, unknown>),
+      archived: (memory_archived_by ?? []).some(id => id.toString() === me),
+    }));
   }
 }

@@ -43,6 +43,9 @@ export function useMemoryApi() {
     setUploaders: (meetupId: string, mode: 'everyone' | 'selected', userIds: string[]) =>
       authFetch<ApiMeetup>('PATCH', `/memory/${meetupId}/uploaders`, JSON.stringify({ mode, user_ids: userIds })),
 
+    setArchived: (meetupId: string, archived: boolean) =>
+      authFetch<{ archived: boolean }>('PATCH', `/memory/${meetupId}/archive`, JSON.stringify({ archived })),
+
     deletePhoto: (meetupId: string, photoId: string) =>
       authFetch<ApiMeetup>('DELETE', `/memory/${meetupId}/photo/${photoId}`),
   };

@@ -40,6 +40,8 @@ export interface ApiMeetup {
   /** Who may add memory photos: everyone, or only the creator + memory_uploaders. */
   memory_upload_mode?: 'everyone' | 'selected';
   memory_uploaders?: string[];
+  /** Memory album only: true if the current user archived this memory. */
+  archived?: boolean;
   created_at: string;
 }
 

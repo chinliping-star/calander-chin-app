@@ -10,6 +10,7 @@ export interface CreateMeetupPayload {
   location?: string;
   is_private?: boolean;
   participants?: string[];
+  memory_upload_mode?: 'everyone' | 'selected';
 }
 
 export interface UpdateMeetupPayload {
@@ -32,6 +33,7 @@ export interface CreateProposalPayload {
   description?: string;
   slots: ProposalSlotInput[];
   participants?: string[];
+  memory_upload_mode?: 'everyone' | 'selected';
 }
 
 export function useMeetupsApi() {

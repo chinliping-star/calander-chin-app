@@ -838,6 +838,15 @@ const DELETE_REASONS = [
 
 type DeleteReason = (typeof DELETE_REASONS)[number];
 
+/** Must match the minimum length set in the Clerk dashboard (same as sign-up). */
+const MIN_PASSWORD_LENGTH = 15;
+
+/** Clerk errors carry a readable message in errors[0]. */
+function clerkErrorMessage(err: unknown, fallback: string): string {
+  const e = err as { errors?: { longMessage?: string; message?: string }[] };
+  return e?.errors?.[0]?.longMessage ?? e?.errors?.[0]?.message ?? fallback;
+}
+
 function AccountSection() {
   const { user: clerkUser } = useUser();
   const { clearAuth } = useAuthStore();
@@ -849,6 +858,7 @@ function AccountSection() {
   const [confirmPw, setConfirmPw] = useState('');
   const [pwSaved, setPwSaved] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
+  const [pwSaving, setPwSaving] = useState(false);
 
   // Delete account panel state
   const [showDeletePanel, setShowDeletePanel] = useState(false);
@@ -863,22 +873,44 @@ function AccountSection() {
       (acc) => acc.provider === 'google',
     ) ?? false;
 
-  function handlePwSave(e: React.FormEvent) {
+  async function handlePwSave(e: React.FormEvent) {
     e.preventDefault();
     setPwError(null);
+    if (!clerkUser) return;
+    if (!currentPw) {
+      setPwError('Enter your current password.');
+      return;
+    }
     if (newPw !== confirmPw) {
       setPwError('New passwords do not match.');
       return;
     }
-    if (newPw.length < 8) {
-      setPwError('Password must be at least 8 characters.');
+    if (newPw.length < MIN_PASSWORD_LENGTH) {
+      setPwError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       return;
     }
-    setPwSaved(true);
-    setTimeout(() => setPwSaved(false), 2000);
-    setCurrentPw('');
-    setNewPw('');
-    setConfirmPw('');
+    if (newPw === currentPw) {
+      setPwError('New password must be different from the current one.');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      // Real change in Clerk. Other devices are signed out for safety.
+      await clerkUser.updatePassword({
+        currentPassword: currentPw,
+        newPassword: newPw,
+        signOutOfOtherSessions: true,
+      });
+      setPwSaved(true);
+      setTimeout(() => setPwSaved(false), 3000);
+      setCurrentPw('');
+      setNewPw('');
+      setConfirmPw('');
+    } catch (err) {
+      setPwError(clerkErrorMessage(err, 'Could not change password. Check your current password and try again.'));
+    } finally {
+      setPwSaving(false);
+    }
   }
 
   const { mutate: deleteAccount, isPending: isDeleting } = useMutation({
@@ -906,7 +938,7 @@ function AccountSection() {
         <SectionHeading id="account-heading">Account</SectionHeading>
 
         {/* ── Change Password ── */}
-        {isGoogleUser ? (
+        {isGoogleUser && !clerkUser?.passwordEnabled ? (
           <div
             className="flex items-start gap-3 rounded-xl px-4 py-3 mb-6"
             style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)' }}
@@ -959,18 +991,27 @@ function AccountSection() {
                 autoComplete="new-password"
               />
             </div>
+            <p className="text-xs" style={{ color: 'var(--text)', margin: 0 }}>
+              At least {MIN_PASSWORD_LENGTH} characters. Your other devices will be signed out.
+            </p>
             {pwError && (
               <p className="text-sm" role="alert" style={{ color: '#dc2626' }}>
                 {pwError}
               </p>
             )}
+            {pwSaved && (
+              <p className="text-sm" role="status" style={{ color: '#15803d' }}>
+                Password changed. Other devices were signed out.
+              </p>
+            )}
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none"
+                disabled={pwSaving}
+                className="px-5 py-2 rounded-full text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: 'var(--color-primary)' }}
               >
-                {pwSaved ? '✓ Updated!' : 'Update Password'}
+                {pwSaving ? 'Updating…' : pwSaved ? '✓ Updated!' : 'Update Password'}
               </button>
             </div>
           </form>
