@@ -18,7 +18,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PostsService } from './posts.service';
-import { CreatePostDto, UpdatePostDto } from './dto/posts.dto';
+import { CreatePostDto, UpdatePostDto, ReactPostDto, CreateCommentDto } from './dto/posts.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -58,6 +58,36 @@ export class PostsController {
     @Body() dto: UpdatePostDto,
   ) {
     return this.postsService.update(clerkId, id, dto);
+  }
+
+  @Post(':id/react')
+  @UseGuards(JwtAuthGuard)
+  react(
+    @CurrentUser() clerkId: string,
+    @Param('id') id: string,
+    @Body() dto: ReactPostDto,
+  ) {
+    return this.postsService.react(clerkId, id, dto.reaction);
+  }
+
+  @Post(':id/comments')
+  @UseGuards(JwtAuthGuard)
+  addComment(
+    @CurrentUser() clerkId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateCommentDto,
+  ) {
+    return this.postsService.addComment(clerkId, id, dto.content);
+  }
+
+  @Delete(':id/comments/:commentId')
+  @UseGuards(JwtAuthGuard)
+  deleteComment(
+    @CurrentUser() clerkId: string,
+    @Param('id') id: string,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.postsService.deleteComment(clerkId, id, commentId);
   }
 
   @Delete(':id')

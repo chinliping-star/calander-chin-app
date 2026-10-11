@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, Clock, MapPin, Lock, Sparkles, Loader2, CalendarCheck } from 'lucide-react';
 import { useMeetupsApi } from '../api/meetups.api.ts';
-import type { ApiMeetup } from '../../calendar/api/calendar.api.ts';
+import type { ApiMeetup, ApiMeetupUser } from '../../calendar/api/calendar.api.ts';
 
 interface Props {
   meetup: ApiMeetup;
@@ -21,6 +21,17 @@ export function ProposalCard({ meetup, myId }: Props) {
   const locked = !!meetup.locked_slot_id;
   const slots = meetup.proposed_slots ?? [];
   const votes = meetup.slot_votes ?? [];
+
+  // Everyone can see who voted for which slot.
+  const people = new Map<string, ApiMeetupUser>(
+    (meetup.participants ?? []).filter(Boolean).map(p => [p._id, p]),
+  );
+  if (meetup.proposer_id?._id) people.set(meetup.proposer_id._id, meetup.proposer_id);
+  const votersFor = (slotId: string) =>
+    votes.filter(v => v.slot_id === slotId).map(v => people.get(v.user_id)).filter((u): u is ApiMeetupUser => !!u);
+  const votedIds = new Set(votes.map(v => v.user_id));
+  const notVoted = (meetup.participants ?? []).filter(p => p && !votedIds.has(p._id));
+  const nameOf = (u: ApiMeetupUser) => (u._id === myId ? 'You' : u.display_name || u.username);
 
   const myVote = votes.find(v => v.user_id === myId)?.slot_id ?? null;
   const countFor = (slotId: string) => votes.filter(v => v.slot_id === slotId).length;
@@ -87,7 +98,7 @@ export function ProposalCard({ meetup, myId }: Props) {
           return (
             <div
               key={slot._id}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+              className="flex flex-col gap-2 rounded-xl px-3 py-2.5"
               style={{
                 backgroundColor: isLockedSlot ? '#dcfce7' : mine ? 'var(--accent-bg)' : 'var(--color-neutral)',
                 border: isLockedSlot
@@ -95,6 +106,7 @@ export function ProposalCard({ meetup, myId }: Props) {
                   : mine ? '1.5px solid var(--accent-border)' : '1px solid var(--border)',
               }}
             >
+              <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold" style={{ color: 'var(--text-h)' }}>{slot.date}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -151,10 +163,21 @@ export function ProposalCard({ meetup, myId }: Props) {
                   <Check size={12} /> Picked
                 </span>
               )}
+              </div>
+
+              {/* Who voted for this slot */}
+              {n > 0 && <VoterList voters={votersFor(slot._id)} nameOf={nameOf} />}
             </div>
           );
         })}
       </div>
+
+      {/* Who has not voted yet */}
+      {!locked && notVoted.length > 0 && (
+        <p className="text-[11px]" style={{ color: 'var(--text)' }}>
+          <span className="font-semibold">Not voted yet:</span> {notVoted.map(nameOf).join(', ')}
+        </p>
+      )}
 
       {/* Proposer auto-lock */}
       {isProposer && !locked && (
@@ -170,5 +193,30 @@ export function ProposalCard({ meetup, myId }: Props) {
         </button>
       )}
     </article>
+  );
+}
+
+/** Small avatars + names of the people who picked a slot. */
+function VoterList({ voters, nameOf }: { voters: ApiMeetupUser[]; nameOf: (u: ApiMeetupUser) => string }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap" aria-label="Voted by">
+      <div className="flex -space-x-1.5">
+        {voters.slice(0, 5).map(u => (
+          <span
+            key={u._id}
+            title={nameOf(u)}
+            className="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-[9px] font-bold"
+            style={{ boxShadow: '0 0 0 1.5px var(--bg)', background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' }}
+          >
+            {u.avatar_url
+              ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+              : (u.display_name || u.username || '?').charAt(0).toUpperCase()}
+          </span>
+        ))}
+      </div>
+      <span className="text-[10px]" style={{ color: 'var(--text)' }}>
+        {voters.map(nameOf).join(', ')}
+      </span>
+    </div>
   );
 }

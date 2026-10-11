@@ -1,6 +1,6 @@
 import { useAuth } from '@clerk/clerk-react';
 import { useApi } from '../../../lib/api';
-import type { Post } from '../types';
+import type { Post, PostReaction } from '../types';
 
 const BASE_URL =
   (import.meta.env as Record<string, string>)['VITE_API_URL'] ?? 'http://localhost:3000/api';
@@ -48,5 +48,14 @@ export function usePostsApi() {
       api.patch<Post>(`/posts/${id}`, data),
 
     delete: (id: string) => api.delete<void>(`/posts/${id}`),
+
+    react: (id: string, reaction: PostReaction) =>
+      api.post<Post>(`/posts/${id}/react`, { reaction }),
+
+    addComment: (id: string, content: string) =>
+      api.post<Post>(`/posts/${id}/comments`, { content }),
+
+    deleteComment: (id: string, commentId: string) =>
+      api.delete<Post>(`/posts/${id}/comments/${commentId}`),
   };
 }

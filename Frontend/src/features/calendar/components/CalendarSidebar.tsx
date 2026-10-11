@@ -194,7 +194,7 @@ export function CalendarSidebar() {
           style={{ color: 'var(--text-h)' }}
         >
           <MessageCircle size={14} style={{ color: 'var(--color-primary)' }} />
-          Shoutbox
+          Message Wall
         </h2>
         <Shoutbox hideHeading />
       </section>

@@ -37,6 +37,9 @@ export interface ApiMeetup {
   proposed_slots?: ApiProposedSlot[];
   slot_votes?: ApiSlotVote[];
   locked_slot_id?: string | null;
+  /** Who may add memory photos: everyone, or only the creator + memory_uploaders. */
+  memory_upload_mode?: 'everyone' | 'selected';
+  memory_uploaders?: string[];
   created_at: string;
 }
 
