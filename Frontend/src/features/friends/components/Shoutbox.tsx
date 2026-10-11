@@ -80,14 +80,14 @@ export function Shoutbox({ hideHeading = false, friendId, title }: ShoutboxProps
   if (!user) return null;
 
   return (
-    <section className="flex flex-col gap-2" aria-label="Shoutbox">
+    <section className="flex flex-col gap-2" aria-label="Message Wall">
       {!hideHeading && (
         <h3
           className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide"
           style={{ color: 'var(--text-h)' }}
         >
           <MessageCircle size={14} />
-          {title ?? 'Shoutbox'}
+          {title ?? 'Message Wall'}
         </h3>
       )}
 
@@ -106,13 +106,13 @@ export function Shoutbox({ hideHeading = false, friendId, title }: ShoutboxProps
           </p>
         ) : isError ? (
           <p className="text-xs m-auto text-center px-3" style={{ color: 'var(--text)' }}>
-            Couldn't load shouts. Try again later.
+            Couldn't load messages. Try again later.
           </p>
         ) : messages.length === 0 ? (
           <div className="m-auto flex flex-col items-center gap-1 text-center px-3">
             <span className="text-2xl" aria-hidden="true">💬</span>
             <p className="text-xs font-semibold" style={{ color: 'var(--text-h)' }}>
-              No shouts yet
+              No messages yet
             </p>
             <p className="text-[11px]" style={{ color: 'var(--text)' }}>
               Be first to say hi! 👋
@@ -171,7 +171,7 @@ export function Shoutbox({ hideHeading = false, friendId, title }: ShoutboxProps
                     onClick={() => deleteMutation.mutate(m._id)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 focus-visible:opacity-100 focus-visible:outline-none mt-0.5"
                     style={{ color: 'var(--text)' }}
-                    aria-label="Delete shout"
+                    aria-label="Delete message"
                   >
                     <Trash2 size={12} />
                   </button>
@@ -208,7 +208,7 @@ export function Shoutbox({ hideHeading = false, friendId, title }: ShoutboxProps
               : 'hover:opacity-90',
           )}
           style={{ backgroundColor: 'var(--color-primary)' }}
-          aria-label="Send shout"
+          aria-label="Send message"
         >
           <Send size={14} />
         </button>

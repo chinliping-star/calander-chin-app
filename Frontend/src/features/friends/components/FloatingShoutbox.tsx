@@ -105,7 +105,7 @@ export function FloatingShoutbox() {
         boxShadow: '0 8px 30px rgba(74,62,78,0.22)',
       }}
       role="dialog"
-      aria-label="Shoutbox"
+      aria-label="Message Wall"
     >
       {/* Drag handle / header */}
       <div
@@ -131,7 +131,7 @@ export function FloatingShoutbox() {
           onPointerDown={(e) => e.stopPropagation()}
           className="grid place-items-center h-6 w-6 rounded-full transition-colors hover:opacity-70 focus-visible:outline-none focus-visible:ring-2"
           style={{ color: 'var(--color-primary)' }}
-          aria-label={open ? 'Collapse shoutbox' : 'Expand shoutbox'}
+          aria-label={open ? 'Collapse Message Wall' : 'Expand Message Wall'}
           aria-expanded={open}
         >
           <ChevronDown

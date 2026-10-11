@@ -29,6 +29,26 @@ export class Post {
   @Prop({ type: Types.ObjectId, ref: 'Meetup' })
   meetup_ref: Types.ObjectId;
 
+  // ── Reactions + comments ──────────────────────────────────────────────────
+  /** A user is in at most one of likes / dislikes at a time. */
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  likes: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  dislikes: Types.ObjectId[];
+
+  @Prop({
+    type: [
+      {
+        author_id:  { type: Types.ObjectId, ref: 'User', required: true },
+        content:    { type: String, required: true, trim: true, maxlength: 1000 },
+        created_at: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  })
+  comments: { _id: Types.ObjectId; author_id: Types.ObjectId; content: string; created_at: Date }[];
+
   @Prop()
   created_at: Date;
 

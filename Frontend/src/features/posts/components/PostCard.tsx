@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { PostPrivacyBadge } from './PostPrivacyBadge.tsx';
 import { ReportModal } from '../../reports/components/ReportModal.tsx';
+import { PostInteractions } from './PostInteractions.tsx';
 import type { Post } from '../types';
 
 interface Props {
@@ -170,6 +171,8 @@ export function PostCard({ post, isOwn, onDelete, onUpdate }: Props) {
             {post.content}
           </p>
         )}
+
+        {!editing && <PostInteractions post={post} />}
       </div>
     </article>
   );

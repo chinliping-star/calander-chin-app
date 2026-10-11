@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -43,6 +44,28 @@ export class PostsService {
     return !!f;
   }
 
+  /** Author + comment authors, so the client can render names and avatars. */
+  private withPeople(id: Types.ObjectId | string) {
+    return this.postModel
+      .findById(id)
+      .populate('author_id', 'username display_name avatar_url _id')
+      .populate('comments.author_id', 'username display_name avatar_url _id')
+      .exec() as Promise<PostDocument>;
+  }
+
+  /** Same rule as the feeds: author sees all, friends see public+friends, others public. */
+  private async loadVisiblePost(postId: string, viewerId: Types.ObjectId): Promise<PostDocument> {
+    if (!Types.ObjectId.isValid(postId)) throw new NotFoundException('Post not found');
+    const post = await this.postModel.findById(postId).exec();
+    if (!post) throw new NotFoundException('Post not found');
+    const authorId = post.author_id as Types.ObjectId;
+    if (authorId.toString() === viewerId.toString()) return post;
+    if (post.privacy === 'public') return post;
+    if (post.privacy === 'friends' && await this.areFriends(viewerId, authorId)) return post;
+    // Hide existence of posts the viewer cannot see.
+    throw new NotFoundException('Post not found');
+  }
+
   // ── Public feed for a user's profile page ─────────────────────────────────
 
   async getPostsByUsername(
@@ -73,6 +96,7 @@ export class PostsService {
     return this.postModel
       .find({ author_id: authorId, privacy: { $in: allowedPrivacy } })
       .populate('author_id', 'username display_name avatar_url _id')
+      .populate('comments.author_id', 'username display_name avatar_url _id')
       .sort({ created_at: -1 })
       .exec();
   }
@@ -97,6 +121,7 @@ export class PostsService {
         privacy: { $in: ['public', 'friends'] },
       })
       .populate('author_id', 'username display_name avatar_url _id')
+      .populate('comments.author_id', 'username display_name avatar_url _id')
       .sort({ created_at: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -152,10 +177,7 @@ export class PostsService {
       ).catch(() => {});
     }
 
-    return this.postModel
-      .findById(post._id)
-      .populate('author_id', 'username display_name avatar_url _id')
-      .exec() as Promise<PostDocument>;
+    return this.withPeople(post._id as Types.ObjectId);
   }
 
   async update(clerkId: string, postId: string, dto: UpdatePostDto): Promise<PostDocument> {
@@ -167,10 +189,7 @@ export class PostsService {
     Object.assign(post, dto);
     await post.save();
 
-    return this.postModel
-      .findById(post._id)
-      .populate('author_id', 'username display_name avatar_url _id')
-      .exec() as Promise<PostDocument>;
+    return this.withPeople(post._id as Types.ObjectId);
   }
 
   async delete(clerkId: string, postId: string): Promise<void> {
@@ -184,5 +203,61 @@ export class PostsService {
     }
 
     await this.postModel.findByIdAndDelete(postId).exec();
+  }
+
+  // ── Reactions + comments ──────────────────────────────────────────────────
+
+  async react(
+    clerkId: string,
+    postId: string,
+    reaction: 'like' | 'dislike' | 'none',
+  ): Promise<PostDocument> {
+    const userId = await this.resolveMongoId(clerkId);
+    await this.loadVisiblePost(postId, userId);
+
+    // Pull from both lists, then add to the chosen one — atomic, no double votes.
+    await this.postModel.updateOne({ _id: postId }, { $pull: { likes: userId, dislikes: userId } }).exec();
+    if (reaction === 'like') {
+      await this.postModel.updateOne({ _id: postId }, { $addToSet: { likes: userId } }).exec();
+    } else if (reaction === 'dislike') {
+      await this.postModel.updateOne({ _id: postId }, { $addToSet: { dislikes: userId } }).exec();
+    }
+    return this.withPeople(postId);
+  }
+
+  async addComment(clerkId: string, postId: string, content: string): Promise<PostDocument> {
+    const userId = await this.resolveMongoId(clerkId);
+    const post = await this.loadVisiblePost(postId, userId);
+    const text = content.trim();
+    if (!text) throw new BadRequestException('Comment cannot be empty');
+
+    await this.postModel.updateOne(
+      { _id: post._id },
+      { $push: { comments: { author_id: userId, content: text, created_at: new Date() } } },
+    ).exec();
+
+    const scan = this.moderationSvc.scan(text);
+    if (scan.flagged && scan.reason) {
+      this.reportsSvc.createAuto('post', post._id as Types.ObjectId, scan.reason, scan.detail).catch(() => {});
+    }
+    return this.withPeople(post._id as Types.ObjectId);
+  }
+
+  /** Comment author or post author can delete a comment. */
+  async deleteComment(clerkId: string, postId: string, commentId: string): Promise<PostDocument> {
+    const userId = await this.resolveMongoId(clerkId);
+    const post = await this.loadVisiblePost(postId, userId);
+    const comment = post.comments.find(c => c._id.toString() === commentId);
+    if (!comment) throw new NotFoundException('Comment not found');
+
+    const isCommentAuthor = comment.author_id.toString() === userId.toString();
+    const isPostAuthor = post.author_id.toString() === userId.toString();
+    if (!isCommentAuthor && !isPostAuthor) throw new ForbiddenException('Not allowed');
+
+    await this.postModel.updateOne(
+      { _id: post._id },
+      { $pull: { comments: { _id: comment._id } } },
+    ).exec();
+    return this.withPeople(post._id as Types.ObjectId);
   }
 }
