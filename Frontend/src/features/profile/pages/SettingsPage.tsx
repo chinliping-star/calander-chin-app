@@ -12,6 +12,7 @@ import { useAuthStore } from '../../../store/auth.ts';
 import { useApi } from '../../../lib/api.ts';
 import { SupportChatWidget } from '../components/SupportChatWidget.tsx';
 import { SupportEmailModal } from '../components/SupportEmailModal.tsx';
+import { ActiveSessions } from '../components/ActiveSessions.tsx';
 import type { SettingsSection } from '../components/SettingsSidebar.tsx';
 
 const inputStyle: React.CSSProperties = {
@@ -280,9 +281,12 @@ function ProfileSection() {
                 onChange={handleCoverChange}
               />
             </div>
-            <p className="mt-1.5 text-xs" style={{ color: coverError ? '#dc2626' : 'var(--text)' }}>
-              {coverError ?? 'Wide banner ratio (4:1). At least 1200×300px, e.g. 1584×396 or 1600×400.'}
-            </p>
+            {/* Size hint only when there is no cover yet, or when the pick failed */}
+            {(coverError || !coverSrc) && (
+              <p className="mt-1.5 text-xs" style={{ color: coverError ? '#dc2626' : 'var(--text)' }}>
+                {coverError ?? 'Wide banner ratio (4:1). At least 1200×300px, e.g. 1584×396 or 1600×400.'}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -1091,6 +1095,13 @@ function AccountSection() {
           )}
         </div>
       </SectionCard>
+
+      <div className="mt-6">
+        <SectionCard>
+          <SectionHeading id="devices-heading">Logged-in Devices</SectionHeading>
+          <ActiveSessions />
+        </SectionCard>
+      </div>
     </section>
   );
 }

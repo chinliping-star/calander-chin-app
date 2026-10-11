@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFriendsApi } from '../api/friends.api.ts';
 import { themeColor } from '../../../lib/theme.ts';
+import { PresenceDot } from '../../chat/components/PresenceDot.tsx';
+import { usePresenceContext } from '../../chat/context/presence.tsx';
 import type { FriendProfile } from '../types.ts';
 
 interface FriendCardProps {
@@ -34,6 +36,7 @@ export function FriendCard({ friend }: FriendCardProps) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const friendsApi = useFriendsApi();
+  const { onlineUsers } = usePresenceContext();
 
   const removeFriend = useMutation({
     mutationFn: () => friendsApi.removeFriend(friend.id),
@@ -127,10 +130,10 @@ export function FriendCard({ friend }: FriendCardProps) {
             className="w-full h-full rounded-full object-cover object-top block"
             loading="lazy"
           />
-          <span
-            className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white"
-            style={{ backgroundColor: '#22c55e' }}
-            aria-hidden="true"
+          <PresenceDot
+            online={onlineUsers.has(friend.id)}
+            ringColor="#fff"
+            className="absolute bottom-0 right-0"
           />
         </div>
 

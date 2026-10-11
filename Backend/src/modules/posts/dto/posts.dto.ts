@@ -27,3 +27,13 @@ export class UpdatePostDto {
   @IsOptional() @IsIn(['public', 'friends', 'private'])
   privacy?: string;
 }
+
+export class ReactPostDto {
+  @IsIn(['like', 'dislike', 'none'])
+  reaction: 'like' | 'dislike' | 'none';
+}
+
+export class CreateCommentDto {
+  @IsString() @MinLength(1) @MaxLength(1000)
+  content: string;
+}

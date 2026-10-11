@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -35,6 +36,16 @@ export class MemoryService {
     }
   }
 
+  /** Creator always may upload; others depend on memory_upload_mode. */
+  private assertCanUpload(meetup: MeetupDocument, userObjId: Types.ObjectId): void {
+    if (meetup.proposer_id.toString() === userObjId.toString()) return;
+    if ((meetup.memory_upload_mode ?? 'everyone') === 'everyone') return;
+    const allowed = (meetup.memory_uploaders ?? []).some(u => u.toString() === userObjId.toString());
+    if (!allowed) {
+      throw new ForbiddenException('The meetup creator has not allowed you to add photos');
+    }
+  }
+
   private populated(meetupId: string): Promise<MeetupDocument> {
     return this.meetupModel
       .findById(meetupId)
@@ -61,6 +72,7 @@ export class MemoryService {
 
     const userObjId = user._id as Types.ObjectId;
     this.assertParticipant(meetup, userObjId);
+    this.assertCanUpload(meetup, userObjId);
 
     if (meetup.status !== 'accepted') {
       throw new ForbiddenException('Can only add photos to accepted meetups');
@@ -116,6 +128,39 @@ export class MemoryService {
       .filter(p => p._id.toString() !== photoId) as unknown as typeof meetup.memory_photos;
     await meetup.save();
 
+    return this.populated(meetupId);
+  }
+
+  /** Only the meetup creator (proposer) can choose who adds memory photos. */
+  async setUploaders(
+    clerkId: string,
+    meetupId: string,
+    mode: 'everyone' | 'selected',
+    userIds: string[],
+  ): Promise<MeetupDocument> {
+    const user = await this.resolveUser(clerkId);
+    if (!Types.ObjectId.isValid(meetupId)) throw new NotFoundException('Meetup not found');
+    const meetup = await this.meetupModel.findById(meetupId).exec();
+    if (!meetup) throw new NotFoundException('Meetup not found');
+
+    const userObjId = user._id as Types.ObjectId;
+    if (meetup.proposer_id.toString() !== userObjId.toString()) {
+      throw new ForbiddenException('Only the meetup creator can manage memory uploads');
+    }
+
+    // Uploaders must be people who were part of the meetup.
+    const members = new Set([
+      meetup.owner_id.toString(),
+      ...meetup.participants.map(p => p.toString()),
+    ]);
+    const unique = [...new Set(userIds)];
+    if (unique.some(id => !members.has(id))) {
+      throw new BadRequestException('Uploaders must be meetup participants');
+    }
+
+    meetup.memory_upload_mode = mode;
+    meetup.memory_uploaders = mode === 'selected' ? unique.map(id => new Types.ObjectId(id)) : [];
+    await meetup.save();
     return this.populated(meetupId);
   }
 
