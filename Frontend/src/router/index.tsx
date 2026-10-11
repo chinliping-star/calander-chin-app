@@ -6,6 +6,7 @@ import { PublicGuard } from '../features/auth/components/PublicGuard.tsx';
 import { LoginPage } from '../features/auth/pages/LoginPage.tsx';
 import { RegisterPage } from '../features/auth/pages/RegisterPage.tsx';
 import { OnboardingPage } from '../features/auth/pages/OnboardingPage.tsx';
+import { LegalPage } from '../features/legal/pages/LegalPage.tsx';
 import { CalendarPage } from '../features/calendar/pages/CalendarPage.tsx';
 import { FriendsPage } from '../features/friends/pages/FriendsPage.tsx';
 import { SettingsPage } from '../features/profile/pages/SettingsPage.tsx';
@@ -49,6 +50,8 @@ export const router = createBrowserRouter([
   { path: '/register',     element: <PublicGuard><RegisterPage /></PublicGuard> },
   { path: '/onboarding',   element: <OnboardingPage /> },
   { path: '/pricing',      element: <PricingPage /> },
+  { path: '/privacy',      element: <LegalPage doc="privacy" /> },
+  { path: '/terms',        element: <LegalPage doc="terms" /> },
   { path: '/sso-callback', element: <AuthenticateWithRedirectCallback /> },
   { path: '/',             element: <Navigate to="/login" replace /> },
 

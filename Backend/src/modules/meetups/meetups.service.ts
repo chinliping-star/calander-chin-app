@@ -91,6 +91,7 @@ export class MeetupsService {
       description:  dto.description,
       location:     dto.location,
       is_private:   dto.is_private ?? false,
+      memory_upload_mode: dto.memory_upload_mode ?? 'everyone',
       participants: Array.from(participantSet).map((id) => new Types.ObjectId(id)),
       responses,
       // Solo meetup (owner == proposer, no extra invitees) has no one to accept,
@@ -157,6 +158,7 @@ export class MeetupsService {
       })),
       slot_votes:     [],
       locked_slot_id: null,
+      memory_upload_mode: dto.memory_upload_mode ?? 'everyone',
     });
 
     await meetup.save();

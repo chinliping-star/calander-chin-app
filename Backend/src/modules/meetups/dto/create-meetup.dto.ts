@@ -6,6 +6,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  IsIn,
 } from 'class-validator';
 
 export class CreateMeetupDto {
@@ -42,4 +43,10 @@ export class CreateMeetupDto {
   @IsArray()
   @IsString({ each: true })
   participants?: string[];
+
+  /** 'everyone' = all participants can add memory photos; 'selected' with no
+   * picked people = only the creator can add (memories "off" for others). */
+  @IsOptional()
+  @IsIn(['everyone', 'selected'])
+  memory_upload_mode?: 'everyone' | 'selected';
 }

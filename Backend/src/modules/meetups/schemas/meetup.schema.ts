@@ -113,6 +113,11 @@ export class Meetup {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   memory_uploaders: Types.ObjectId[];
 
+  /** People who archived this memory. Archive is personal: it hides the
+   * memory only for that person. Never sent to clients as-is. */
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [], select: false })
+  memory_archived_by: Types.ObjectId[];
+
   @Prop({ default: Date.now })
   created_at: Date;
 }

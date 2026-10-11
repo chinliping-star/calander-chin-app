@@ -75,6 +75,26 @@ export class User {
     friend_list?: 'mutual' | 'all';
   };
 
+  /** Sign-up agreement record: which policy version, when, and promo opt-in. */
+  @Prop({
+    type: {
+      policy_version:   { type: String },
+      age_confirmed:    { type: Boolean },
+      accepted_terms:   { type: Boolean },
+      marketing_opt_in: { type: Boolean, default: false },
+      accepted_at:      { type: Date },
+    },
+    _id: false,
+    default: undefined,
+  })
+  consent?: {
+    policy_version: string;
+    age_confirmed: boolean;
+    accepted_terms: boolean;
+    marketing_opt_in: boolean;
+    accepted_at: Date;
+  };
+
   @Prop({ default: false })
   is_premium: boolean;
 
