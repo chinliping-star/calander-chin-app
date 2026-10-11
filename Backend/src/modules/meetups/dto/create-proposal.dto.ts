@@ -8,6 +8,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -50,4 +51,9 @@ export class CreateProposalDto {
   @IsArray()
   @IsString({ each: true })
   participants?: string[];
+
+  /** 'selected' with no picked people = only the creator adds memory photos. */
+  @IsOptional()
+  @IsIn(['everyone', 'selected'])
+  memory_upload_mode?: 'everyone' | 'selected';
 }

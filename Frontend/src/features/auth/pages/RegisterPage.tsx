@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { ConsentCheckboxes } from '../../legal/components/ConsentCheckboxes.tsx';
+import { makeConsent } from '../../legal/consent.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSignUp } from '@clerk/clerk-react';
 import { AuthAnimatedBg } from '../components/AuthAnimatedBg.tsx';
@@ -197,14 +199,19 @@ export function RegisterPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPw, setShowPw]           = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [agreed, setAgreed]           = useState(false);
+  const [marketing, setMarketing]     = useState(false);
+  const [consentError, setConsentError] = useState(false);
 
   const strength = getStrength(password);
 
   async function handleGoogle() {
     if (!isLoaded || !signUp) return;
+    if (!agreed) { setConsentError(true); return; }
     setGoogleLoading(true);
     await signUp.authenticateWithRedirect({
       strategy: 'oauth_google',
+      unsafeMetadata: { consent: makeConsent(marketing) },
       redirectUrl: '/sso-callback',
       redirectUrlComplete: '/onboarding',
     });
@@ -213,6 +220,7 @@ export function RegisterPage() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     if (!isLoaded) return;
+    if (!agreed) { setConsentError(true); return; }
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError(`Password must be ${MIN_PASSWORD_LENGTH} characters or more.`);
@@ -221,7 +229,11 @@ export function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await signUp.create({ emailAddress: email, password });
+      await signUp.create({
+        emailAddress: email,
+        password,
+        unsafeMetadata: { consent: makeConsent(marketing) },
+      });
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       setStep('verify');
     } catch (err: unknown) {
@@ -289,6 +301,15 @@ export function RegisterPage() {
 
         {step === 'form' ? (
           <>
+            {/* Sign-up agreement — covers both Google and email sign-up */}
+            <ConsentCheckboxes
+              agreed={agreed}
+              onAgreedChange={v => { setAgreed(v); if (v) setConsentError(false); }}
+              marketing={marketing}
+              onMarketingChange={setMarketing}
+              showError={consentError}
+            />
+
             {/* Google button */}
             <button
               type="button"

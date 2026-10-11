@@ -7,6 +7,7 @@ import { MoodPicker } from '../components/MoodPicker.tsx';
 import { FriendSelector } from '../components/FriendSelector.tsx';
 import { ProposedSlot, useProposedSlots } from '../components/ProposedSlot.tsx';
 import { useMeetupsApi } from '../api/meetups.api.ts';
+import { MemoryUploadToggle, type MemoryUploadMode } from '../components/MemoryUploadToggle.tsx';
 import type { MoodTheme } from '../types.ts';
 import { useAuthStore } from '../../../store/auth.ts';
 
@@ -55,6 +56,7 @@ export function ProposeMeetupPage() {
   const [intent, setIntent] = useState(draft?.intent ?? '');
   const [mood, setMood] = useState<MoodTheme | null>(draft?.mood ?? null);
   const [selectedFriends, setSelectedFriends] = useState<string[]>(draft?.friendIds ?? []);
+  const [memoryMode, setMemoryMode] = useState<MemoryUploadMode>('everyone');
   const [toast, setToast] = useState<{ msg: string; type: 'error' | 'success' } | null>(null);
 
   useEffect(() => {
@@ -80,6 +82,7 @@ export function ProposeMeetupPage() {
           .filter(s => s.date)
           .map(s => ({ date: s.date, time: s.time || undefined, location: s.location || undefined })),
         participants: selectedFriends,
+        memory_upload_mode: memoryMode,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['meetups'] });
@@ -183,6 +186,10 @@ export function ProposeMeetupPage() {
           <div className="lg:w-80 xl:w-96 flex-shrink-0 flex flex-col gap-6">
             {/* Proposed Slots */}
             <ProposedSlot slots={slots} onAdd={addSlot} onRemove={removeSlot} onUpdate={updateSlot} />
+
+            <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}>
+              <MemoryUploadToggle value={memoryMode} onChange={setMemoryMode} />
+            </div>
 
           </div>
         </div>

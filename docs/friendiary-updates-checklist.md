@@ -39,7 +39,10 @@ Size: XS = minutes · S = under 2 hours · M = half day to 1 day · L = 2+ days
 - [x] **#2 Search in Memories** (S)
   Search box on the Memories page. Finds by event name, location, date, or friend name.
   File: `Frontend/src/features/memory/pages/MemoryPage.tsx`
-- [ ] **#2b Search in Friends and Home** (M) — not asked yet in round 2.
+- [x] **#2b Search in Friends and Home** (M)
+  Friends page: "Search your friends by name…" box filters your friend list (by name, username, tag).
+  Home (calendar page): "Search events or friends…" box searches all your meetups. Click a result → calendar jumps to that day and opens it.
+  Files: `FriendsPage.tsx`, `HomeSearch.tsx`, `CalendarGrid.tsx`
 - [x] **#6 Like, dislike, comment on diary posts** (M–L)
   Bar under each post: 👍 count, 👎 count, comments. A person can like OR dislike, not both. Click again to remove. Comment author or post author can delete a comment. Only people who can see the post can react or comment.
   New API: `POST /posts/:id/react`, `POST /posts/:id/comments`, `DELETE /posts/:id/comments/:commentId`
@@ -48,23 +51,36 @@ Size: XS = minutes · S = under 2 hours · M = half day to 1 day · L = 2+ days
   In the memory album, the creator sees a "Who can add" button: "Everyone in the meetup" or "Only people I pick". Creator can always add. Others see "Not allowed" / "View only". Backend also blocks it.
   New API: `PATCH /memory/:meetupId/uploaders`
   Files: `memory.service.ts`, `meetup.schema.ts`, `MemoryPage.tsx`
-- [ ] **#3b Memories on/off at meetup creation + archive / unarchive** (L)
-  Not done yet. Ask: what happens when memories are off? Is archive only for the owner, or for everyone?
+- [x] **#3b Memory photos setting at meetup creation** (M)
+  Chin's answer: "memories off" = album still shows, but only the creator can add photos.
+  New Meetup and Propose Meetup forms have "Who can add memory photos?": **Everyone invited** / **Only me**. The creator can change it later in the album ("Who can add").
+- [x] **#3c Archive / unarchive memories** (M)
+  Chin's answer: archive is personal — it hides the memory only for the person who archived it.
+  Archive button on each memory card. "Memories" and "Archived" tabs on the Memories page. Unarchive any time. Nobody can see who else archived a memory (the list is never sent to the app).
+  New API: `PATCH /memory/:meetupId/archive`
 
 ## Found while working
 
-- [ ] **Change Password form in Settings does nothing.** It only shows "saved" — it never calls Clerk. Users think the password changed, but it did not. Fix with Clerk `user.updatePassword()`.
+- [x] **Change Password form in Settings did nothing.** Now really changes the password in Clerk. Needs current password, min 15 characters (same as sign-up). Signs out other devices. Shows Clerk's error if the current password is wrong.
+- [x] **Privacy leak: `GET /api/users/:username` gave anyone (no login) the full user record** — email, phone, first/last name, country, clerk_id, admin flag, privacy settings. Now returns only public card fields: username, display name, avatar, banner, bio, theme, interests.
 
 ## Part B — Legal pack (Privacy Policy, Terms, Sign-up consent)
 
 Get it checked by a lawyer before publishing (Singapore PDPA).
 
-- [ ] **Privacy permissions** — make sure strangers and logged-out visitors cannot see profiles, memories, calendars or the Message Wall. (Old spec said `/:username` is public. Must check every endpoint.)
-- [ ] **Registration** — unchecked agree box, 13+ age check, links to policies, save which policy version was accepted and when (new User fields).
-- [ ] **Account deletion** — confirm it exists in Settings. Decide what happens to photos, messages and backups.
-- [ ] **Safety controls** — confirm block / report / unfriend. Fill "[Reporting method]".
-- [ ] **Hosting and database** — answer: DB provider, server country, backups.
+- [~] **Privacy permissions** — audit done.
+  - [x] Fixed: public profile endpoint leaked email/phone (see "Found while working").
+  - [x] OK: calendar, memories, Message Wall, chat, friends — all need login.
+  - [ ] **Needs decision:** by default, strangers and logged-out visitors CAN see a user's meetups (title, date) on their profile, unless the user turns on "Private account". The policy says calendars are friends-only. Either make friends-only the default, or change the policy text.
+  - [ ] **Needs decision:** diary posts set to "Public" are visible to anyone. Policy should say "unless you choose Public".
+- [x] **Registration** — sign-up page has the required box (13+ and Terms, with links) and an optional promo box. Both start unchecked. Google and email sign-up are both blocked until the box is ticked. Onboarding asks again if consent is missing (e.g. Google sign-in that skipped sign-up). Backend refuses to create a profile without it and saves `consent` (policy version, promo opt-in, server time) on the user.
+  Policy version lives in `Frontend/src/features/legal/consent.ts` — bump it when the policy changes.
+- [ ] **Account deletion** — exists in Settings, but it is a **soft delete only**: account is hidden and banned in Clerk, but email, phone, posts, photos and messages stay in the database forever. The policy promises "delete or anonymise". **Needs decision:** e.g. keep 30 days for recovery, then a job wipes personal data and photos.
+- [x] **Safety controls** — block, report and unfriend all exist. "[Reporting method]" filled: "the Report button on posts and profiles".
+- [x] **Hosting and database** — filled in Privacy Policy section 9: Hostinger (domain), Vercel (website), Railway (server), MongoDB Atlas (database), Cloudinary (photos), Clerk (sign-in), Stripe (payments). Still fill "[database region]" (Atlas → cluster → region).
 - [ ] **Chat confidentiality** — answer: who can read stored chats, can admins see them.
 - [ ] **Security** — answer: passwords (Clerk), HTTPS, DB access rules.
-- [ ] **Cookies and third parties** — list: Clerk, Vercel, email provider, any analytics.
-- [ ] **Policy pages** — add Privacy Policy and Terms pages to the site, fill all `[Insert ...]` placeholders.
+- [x] **Cookies and third parties** — filled: only Clerk's essential sign-in cookies; no analytics or ad tracking found in the code. No email provider yet (support tickets are saved in the database).
+- [~] **Policy pages** — `/privacy` and `/terms` pages added (public, no login). Text is Chin's draft. "Message Board" renamed to "Message Wall". Unfilled `[placeholders]` show in yellow.
+  - [ ] Fill every `[placeholder]` in `Frontend/src/features/legal/content/policies.ts`.
+  - [ ] Lawyer review — Chin's side, not ours.

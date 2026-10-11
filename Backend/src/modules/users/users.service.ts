@@ -45,6 +45,20 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Public profile card — safe fields only. This endpoint has no auth, so it
+   * must never return email, phone, real name, clerk_id, admin or privacy data.
+   */
+  async findPublicByUsername(username: string) {
+    const user = await this.userModel
+      .findOne({ username: username.toLowerCase(), deleted_at: null })
+      .select('_id username display_name avatar_url banner_url bio theme interests created_at')
+      .lean()
+      .exec();
+    if (!user) throw new NotFoundException(`User @${username} not found`);
+    return user;
+  }
+
   async isUsernameTaken(username: string): Promise<boolean> {
     const user = await this.userModel.findOne({ username: username.toLowerCase() }).exec();
     return !!user;
@@ -61,12 +75,19 @@ export class UsersService {
     country?: string;
     interests?: string[];
     hobbies?: string[];
+    consent?: { policy_version: string; age_confirmed: boolean; accepted_terms: boolean; marketing_opt_in: boolean };
   }): Promise<UserDocument> {
     const existing = await this.userModel.findOne({ clerk_id: data.clerk_id });
     if (existing) return existing;
     const taken = await this.isUsernameTaken(data.username);
     if (taken) throw new ConflictException('Username already taken');
-    const user = new this.userModel({ ...data, username: data.username.toLowerCase() });
+    const { consent, ...rest } = data;
+    const user = new this.userModel({
+      ...rest,
+      username: data.username.toLowerCase(),
+      // Server time is the record of when the agreement was accepted.
+      consent: consent ? { ...consent, accepted_at: new Date() } : undefined,
+    });
     return user.save();
   }
 

@@ -18,7 +18,7 @@ import { memoryStorage } from 'multer';
 import { MemoryService } from './memory.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { SetUploadersDto } from './dto/set-uploaders.dto';
+import { SetUploadersDto, SetArchivedDto } from './dto/set-uploaders.dto';
 
 @Controller('memory')
 @UseGuards(JwtAuthGuard)
@@ -59,6 +59,16 @@ export class MemoryController {
     @Body() dto: SetUploadersDto,
   ) {
     return this.memoryService.setUploaders(clerkId, meetupId, dto.mode, dto.user_ids ?? []);
+  }
+
+  @Patch(':meetupId/archive')
+  @HttpCode(HttpStatus.OK)
+  async setArchived(
+    @CurrentUser() clerkId: string,
+    @Param('meetupId') meetupId: string,
+    @Body() dto: SetArchivedDto,
+  ) {
+    return this.memoryService.setArchived(clerkId, meetupId, dto.archived);
   }
 
   @Delete(':meetupId/photo/:photoId')

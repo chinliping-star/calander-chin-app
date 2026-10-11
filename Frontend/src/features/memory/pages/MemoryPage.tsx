@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera, Lock, ImageIcon, X,
-  Plus, Loader2, Sparkles, Search, Users,
+  Plus, Loader2, Sparkles, Search, Users, Archive, ArchiveRestore,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
@@ -496,7 +496,7 @@ function UploaderManager({ meetup, onDone }: { meetup: ApiMeetup; onDone: () => 
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Who can add photos">
         {([
           { value: 'everyone', label: 'Everyone in the meetup' },
-          { value: 'selected', label: 'Only people I pick' },
+          { value: 'selected', label: 'Only me + people I pick' },
         ] as const).map(o => (
           <button
             key={o.value}
@@ -544,7 +544,9 @@ function UploaderManager({ meetup, onDone }: { meetup: ApiMeetup; onDone: () => 
           </ul>
         )
       )}
-      <p className="text-[11px]" style={{ color: 'var(--text)' }}>You (the creator) can always add photos.</p>
+      <p className="text-[11px]" style={{ color: 'var(--text)' }}>
+        You (the creator) can always add photos.{mode === 'selected' && ' Tick nobody to keep it only you.'}
+      </p>
 
       {error && <p className="text-xs" role="alert" style={{ color: '#dc2626' }}>{error}</p>}
       <div className="flex justify-end gap-2">
@@ -604,7 +606,22 @@ function MemoryCard({ meetup, cardIndex }: {
 
   const { user } = useAuthStore();
   const canUpload = canUploadTo(meetup, user?._id);
+  const [archiving, setArchiving] = useState(false);
   const participants = [meetup.proposer_id, ...meetup.participants].filter(Boolean).filter((p, i, arr) => arr.findIndex(x => x._id === p._id) === i);
+
+  /** Archive is personal — hides this memory only for me. */
+  async function toggleArchive(e: React.MouseEvent) {
+    e.stopPropagation();
+    setArchiving(true);
+    try {
+      await memoryApi.setArchived(meetup._id, !meetup.archived);
+      await queryClient.invalidateQueries({ queryKey: ['memory', 'album'] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not update. Try again.');
+    } finally {
+      setArchiving(false);
+    }
+  }
   const dayNum    = parseInt(meetup.date.split('-')[2], 10);
   const monthName = new Date(meetup.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
   const hasPhotos = photos.length > 0;
@@ -768,6 +785,19 @@ function MemoryCard({ meetup, cardIndex }: {
               {hasPhotos && <span className="font-semibold" style={{ color: 'var(--color-primary)' }}> · {photos.length} photo{photos.length !== 1 ? 's' : ''}</span>}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={toggleArchive}
+            disabled={archiving}
+            aria-label={meetup.archived ? `Unarchive ${meetup.title}` : `Archive ${meetup.title}`}
+            title={meetup.archived ? 'Unarchive (show in Memories again)' : 'Archive (hide only for you)'}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)', border: '1px solid var(--border)' }}
+          >
+            {archiving
+              ? <Loader2 size={13} className="animate-spin" />
+              : meetup.archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+          </button>
         </div>
 
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
@@ -811,6 +841,7 @@ export function MemoryPage() {
   const { user } = useAuthStore();
   const premium = effectivePremium(user?.is_premium);
   const [search, setSearch] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: meetups = [], isLoading } = useQuery({
     queryKey: ['memory', 'album'],
@@ -822,7 +853,8 @@ export function MemoryPage() {
   const totalPhotos = meetups.reduce((acc, m) => acc + photosOf(m).length, 0);
 
   const meetupsWithPhotos = meetups.filter(m => photosOf(m).length > 0).length;
-  const visible = meetups.filter(m => matchesSearch(m, search));
+  const archivedCount = meetups.filter(m => m.archived).length;
+  const visible = meetups.filter(m => !!m.archived === showArchived && matchesSearch(m, search));
 
   return (
     <AppShell>
@@ -913,6 +945,27 @@ export function MemoryPage() {
               style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
             />
           </div>
+          <div className="mt-3 flex gap-2" role="tablist" aria-label="Memory view">
+            {([
+              { key: false, label: 'Memories', count: meetups.length - archivedCount },
+              { key: true,  label: 'Archived', count: archivedCount },
+            ] as const).map(t => (
+              <button
+                key={String(t.key)}
+                type="button"
+                role="tab"
+                aria-selected={showArchived === t.key}
+                onClick={() => setShowArchived(t.key)}
+                className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition-all hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+                style={showArchived === t.key
+                  ? { backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1px solid var(--color-primary-light)' }
+                  : { backgroundColor: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--border)' }}
+              >
+                {t.key && <Archive size={12} />}
+                {t.label} ({t.count})
+              </button>
+            ))}
+          </div>
           {search.trim() && (
             <p className="mt-2 px-2 text-xs" style={{ color: 'var(--text)' }} aria-live="polite">
               {visible.length} {visible.length === 1 ? 'memory' : 'memories'} found
@@ -923,7 +976,11 @@ export function MemoryPage() {
 
       {premium && !isLoading && meetups.length > 0 && visible.length === 0 && (
         <p className="py-16 text-center text-sm" style={{ color: 'var(--text)' }}>
-          No memories match "{search.trim()}".
+          {search.trim()
+            ? `No memories match "${search.trim()}".`
+            : showArchived
+              ? 'Nothing archived. Archived memories are hidden only for you.'
+              : 'All your memories are archived.'}
         </p>
       )}
 

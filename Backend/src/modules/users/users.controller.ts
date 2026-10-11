@@ -30,7 +30,7 @@ export class UsersController {
   @Get(':username')
   @HttpCode(HttpStatus.OK)
   async getPublicProfile(@Param('username') username: string) {
-    return this.usersService.findByUsername(username);
+    return this.usersService.findPublicByUsername(username);
   }
 
   // Aggregated tab data for the profile page. Auth optional — the owner's

@@ -7,6 +7,7 @@ import { Skeleton } from '../../../components/ui/Skeleton.tsx';
 import { ChevronLeft, ChevronRight } from '../../../components/ui/Icon.tsx';
 import { DayCell } from './DayCell.tsx';
 import { DayDetailModal } from './DayDetailModal.tsx';
+import { HomeSearch } from './HomeSearch.tsx';
 import { useCalendarApi, type ApiMeetup, type ApiCalendarDay } from '../api/calendar.api.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
 import { InviteFriendsPicker } from '../../meetup/components/InviteFriendsPicker.tsx';
@@ -1245,6 +1246,20 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
           onPropose={(d) => navigate(`/meetups/propose?date=${d}`)}
           onToggleAvailability={(d, cur) => { handleToggleAvailability(d, cur); setActiveDay(null); }}
         />
+      )}
+
+      {/* Search all my meetups — jumps the calendar to the picked day */}
+      {isOwn && (
+        <div className="mb-4">
+          <HomeSearch
+            meetups={visibleAll}
+            onPick={(d) => {
+              const [y, mo, da] = d.split('-').map(Number);
+              setCurrentDate(new Date(y, mo - 1, da));
+              setActiveDay(d);
+            }}
+          />
+        </div>
       )}
 
       {/* Header */}
