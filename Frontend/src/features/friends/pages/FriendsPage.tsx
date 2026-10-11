@@ -470,6 +470,11 @@ export function FriendsPage() {
   });
 
   const friends: FriendProfile[] = apiFriends.map(apiFriendToProfile);
+  const [friendQuery, setFriendQuery] = useState('');
+  const fq = friendQuery.trim().toLowerCase();
+  const matchesFriend = (f: FriendProfile) =>
+    !fq || [f.displayName, f.username, ...f.tags.map(t => String(t))].join(' ').toLowerCase().includes(fq);
+  const shownFriends = friends.filter(matchesFriend);
 
   function toggleFavorite(id: string) {
     setFavorites(prev => {
@@ -506,7 +511,7 @@ export function FriendsPage() {
                   <span className="text-xs ml-1" style={{ color: 'var(--text)' }}>({favorites.size}/3 pinned)</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {friends.filter(f => favorites.has(f.id)).map(friend => (
+                  {shownFriends.filter(f => favorites.has(f.id)).map(friend => (
                     <div key={friend.id} className="relative">
                       <FriendCard friend={friend} />
                       <button
@@ -563,6 +568,28 @@ export function FriendsPage() {
                 </div>
               </div>
 
+              {/* Search my own friends (Add Friend searches new people) */}
+              {friends.length > 0 && (
+                <div className="relative mb-4">
+                  <label htmlFor="friend-filter" className="sr-only">Search your friends</label>
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text)' }} />
+                  <input
+                    id="friend-filter"
+                    type="search"
+                    value={friendQuery}
+                    onChange={e => setFriendQuery(e.target.value)}
+                    placeholder="Search your friends by name…"
+                    className="w-full rounded-full py-2 pl-10 pr-4 text-sm outline-none focus-visible:ring-2"
+                    style={{ backgroundColor: 'var(--color-neutral)', border: '1px solid var(--border)', color: 'var(--text-h)' }}
+                  />
+                  {fq && (
+                    <p className="mt-2 px-2 text-xs" style={{ color: 'var(--text)' }} aria-live="polite">
+                      {shownFriends.length} {shownFriends.length === 1 ? 'friend' : 'friends'} found
+                    </p>
+                  )}
+                </div>
+              )}
+
               {isLoading && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -582,7 +609,7 @@ export function FriendsPage() {
 
               {!isLoading && friends.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {friends.filter(f => !favorites.has(f.id)).map((friend) => (
+                  {shownFriends.filter(f => !favorites.has(f.id)).map((friend) => (
                     <div key={friend.id} className="relative">
                       <FriendCard friend={friend} />
                       <button

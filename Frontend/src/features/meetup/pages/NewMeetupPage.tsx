@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DatePicker } from '../../../components/ui/DatePicker.tsx';
 import { TimePicker } from '../../../components/ui/TimePicker.tsx';
 import { InviteFriendsPicker } from '../components/InviteFriendsPicker.tsx';
+import { MemoryUploadToggle, type MemoryUploadMode } from '../components/MemoryUploadToggle.tsx';
 import { useMeetupsApi } from '../api/meetups.api.ts';
 import { useAuthStore } from '../../../store/auth.ts';
 import type { NewMeetupFormValues } from '../types.ts';
@@ -33,6 +34,7 @@ export function NewMeetupPage() {
     invitedFriendIds: prefillFriend ? [prefillFriend] : [],
   });
   const [mode, setMode] = useState<'friends' | 'solo'>('friends');
+  const [memoryMode, setMemoryMode] = useState<MemoryUploadMode>('everyone');
 
   // Check meetup count for selected date (max 3)
   const { data: allMeetups = [] } = useQuery({
@@ -98,6 +100,7 @@ export function NewMeetupPage() {
       description: values.details || undefined,
       location: values.location || undefined,
       participants: rest.length > 0 ? rest : undefined,
+      memory_upload_mode: memoryMode,
     });
   }
 
@@ -330,6 +333,9 @@ export function NewMeetupPage() {
                 }}
               />
             </div>
+
+            {/* Solo events have no one else to share uploads with */}
+            {mode === 'friends' && <MemoryUploadToggle value={memoryMode} onChange={setMemoryMode} />}
 
             {submitError && (
               <p className="text-sm text-center" style={{ color: 'var(--color-primary)' }}>{submitError}</p>

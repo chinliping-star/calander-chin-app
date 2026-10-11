@@ -5,6 +5,8 @@ import { useApi } from '../../../lib/api.ts';
 import { Logo } from '../../../components/Logo.tsx';
 import { useAuthStore } from '../../../store/auth.ts';
 import type { User } from '../../../types/index.ts';
+import { ConsentCheckboxes } from '../../legal/components/ConsentCheckboxes.tsx';
+import { makeConsent, readConsent } from '../../legal/consent.ts';
 
 const INTERESTS = [
   '🎵 Music', '🎮 Gaming', '🍕 Food', '✈️ Travel', '⚽ Sports',
@@ -65,6 +67,13 @@ export function OnboardingPage() {
     heard_about: '',
     interests: [] as string[],
   });
+
+  // Consent may already be saved from the sign-up page (Clerk metadata).
+  // If not (e.g. Google sign-in that skipped sign-up), ask here.
+  const savedConsent = readConsent(clerkUser?.unsafeMetadata as Record<string, unknown> | undefined);
+  const [agreed, setAgreed] = useState(false);
+  const [marketing, setMarketing] = useState(false);
+  const [consentError, setConsentError] = useState(false);
 
   useEffect(() => {
     if (clerkUser) {
@@ -129,12 +138,20 @@ export function OnboardingPage() {
   const step1Valid = form.username && form.display_name && form.first_name && form.last_name && form.email && usernameAvailable === true && !checkingUsername;
 
   async function handleSubmit() {
+    if (!savedConsent && !agreed) { setConsentError(true); return; }
+    const consent = savedConsent ?? makeConsent(marketing);
     setLoading(true);
     setError(null);
     try {
       const user = await post<User>('/users/onboarding', {
         ...form,
         avatar_url: clerkUser?.imageUrl,
+        consent: {
+          policy_version: consent.policy_version,
+          age_confirmed: consent.age_confirmed,
+          accepted_terms: consent.accepted_terms,
+          marketing_opt_in: consent.marketing_opt_in,
+        },
       });
       setAuth(user, '');
       navigate(`/${user.username}/calendar`);
@@ -288,6 +305,16 @@ export function OnboardingPage() {
                   );
                 })}
               </div>
+
+              {!savedConsent && (
+                <ConsentCheckboxes
+                  agreed={agreed}
+                  onAgreedChange={v => { setAgreed(v); if (v) setConsentError(false); }}
+                  marketing={marketing}
+                  onMarketingChange={setMarketing}
+                  showError={consentError}
+                />
+              )}
 
               <div className="flex gap-3 mt-2">
                 <button

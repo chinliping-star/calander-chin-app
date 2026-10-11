@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsBoolean, IsIn, MaxLength, Matches, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsBoolean, IsIn, MaxLength, Matches, ValidateNested, Equals } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PrivacyDto {
@@ -25,6 +25,13 @@ export class UpdateUserDto {
   @IsOptional() @ValidateNested() @Type(() => PrivacyDto) privacy?: PrivacyDto;
 }
 
+export class SignupConsentDto {
+  @IsString() @MaxLength(20) policy_version: string;
+  @Equals(true) age_confirmed: boolean;
+  @Equals(true) accepted_terms: boolean;
+  @IsBoolean() marketing_opt_in: boolean;
+}
+
 export class OnboardingDto {
   @IsString() @MaxLength(30) username: string;
   @IsString() @MaxLength(50) display_name: string;
@@ -37,4 +44,7 @@ export class OnboardingDto {
   @IsOptional() @IsArray() @IsString({ each: true }) hobbies?: string[];
   @IsOptional() @IsString() email?: string;
   @IsOptional() @IsString() avatar_url?: string;
+
+  /** Required: 13+ and Terms/Privacy accepted (PDPA record). */
+  @ValidateNested() @Type(() => SignupConsentDto) consent: SignupConsentDto;
 }
