@@ -38,6 +38,8 @@ import { api } from '../../../lib/api.ts';
 import { effectivePremium } from '../../../lib/featureFlags.ts';
 import type { User } from '../../../types/index.ts';
 import type { InterestNote } from '../interests.ts';
+import { isSceneEffect, useEffectOverride } from '../../effects/effects.ts';
+import { AdoptEffectToast } from '../../effects/components/AdoptEffectToast.tsx';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -505,6 +507,15 @@ export function ProfilePage() {
   const tabMeetups     = profileData?.meetups ?? [];
   const counts = profileData?.counts ?? { friends: 0, meetups: 0, communities: 0 };
 
+  // Visiting someone's profile shows their background effect instead of mine.
+  const setEffectOverride = useEffectOverride(s => s.setOverride);
+  const ownerEffect = isSceneEffect(profileUser?.scene_effect) ? profileUser.scene_effect : 'none';
+  useEffect(() => {
+    if (isOwnProfile || !profileUser) return;
+    setEffectOverride(ownerEffect);
+    return () => setEffectOverride(null);
+  }, [isOwnProfile, profileUser, ownerEffect, setEffectOverride]);
+
   useEffect(() => {
     if (!username) return;
     if (isOwnProfile && me) {
@@ -763,6 +774,10 @@ export function ProfilePage() {
           )}
         </div>
       </div>
+
+      {!isOwnProfile && ownerEffect !== 'none' && (
+        <AdoptEffectToast key={profileUser._id ?? username} ownerName={displayName} effect={ownerEffect} />
+      )}
 
       {showPostModal && (
         <NewPostModal

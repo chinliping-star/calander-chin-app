@@ -14,6 +14,7 @@ import { SupportChatWidget } from '../components/SupportChatWidget.tsx';
 import { SupportEmailModal } from '../components/SupportEmailModal.tsx';
 import { ActiveSessions } from '../components/ActiveSessions.tsx';
 import type { SettingsSection } from '../components/SettingsSidebar.tsx';
+import { EffectPicker } from '../../effects/components/EffectPicker.tsx';
 
 const inputStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
@@ -575,6 +576,12 @@ function ThemeSection() {
           ))}
         </div>
       </SectionCard>
+      <div className="mt-6">
+        <SectionCard>
+          <SectionHeading id="effects-heading">Theme effects</SectionHeading>
+          <EffectPicker />
+        </SectionCard>
+      </div>
     </section>
   );
 }
