@@ -1,4 +1,5 @@
 import { useApi } from '../../../lib/api.ts';
+import type { InterestNote } from '../interests.ts';
 
 export interface ProfileFriend {
   _id: string;
@@ -44,6 +45,7 @@ export interface ProfileBooking {
 
 export interface ProfileData {
   interests: string[];
+  interest_notes?: InterestNote[];
   counts: { friends: number; meetups: number; communities: number };
   friends: ProfileFriend[];
   meetups: ProfileMeetup[];

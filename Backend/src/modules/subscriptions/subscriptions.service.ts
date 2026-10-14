@@ -101,7 +101,7 @@ export class SubscriptionsService {
       { upsert: true, new: true },
     ).exec();
 
-    await this.userModel.findByIdAndUpdate(mongoUserId, { $set: { is_premium: true } }).exec();
+    await this.userModel.findByIdAndUpdate(mongoUserId, { $set: { is_premium: true, premium_source: 'stripe', premium_until: null } }).exec();
   }
 
   private async handleSubscriptionChange(stripeSub: any): Promise<void> {
@@ -118,7 +118,7 @@ export class SubscriptionsService {
     }).exec();
 
     if (stripeSub.status === 'canceled') {
-      await this.userModel.findByIdAndUpdate(record.user_id, { $set: { is_premium: false } }).exec();
+      await this.userModel.findByIdAndUpdate(record.user_id, { $set: { is_premium: false, premium_source: null } }).exec();
     }
   }
 

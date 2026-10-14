@@ -374,16 +374,44 @@ export class MeetupsService {
     return this.findById(meetupId);
   }
 
-  async findAllForUser(clerkId: string): Promise<MeetupDocument[]> {
+  async findAllForUser(clerkId: string) {
     const userObjId = await this.resolveMongoId(clerkId);
-    return this.meetupModel
+    const docs = await this.meetupModel
       .find({ $or: [{ proposer_id: userObjId }, { owner_id: userObjId }, { participants: userObjId }] })
+      .select('+event_colors')
       .populate('proposer_id', 'username display_name avatar_url theme')
       .populate('owner_id',    'username display_name avatar_url theme')
       .populate('participants', 'username display_name avatar_url theme')
       .populate('responses.user_id', 'username display_name avatar_url theme')
       .sort({ date: 1, time: 1 })
       .exec();
+    // Each person only gets their own chip colour.
+    const uid = userObjId.toString();
+    return docs.map((d) => {
+      const { event_colors, ...rest } = d.toObject();
+      const mine = (event_colors ?? []).find((c) => c.user_id.toString() === uid);
+      return { ...rest, my_color: mine?.color ?? null };
+    });
+  }
+
+  /** Set (or clear with null) the viewer's personal colour for this meetup. */
+  async setColor(meetupId: string, clerkId: string, color: string | null): Promise<{ my_color: string | null }> {
+    const userObjId = await this.resolveMongoId(clerkId);
+    const meetup = await this.meetupModel
+      .findOne({
+        _id: meetupId,
+        $or: [{ proposer_id: userObjId }, { owner_id: userObjId }, { participants: userObjId }],
+      })
+      .select('_id')
+      .exec();
+    if (!meetup) throw new NotFoundException('Meetup not found');
+    await this.meetupModel.updateOne({ _id: meetup._id }, { $pull: { event_colors: { user_id: userObjId } } }).exec();
+    if (color) {
+      await this.meetupModel
+        .updateOne({ _id: meetup._id }, { $push: { event_colors: { user_id: userObjId, color: color.toLowerCase() } } })
+        .exec();
+    }
+    return { my_color: color ? color.toLowerCase() : null };
   }
 
   async findById(id: string): Promise<MeetupDocument> {

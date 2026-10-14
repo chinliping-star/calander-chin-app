@@ -14,6 +14,7 @@ import { CreatePostDto, UpdatePostDto } from './dto/posts.dto';
 import { ActivityService } from '../activity/activity.service';
 import { ReportsService } from '../reports/reports.service';
 import { ModerationService } from '../reports/moderation.service';
+import { CoinsService } from '../coins/coins.service';
 
 @Injectable()
 export class PostsService {
@@ -25,6 +26,7 @@ export class PostsService {
     private readonly activitySvc: ActivityService,
     private readonly reportsSvc: ReportsService,
     private readonly moderationSvc: ModerationService,
+    private readonly coinsSvc: CoinsService,
   ) {}
 
   private async resolveMongoId(clerkId: string): Promise<Types.ObjectId> {
@@ -159,6 +161,9 @@ export class PostsService {
       meetup_ref: dto.meetup_ref ? new Types.ObjectId(dto.meetup_ref) : undefined,
     });
     await post.save();
+
+    // Coins: more for posting a picture. Daily-capped in CoinsService.
+    void this.coinsSvc.award(authorId, image_url ? 'post_photo' : 'post_created', String(post._id));
 
     // Auto-moderation: scan content; auto-file a report for human review if flagged.
     const scan = this.moderationSvc.scan(`${dto.title ?? ''} ${dto.content ?? ''}`);

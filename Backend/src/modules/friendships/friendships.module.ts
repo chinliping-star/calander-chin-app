@@ -6,6 +6,7 @@ import { Friendship, FriendshipSchema } from './schemas/friendship.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ActivityModule } from '../activity/activity.module';
+import { CoinsModule } from '../coins/coins.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ActivityModule } from '../activity/activity.module';
     ]),
     NotificationsModule,
     ActivityModule,
+    CoinsModule,
   ],
   controllers: [FriendshipsController],
   providers: [FriendshipsService],

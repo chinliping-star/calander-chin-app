@@ -3,6 +3,11 @@ import { Document } from 'mongoose';
 
 export type UserDocument = User & Document;
 
+export const SCENE_EFFECTS = [
+  'none', 'snow', 'christmas', 'rain', 'sunny', 'autumn',
+  'fireworks', 'fireflies', 'thunder', 'dragon',
+] as const;
+
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: false } })
 export class User {
   @Prop({ required: true, unique: true, trim: true })
@@ -38,6 +43,10 @@ export class User {
   @Prop({ type: [String], default: [] })
   hobbies: string[];
 
+  /** Optional note per interest, shown on the profile (e.g. "Food" → "Love ramen"). */
+  @Prop({ type: [{ tag: { type: String, trim: true }, note: { type: String, trim: true } }], _id: false, default: [] })
+  interest_notes: { tag: string; note: string }[];
+
   @Prop({ trim: true })
   bio: string;
 
@@ -49,6 +58,11 @@ export class User {
 
   @Prop({ default: 'pastel-pink' })
   theme: string;
+
+  /** Animated background effect (snow, rain, dragon…). Visitors see it on this
+   * user's profile and can adopt it. 'none' = off. */
+  @Prop({ enum: SCENE_EFFECTS, default: 'none' })
+  scene_effect: string;
 
   /**
    * Privacy toggles. Missing field (older accounts) = defaults below, which
@@ -97,6 +111,21 @@ export class User {
 
   @Prop({ default: false })
   is_premium: boolean;
+
+  /** Where premium came from. 'coins' premium ends at premium_until. */
+  @Prop({ type: String, enum: ['stripe', 'coins', 'admin', null], default: null })
+  premium_source: 'stripe' | 'coins' | 'admin' | null;
+
+  @Prop({ type: Date, default: null })
+  premium_until: Date | null;
+
+  /** Coin balance (earned by adding friends, posting, memory photos). */
+  @Prop({ default: 0, min: 0 })
+  coins: number;
+
+  /** "Good user" badge set by admins. */
+  @Prop({ default: false })
+  is_trusted: boolean;
 
   @Prop({ default: false })
   is_admin: boolean;

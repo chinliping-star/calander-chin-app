@@ -11,6 +11,7 @@ import { Friendship, FriendshipDocument } from './schemas/friendship.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ActivityService } from '../activity/activity.service';
+import { CoinsService } from '../coins/coins.service';
 
 @Injectable()
 export class FriendshipsService {
@@ -21,6 +22,7 @@ export class FriendshipsService {
     private readonly userModel: Model<UserDocument>,
     private readonly notifSvc: NotificationsService,
     private readonly activitySvc: ActivityService,
+    private readonly coinsSvc: CoinsService,
   ) {}
 
   private async resolveMongoId(clerkId: string): Promise<Types.ObjectId> {
@@ -183,6 +185,11 @@ export class FriendshipsService {
 
     friendship.status = 'accepted';
     await friendship.save();
+
+    // New friend = coins for both people (once per pair, ever).
+    const pair = CoinsService.friendRef(currentObjId, requesterObjId);
+    void this.coinsSvc.award(currentObjId, 'friend_added', pair);
+    void this.coinsSvc.award(requesterObjId, 'friend_added', pair);
 
     this.activitySvc.record(
       currentObjId,

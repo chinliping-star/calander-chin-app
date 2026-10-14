@@ -8,6 +8,7 @@ import { Community, CommunityDocument } from '../communities/schemas/community.s
 import { ModerateUserDto } from './dto/moderate-user.dto';
 import { ReportsService } from '../reports/reports.service';
 import { ResolveReportDto } from '../reports/dto/create-report.dto';
+import { CoinsService } from '../coins/coins.service';
 
 interface ListParams {
   page?: number;
@@ -24,6 +25,7 @@ export class AdminService {
     @InjectModel(Meetup.name)    private readonly meetupModel:    Model<MeetupDocument>,
     @InjectModel(Community.name) private readonly communityModel: Model<CommunityDocument>,
     private readonly reportsService: ReportsService,
+    private readonly coinsService: CoinsService,
   ) {}
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
@@ -40,7 +42,7 @@ export class AdminService {
     const [
       totalUsers, premiumUsers, suspendedUsers, blockedUsers,
       newToday, newThisWeek, newThisMonth,
-      totalPosts, totalMeetups, totalCommunities,
+      totalPosts, totalMeetups, totalCommunities, trustedUsers,
     ] = await Promise.all([
       this.userModel.countDocuments(notDeleted),
       this.userModel.countDocuments({ ...notDeleted, is_premium: true }),
@@ -52,11 +54,13 @@ export class AdminService {
       this.postModel.countDocuments({}),
       this.meetupModel.countDocuments({}),
       this.communityModel.countDocuments({}),
+      this.userModel.countDocuments({ ...notDeleted, is_trusted: true }),
     ]);
 
     const userGrowth = await this.dailyCounts(this.userModel, 'created_at', 14);
     const postVolume = await this.dailyCounts(this.postModel, 'created_at', 14);
     const { reportedPosts, reportedUsers } = await this.reportsService.pendingCounts();
+    const [coins, topUsers] = await Promise.all([this.coinsService.stats(), this.coinsService.topEarners(30, 8)]);
 
     return {
       kpis: {
@@ -72,7 +76,10 @@ export class AdminService {
         totalCommunities,
         reportedPosts,
         reportedUsers,
+        trustedUsers,
       },
+      coins,
+      topUsers,
       charts: { userGrowth, postVolume },
     };
   }
@@ -118,12 +125,16 @@ export class AdminService {
     }
     if (status && ['active', 'suspended', 'blocked'].includes(status)) {
       filter.status = status;
+    } else if (status === 'trusted') {
+      filter.is_trusted = true;
+    } else if (status === 'premium') {
+      filter.is_premium = true;
     }
 
     const [items, total] = await Promise.all([
       this.userModel
         .find(filter)
-        .select('username display_name email avatar_url status role is_premium is_admin created_at deleted_at suspended_until moderation_reason')
+        .select('username display_name email avatar_url status role is_premium premium_source premium_until is_admin is_trusted coins created_at deleted_at suspended_until moderation_reason')
         .sort({ created_at: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -160,7 +171,12 @@ export class AdminService {
     if (dto.status !== undefined) user.status = dto.status;
     if (dto.moderation_reason !== undefined) user.moderation_reason = dto.moderation_reason;
     if (dto.role !== undefined) user.role = dto.role;
-    if (dto.is_premium !== undefined) user.is_premium = dto.is_premium;
+    if (dto.is_premium !== undefined && dto.is_premium !== user.is_premium) {
+      user.is_premium = dto.is_premium;
+      user.premium_source = dto.is_premium ? 'admin' : null;
+      user.premium_until = null;
+    }
+    if (dto.is_trusted !== undefined) user.is_trusted = dto.is_trusted;
     if (dto.is_admin !== undefined) user.is_admin = dto.is_admin;
     if (dto.suspended_until !== undefined) {
       user.suspended_until = dto.suspended_until ? new Date(dto.suspended_until) : null;
@@ -170,6 +186,14 @@ export class AdminService {
 
     await user.save();
     return this.getUserDetail(id);
+  }
+
+  adjustCoins(id: string, amount: number, note: string) {
+    return this.coinsService.adminAdjust(id, amount, note);
+  }
+
+  topUsers(days: number) {
+    return this.coinsService.topEarners(days, 25);
   }
 
   /** Soft delete — 30-day recovery window handled by the deleted_at timestamp. */

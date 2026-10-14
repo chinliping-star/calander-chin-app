@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
-import { ModerateUserDto } from './dto/moderate-user.dto';
+import { ModerateUserDto, AdjustCoinsDto } from './dto/moderate-user.dto';
 import { ResolveReportDto } from '../reports/dto/create-report.dto';
 import { AuditInterceptor } from '../audit/audit.interceptor';
 import { AuditService } from '../audit/audit.service';
@@ -70,6 +70,20 @@ export class AdminController {
   @Patch('users/:id')
   moderateUser(@Param('id') id: string, @Body() dto: ModerateUserDto) {
     return this.adminService.moderateUser(id, dto);
+  }
+
+  /** Give (+) or take (-) coins. */
+  @Post('users/:id/coins')
+  @HttpCode(HttpStatus.OK)
+  adjustCoins(@Param('id') id: string, @Body() dto: AdjustCoinsDto) {
+    return this.adminService.adjustCoins(id, dto.amount, dto.note);
+  }
+
+  /** "Good users" — most coins earned by real activity in the last N days. */
+  @Get('top-users')
+  topUsers(@Query('days') days?: string) {
+    const d = Math.min(365, Math.max(1, parseInt(days ?? '30', 10) || 30));
+    return this.adminService.topUsers(d);
   }
 
   @Delete('users/:id')

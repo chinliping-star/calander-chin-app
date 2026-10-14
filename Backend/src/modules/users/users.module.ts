@@ -11,6 +11,7 @@ import { CommunityPost, CommunityPostSchema } from '../communities/schemas/commu
 import { Rsvp, RsvpSchema } from '../rsvp/schemas/rsvp.schema';
 import { CloudinaryProvider } from '../../common/cloudinary/cloudinary.provider';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
+import { CoinsModule } from '../coins/coins.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
       { name: CommunityPost.name, schema: CommunityPostSchema },
       { name: Rsvp.name, schema: RsvpSchema },
     ]),
+    CoinsModule,
   ],
   controllers: [UsersController],
   providers: [UsersService, CloudinaryProvider, CloudinaryService],

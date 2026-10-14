@@ -51,5 +51,6 @@ export function useMeetupsApi() {
     declineMeetup:(id: string)                    => api.patch<ApiMeetup>(`/meetups/${id}/decline`),
     cancelMeetup: (id: string)                    => api.patch<ApiMeetup>(`/meetups/${id}/cancel`),
     deleteMeetup: (id: string)                    => api.delete<void>(`/meetups/${id}`),
+    setColor:     (id: string, color: string | null) => api.patch<{ my_color: string | null }>(`/meetups/${id}/color`, { color }),
   };
 }

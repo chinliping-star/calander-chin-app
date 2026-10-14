@@ -4,6 +4,10 @@ import {
   IsBoolean,
   IsIn,
   IsDateString,
+  IsInt,
+  Min,
+  Max,
+  MaxLength,
 } from 'class-validator';
 
 export class ModerateUserDto {
@@ -30,4 +34,21 @@ export class ModerateUserDto {
   @IsOptional()
   @IsBoolean()
   is_admin?: boolean;
+
+  /** "Good user" badge. */
+  @IsOptional()
+  @IsBoolean()
+  is_trusted?: boolean;
+}
+
+export class AdjustCoinsDto {
+  /** + to give, - to take away. */
+  @IsInt()
+  @Min(-100000)
+  @Max(100000)
+  amount: number;
+
+  @IsString()
+  @MaxLength(200)
+  note: string;
 }
