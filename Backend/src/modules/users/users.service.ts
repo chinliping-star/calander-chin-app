@@ -52,7 +52,7 @@ export class UsersService {
   async findPublicByUsername(username: string) {
     const user = await this.userModel
       .findOne({ username: username.toLowerCase(), deleted_at: null })
-      .select('_id username display_name avatar_url banner_url bio theme interests created_at')
+      .select('_id username display_name avatar_url banner_url bio theme scene_effect interests interest_notes created_at')
       .lean()
       .exec();
     if (!user) throw new NotFoundException(`User @${username} not found`);
@@ -97,6 +97,14 @@ export class UsersService {
       const taken = await this.userModel.findOne({ username: lower, clerk_id: { $ne: clerkId } }).exec();
       if (taken) throw new ConflictException('Username already taken');
       dto = { ...dto, username: lower };
+    }
+    // Notes only for interests the user still has; drop empty notes.
+    if (dto.interest_notes) {
+      const keep = dto.interests ? new Set(dto.interests) : null;
+      dto = {
+        ...dto,
+        interest_notes: dto.interest_notes.filter((n) => n.note.trim() && (!keep || keep.has(n.tag))),
+      };
     }
     // Flatten privacy to dot-notation so toggling one key keeps the others.
     const { privacy, ...rest } = dto;
@@ -151,7 +159,7 @@ export class UsersService {
   async getProfileData(username: string, viewerClerkId?: string) {
     const user = await this.userModel
       .findOne({ username: username.toLowerCase(), deleted_at: null })
-      .select('_id interests privacy')
+      .select('_id interests interest_notes privacy')
       .lean()
       .exec();
     if (!user) throw new NotFoundException(`User @${username} not found`);
@@ -306,6 +314,7 @@ export class UsersService {
 
     return {
       interests: user.interests ?? [],
+      interest_notes: user.interest_notes ?? [],
       counts: { friends: friends.length, meetups: meetups.length, communities: communities.length },
       friends: visibleFriends,
       meetups,

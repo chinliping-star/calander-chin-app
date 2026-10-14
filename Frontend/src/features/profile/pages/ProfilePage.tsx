@@ -8,6 +8,7 @@ import {
   type ProfileMeetup,
 } from '../api/profile.api.ts';
 import { ProfileMeetupCalendar } from '../components/ProfileMeetupCalendar.tsx';
+import { InterestsPanel } from '../components/InterestsPanel.tsx';
 import { PostFeed } from '../../posts/components/PostFeed.tsx';
 import { NewPostModal } from '../../posts/components/NewPostModal.tsx';
 import { usePostsApi } from '../../posts/api/posts.api.ts';
@@ -36,6 +37,9 @@ import { ReportModal } from '../../reports/components/ReportModal.tsx';
 import { api } from '../../../lib/api.ts';
 import { effectivePremium } from '../../../lib/featureFlags.ts';
 import type { User } from '../../../types/index.ts';
+import type { InterestNote } from '../interests.ts';
+import { isSceneEffect, useEffectOverride } from '../../effects/effects.ts';
+import { AdoptEffectToast } from '../../effects/components/AdoptEffectToast.tsx';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -200,7 +204,7 @@ function FriendsRailCard({ friends, onViewAll }: { friends: ProfileFriend[]; onV
 }
 
 /** Interests — right-rail card with tag chips. */
-function InterestsRailCard({ interests, onViewAll }: { interests: string[]; onViewAll: () => void }) {
+function InterestsRailCard({ interests, notes, onViewAll }: { interests: string[]; notes: InterestNote[]; onViewAll: () => void }) {
   if (interests.length === 0) return null;
   return (
     <Card className="p-6">
@@ -209,6 +213,7 @@ function InterestsRailCard({ interests, onViewAll }: { interests: string[]; onVi
         {interests.slice(0, 8).map((tag, i) => (
           <span
             key={tag}
+            title={notes.find(n => n.tag === tag)?.note || undefined}
             className="px-3 py-1.5 rounded-full text-xs font-semibold"
             style={i % 3 === 0
               ? { backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }
@@ -220,9 +225,9 @@ function InterestsRailCard({ interests, onViewAll }: { interests: string[]; onVi
           </span>
         ))}
       </div>
-      {interests.length > 8 && (
+      {(interests.length > 8 || notes.length > 0) && (
         <button type="button" onClick={onViewAll} className="mt-3 text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>
-          See all interests
+          {notes.length > 0 ? 'See interests & notes' : 'See all interests'}
         </button>
       )}
     </Card>
@@ -428,37 +433,6 @@ function FriendsTab({ friends, isOwnProfile, shoutWith }: FriendsTabProps) {
   );
 }
 
-function InterestsTab({ interests }: { interests: string[] }) {
-  return (
-    <section aria-labelledby="interests-tags-heading">
-      <h3 id="interests-tags-heading" className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text)' }}>
-        Interests
-      </h3>
-      {interests.length === 0 ? (
-        <EmptyState message="No interests added yet." />
-      ) : (
-        <div className="flex flex-wrap gap-3">
-          {interests.map((tag, idx) => {
-            // Vary sizes slightly for a tag-cloud feel
-            const sizes = ['text-xs', 'text-sm', 'text-xs', 'text-base', 'text-xs', 'text-sm'];
-            const pads  = ['px-3 py-1.5', 'px-4 py-2', 'px-3 py-1.5', 'px-5 py-2.5', 'px-3 py-1.5', 'px-4 py-2'];
-            return (
-              <span
-                key={tag}
-                className={cn('rounded-full font-semibold cursor-default transition-all', sizes[idx % sizes.length], pads[idx % pads.length])}
-                style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)', border: '1.5px solid var(--color-primary)' }}
-              >
-                <Tag size={10} className="inline mr-1" aria-hidden="true" />
-                {tag}
-              </span>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
 // ── Tab bar ───────────────────────────────────────────────────────────────────
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; access: 'public' | 'friends' | 'premium' }[] = [
@@ -533,6 +507,15 @@ export function ProfilePage() {
   const tabMeetups     = profileData?.meetups ?? [];
   const counts = profileData?.counts ?? { friends: 0, meetups: 0, communities: 0 };
 
+  // Visiting someone's profile shows their background effect instead of mine.
+  const setEffectOverride = useEffectOverride(s => s.setOverride);
+  const ownerEffect = isSceneEffect(profileUser?.scene_effect) ? profileUser.scene_effect : 'none';
+  useEffect(() => {
+    if (isOwnProfile || !profileUser) return;
+    setEffectOverride(ownerEffect);
+    return () => setEffectOverride(null);
+  }, [isOwnProfile, profileUser, ownerEffect, setEffectOverride]);
+
   useEffect(() => {
     if (!username) return;
     if (isOwnProfile && me) {
@@ -572,6 +555,7 @@ export function ProfilePage() {
   const avatarUrl = profileUser.avatar_url || `https://i.pravatar.cc/150?u=${profileUser.username}`;
   const bannerUrl = profileUser.banner_url || '';
   const interests = profileData?.interests ?? (profileUser as User & { interests?: string[] }).interests ?? [];
+  const interestNotes = profileData?.interest_notes ?? [];
 
   const themeMeta = THEMES.find(t => t.id === (profileUser as User & { theme?: string }).theme);
 
@@ -749,7 +733,7 @@ export function ProfilePage() {
               {/* Right rail */}
               <div className="flex flex-col gap-6">
                 <FriendsRailCard friends={tabFriends} onViewAll={() => setActiveTab('friends')} />
-                <InterestsRailCard interests={interests} onViewAll={() => setActiveTab('interests')} />
+                <InterestsRailCard interests={interests} notes={interestNotes} onViewAll={() => setActiveTab('interests')} />
               </div>
             </div>
           )}
@@ -767,7 +751,9 @@ export function ProfilePage() {
                   shoutWith={!isOwnProfile && isFriend && profileUser._id ? { _id: profileUser._id, name: displayName } : null}
                 />
               )}
-              {activeTab === 'interests' && <InterestsTab interests={interests} />}
+              {activeTab === 'interests' && (
+                <InterestsPanel username={username!} interests={interests} notes={interestNotes} isOwn={isOwnProfile} />
+              )}
               {activeTab === 'posts' && (
                 <div className="flex flex-col gap-4">
                   {isOwnProfile && (
@@ -788,6 +774,10 @@ export function ProfilePage() {
           )}
         </div>
       </div>
+
+      {!isOwnProfile && ownerEffect !== 'none' && (
+        <AdoptEffectToast key={profileUser._id ?? username} ownerName={displayName} effect={ownerEffect} />
+      )}
 
       {showPostModal && (
         <NewPostModal

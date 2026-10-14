@@ -10,6 +10,7 @@ import { Meetup, MeetupDocument } from '../meetups/schemas/meetup.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { effectivePremium } from '../../common/feature-flags';
+import { CoinsService } from '../coins/coins.service';
 
 /** Album row: meetup fields + whether the current viewer archived it. */
 export type AlbumMeetup = Record<string, unknown> & { archived: boolean };
@@ -20,6 +21,7 @@ export class MemoryService {
     @InjectModel(Meetup.name) private readonly meetupModel: Model<MeetupDocument>,
     @InjectModel(User.name)   private readonly userModel: Model<UserDocument>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly coinsSvc: CoinsService,
   ) {}
 
   private async resolveUser(clerkId: string): Promise<UserDocument> {
@@ -96,6 +98,8 @@ export class MemoryService {
       added_at: new Date(),
     });
     await meetup.save();
+
+    void this.coinsSvc.award(userObjId, 'memory_photo', result.secure_url);
 
     return this.populated(meetupId);
   }

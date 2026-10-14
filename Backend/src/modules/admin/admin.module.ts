@@ -11,6 +11,7 @@ import { ReportsModule } from '../reports/reports.module';
 import { AuditModule } from '../audit/audit.module';
 import { SettingsModule } from '../settings/settings.module';
 import { SupportModule } from '../support/support.module';
+import { CoinsModule } from '../coins/coins.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SupportModule } from '../support/support.module';
     AuditModule,
     SettingsModule,
     SupportModule,
+    CoinsModule,
   ],
   controllers: [AdminController],
   providers: [AdminService, AdminGuard],

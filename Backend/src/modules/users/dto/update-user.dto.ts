@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsArray, IsBoolean, IsIn, MaxLength, Matches, ValidateNested, Equals } from 'class-validator';
+import { IsString, IsOptional, IsArray, ArrayMaxSize, IsBoolean, IsIn, MaxLength, Matches, ValidateNested, Equals } from 'class-validator';
 import { Type } from 'class-transformer';
+import { SCENE_EFFECTS } from '../schemas/user.schema';
 
 export class PrivacyDto {
   @IsOptional() @IsBoolean() private_account?: boolean;
@@ -7,6 +8,11 @@ export class PrivacyDto {
   @IsOptional() @IsBoolean() discoverability?: boolean;
   @IsOptional() @IsBoolean() show_meetups?: boolean;
   @IsOptional() @IsIn(['mutual', 'all']) friend_list?: 'mutual' | 'all';
+}
+
+export class InterestNoteDto {
+  @IsString() @MaxLength(40)  tag: string;
+  @IsString() @MaxLength(300) note: string;
 }
 
 export class UpdateUserDto {
@@ -17,9 +23,11 @@ export class UpdateUserDto {
   @IsOptional() @IsString() @MaxLength(60)  country?: string;
   @IsOptional() @IsString() @MaxLength(1000) @Matches(/^(?:\s*\S+){0,100}\s*$/, { message: 'Bio must be 100 words or fewer' }) bio?: string;
   @IsOptional() @IsString()                 theme?: string;
+  @IsOptional() @IsIn(SCENE_EFFECTS)        scene_effect?: string;
   @IsOptional() @IsString()                 banner_url?: string;
   @IsOptional() @IsString()                 avatar_url?: string;
-  @IsOptional() @IsArray() @IsString({ each: true }) interests?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(30) @IsString({ each: true }) @MaxLength(40, { each: true }) interests?: string[];
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => InterestNoteDto) @ArrayMaxSize(30) interest_notes?: InterestNoteDto[];
   @IsOptional() @IsArray() @IsString({ each: true }) hobbies?: string[];
   @IsOptional() @IsBoolean() is_premium?: boolean;
   @IsOptional() @ValidateNested() @Type(() => PrivacyDto) privacy?: PrivacyDto;

@@ -10,12 +10,14 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
+import { CoinsService } from '../coins/coins.service';
 
 @Controller('users')
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly coinsService: CoinsService,
   ) {}
 
   // Search users by username/display_name — must be before :username param
@@ -59,6 +61,7 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   async getMe(@CurrentUser() clerkId: string) {
     const user = await this.usersService.findByClerkId(clerkId);
+    if (user) await this.coinsService.expireCoinPremium(user);
     return user ?? null;
   }
 

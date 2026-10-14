@@ -118,6 +118,16 @@ export class Meetup {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [], select: false })
   memory_archived_by: Types.ObjectId[];
 
+  /** Personal chip colour per person on their calendar. Each user sees only
+   * their own pick (sent back as `my_color`). Never sent to clients as-is. */
+  @Prop({
+    type: [{ user_id: { type: Types.ObjectId, ref: 'User', required: true }, color: { type: String, required: true } }],
+    _id: false,
+    default: [],
+    select: false,
+  })
+  event_colors: { user_id: Types.ObjectId; color: string }[];
+
   @Prop({ default: Date.now })
   created_at: Date;
 }

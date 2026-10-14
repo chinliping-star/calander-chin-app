@@ -15,6 +15,7 @@ import { CreateMeetupDto } from './dto/create-meetup.dto';
 import { UpdateMeetupDto } from './dto/update-meetup.dto';
 import { CreateProposalDto } from './dto/create-proposal.dto';
 import { VoteSlotDto, LockSlotDto } from './dto/vote-slot.dto';
+import { SetColorDto } from './dto/set-color.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -81,6 +82,17 @@ export class MeetupsController {
     @Body() dto: UpdateMeetupDto,
   ) {
     return this.meetupsService.update(id, userId, dto);
+  }
+
+  // Personal chip colour — only changes how this meetup looks on your calendar.
+  @Patch(':id/color')
+  @HttpCode(HttpStatus.OK)
+  async setColor(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
+    @Body() dto: SetColorDto,
+  ) {
+    return this.meetupsService.setColor(id, userId, dto.color ?? null);
   }
 
   @Patch(':id/accept')
