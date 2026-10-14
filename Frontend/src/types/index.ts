@@ -18,6 +18,8 @@ export interface User {
   last_name?: string;
   bio?: string;
   theme?: string;
+  /** Animated background effect id (see features/effects). */
+  scene_effect?: string;
   is_premium?: boolean;
   is_admin?: boolean;
   clerk_id?: string;

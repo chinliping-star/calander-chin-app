@@ -52,7 +52,7 @@ export class UsersService {
   async findPublicByUsername(username: string) {
     const user = await this.userModel
       .findOne({ username: username.toLowerCase(), deleted_at: null })
-      .select('_id username display_name avatar_url banner_url bio theme interests interest_notes created_at')
+      .select('_id username display_name avatar_url banner_url bio theme scene_effect interests interest_notes created_at')
       .lean()
       .exec();
     if (!user) throw new NotFoundException(`User @${username} not found`);

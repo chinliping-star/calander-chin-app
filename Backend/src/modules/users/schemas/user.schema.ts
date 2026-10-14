@@ -3,6 +3,11 @@ import { Document } from 'mongoose';
 
 export type UserDocument = User & Document;
 
+export const SCENE_EFFECTS = [
+  'none', 'snow', 'christmas', 'rain', 'sunny', 'autumn',
+  'fireworks', 'fireflies', 'thunder', 'dragon',
+] as const;
+
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: false } })
 export class User {
   @Prop({ required: true, unique: true, trim: true })
@@ -53,6 +58,11 @@ export class User {
 
   @Prop({ default: 'pastel-pink' })
   theme: string;
+
+  /** Animated background effect (snow, rain, dragon…). Visitors see it on this
+   * user's profile and can adopt it. 'none' = off. */
+  @Prop({ enum: SCENE_EFFECTS, default: 'none' })
+  scene_effect: string;
 
   /**
    * Privacy toggles. Missing field (older accounts) = defaults below, which
