@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Search, Trash2, RotateCcw, Shield, X, Check, Download } from 'lucide-react';
+import { Loader2, Search, Trash2, RotateCcw, Shield, X, Check, Download, BadgeCheck, Coins } from 'lucide-react';
 import { useAdminApi, type AdminUser, type ModerateUserPayload } from '../api/admin.api.ts';
 
 const STATUS_TINT: Record<string, { bg: string; fg: string }> = {
@@ -26,8 +26,23 @@ function ModerateModal({ user, onClose }: { user: AdminUser; onClose: () => void
     role: user.role,
     is_premium: user.is_premium,
     is_admin: user.is_admin,
+    is_trusted: !!user.is_trusted,
     moderation_reason: user.moderation_reason ?? '',
   });
+  const [coinAmount, setCoinAmount] = useState('');
+  const [coinNote, setCoinNote] = useState('');
+  const [balance, setBalance] = useState(user.coins ?? 0);
+  const adjust = useMutation({
+    mutationFn: () => api.adjustCoins(user._id, parseInt(coinAmount, 10), coinNote.trim()),
+    onSuccess: (r) => {
+      setBalance(r.balance);
+      setCoinAmount('');
+      setCoinNote('');
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+  const coinValue = parseInt(coinAmount, 10);
+  const canAdjust = Number.isInteger(coinValue) && coinValue !== 0 && coinNote.trim().length > 0;
 
   const save = useMutation({
     mutationFn: () => api.moderateUser(user._id, form),
@@ -80,6 +95,49 @@ function ModerateModal({ user, onClose }: { user: AdminUser; onClose: () => void
             <input type="checkbox" checked={form.is_admin} onChange={e => setForm(f => ({ ...f, is_admin: e.target.checked }))} />
             Admin
           </label>
+          <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-h)' }}>
+            <input type="checkbox" checked={form.is_trusted} onChange={e => setForm(f => ({ ...f, is_trusted: e.target.checked }))} />
+            Good user
+          </label>
+        </div>
+        {user.premium_source === 'coins' && user.premium_until && (
+          <p className="text-xs" style={{ color: 'var(--text)' }}>Premium bought with coins, until {user.premium_until.slice(0, 10)}.</p>
+        )}
+
+        <div className="flex flex-col gap-2 rounded-xl p-3" style={{ background: 'var(--color-neutral)', border: '1px solid var(--border)' }}>
+          <p className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--text-h)' }}>
+            <Coins size={13} style={{ color: '#b45309' }} /> Coins: <strong>{balance.toLocaleString()}</strong>
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={coinAmount}
+              onChange={e => setCoinAmount(e.target.value)}
+              placeholder="+50 or -50"
+              aria-label="Coins to give or take"
+              className={field + ' w-28'}
+              style={fieldStyle}
+            />
+            <input
+              value={coinNote}
+              onChange={e => setCoinNote(e.target.value)}
+              maxLength={200}
+              placeholder="Reason (shown to the user)"
+              aria-label="Reason"
+              className={field}
+              style={fieldStyle}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => adjust.mutate()}
+            disabled={!canAdjust || adjust.isPending}
+            className="self-start rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+            style={{ background: '#fef3c7', color: '#92400e' }}
+          >
+            {adjust.isPending ? 'Saving…' : coinValue < 0 ? 'Take coins' : 'Give coins'}
+          </button>
+          {adjust.isError && <p role="alert" className="text-xs" style={{ color: '#dc2626' }}>{(adjust.error as Error).message}</p>}
         </div>
 
         <button
@@ -149,6 +207,8 @@ export function AdminUsers() {
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
           <option value="blocked">Blocked</option>
+          <option value="trusted">Good users</option>
+          <option value="premium">Premium</option>
         </select>
       </div>
 
@@ -164,6 +224,7 @@ export function AdminUsers() {
                 <th className="text-left font-semibold px-4 py-3">User</th>
                 <th className="text-left font-semibold px-4 py-3">Status</th>
                 <th className="text-left font-semibold px-4 py-3">Role</th>
+                <th className="text-left font-semibold px-4 py-3">Coins</th>
                 <th className="text-left font-semibold px-4 py-3">Joined</th>
                 <th className="text-right font-semibold px-4 py-3">Actions</th>
               </tr>
@@ -183,6 +244,7 @@ export function AdminUsers() {
                           {u.display_name || u.username}
                           {u.is_premium && <span className="text-[9px] font-bold" style={{ color: 'var(--color-primary)' }}>★</span>}
                           {u.is_admin && <Shield size={11} style={{ color: 'var(--color-primary)' }} />}
+                          {u.is_trusted && <BadgeCheck size={12} style={{ color: '#059669' }} aria-label="Good user" />}
                         </p>
                         <p className="text-xs truncate" style={{ color: 'var(--text)' }}>{u.email || `@${u.username}`}</p>
                       </div>
@@ -190,6 +252,7 @@ export function AdminUsers() {
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={u.deleted_at ? 'blocked' : u.status} /></td>
                   <td className="px-4 py-3" style={{ color: 'var(--text)' }}>{u.role}</td>
+                  <td className="px-4 py-3 font-semibold" style={{ color: '#b45309' }}>{(u.coins ?? 0).toLocaleString()}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--text)' }}>{u.created_at?.slice(0, 10)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">

@@ -11,6 +11,7 @@ import { CloudinaryProvider } from '../../common/cloudinary/cloudinary.provider'
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { ActivityModule } from '../activity/activity.module';
 import { ReportsModule } from '../reports/reports.module';
+import { CoinsModule } from '../coins/coins.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ReportsModule } from '../reports/reports.module';
     ]),
     ActivityModule,
     ReportsModule,
+    CoinsModule,
   ],
   providers: [PostsService, CloudinaryProvider, CloudinaryService, OptionalJwtAuthGuard],
   controllers: [PostsController],

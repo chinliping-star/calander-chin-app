@@ -6,6 +6,7 @@ import { Meetup, MeetupSchema } from '../meetups/schemas/meetup.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { CloudinaryProvider } from '../../common/cloudinary/cloudinary.provider';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
+import { CoinsModule } from '../coins/coins.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
       { name: Meetup.name, schema: MeetupSchema },
       { name: User.name,   schema: UserSchema },
     ]),
+    CoinsModule,
   ],
   controllers: [MemoryController],
   providers: [MemoryService, CloudinaryProvider, CloudinaryService],
