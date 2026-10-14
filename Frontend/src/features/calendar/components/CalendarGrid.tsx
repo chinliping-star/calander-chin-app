@@ -18,6 +18,7 @@ import type { CalendarDayData } from '../types.ts';
 import type { DayStatus } from '../../../types/index.ts';
 import { AttendanceMarker } from '../../analytics/components/AttendanceMarker.tsx';
 import { useAnalyticsApi } from '../../analytics/api/analytics.api.ts';
+import { EVENT_COLORS } from '../eventColors.ts';
 
 // Week day labels in Mon-first and Sun-first orders
 const WEEK_DAYS_MON = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
@@ -84,6 +85,7 @@ interface MeetupItem {
   invited: { name: string; avatar?: string; status: 'pending' | 'accepted' | 'declined' }[]; // everyone except the proposer (declined hidden)
   participantIds: string[];                             // extra invitee ids (excludes proposer, includes owner)
   color: string;                                        // proposer's theme colour
+  myColor?: string;                                     // colour the viewer picked
 }
 
 interface MeetupDetailInfo {
@@ -197,6 +199,59 @@ function Avatar({ name, src }: { name: string; src?: string }) {
         ? <img src={src} alt={name} className="w-full h-full object-cover" />
         : name.charAt(0).toUpperCase()}
     </span>
+  );
+}
+
+// ── Personal event colour ─────────────────────────────────────────────────────
+
+function EventColorPicker({ meetupId, current }: { meetupId: string; current?: string }) {
+  const meetupsApi = useMeetupsApi();
+  const qc = useQueryClient();
+  const [picked, setPicked] = useState<string | null>(current ?? null);
+  const setColor = useMutation({
+    mutationFn: (color: string | null) => meetupsApi.setColor(meetupId, color),
+    onMutate: (color) => setPicked(color),
+    onError: () => setPicked(current ?? null),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['meetups'] }),
+  });
+  const ring = '0 0 0 2px var(--bg), 0 0 0 4px var(--text-h)';
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-xs font-semibold" style={{ color: 'var(--text-h)' }}>Colour on my calendar</p>
+      <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Meetup colour">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={picked === null}
+          aria-label="Default colour"
+          title="Default"
+          onClick={() => setColor.mutate(null)}
+          disabled={setColor.isPending}
+          className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold transition-transform hover:scale-110 disabled:opacity-60"
+          style={{ background: 'var(--color-primary)', color: '#fff', boxShadow: picked === null ? ring : undefined }}
+        >
+          A
+        </button>
+        {EVENT_COLORS.map(c => (
+          <button
+            key={c.value}
+            type="button"
+            role="radio"
+            aria-checked={picked === c.value}
+            aria-label={c.label}
+            title={c.label}
+            onClick={() => setColor.mutate(c.value)}
+            disabled={setColor.isPending}
+            className="h-6 w-6 rounded-full transition-transform hover:scale-110 disabled:opacity-60"
+            style={{ backgroundColor: c.value, boxShadow: picked === c.value ? ring : undefined }}
+          />
+        ))}
+      </div>
+      {setColor.isError && (
+        <p role="alert" className="text-[11px]" style={{ color: '#dc2626' }}>Could not save the colour. Try again.</p>
+      )}
+    </div>
   );
 }
 
@@ -459,6 +514,9 @@ function MeetupDetailModal({
             </div>
           </div>
         )}
+
+        {/* Personal colour — how this meetup looks on my calendar */}
+        {!editing && meetup && <EventColorPicker meetupId={meetup.id} current={meetup.myColor} />}
 
         {/* Attendance — only for past, accepted meetups (view mode) */}
         {!editing && canMarkAttendance && meetup && (
@@ -1161,12 +1219,8 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
 
   const overrides = data ? buildOverrides(data.days, visibleMeetups) : {};
   // Bug 10.1: pass timeFormat to buildMeetupList so times are pre-formatted
-  const meetupList = (data ? buildMeetupList(visibleMeetups, timeFormat) : []).map(m => ({
-    ...m,
-    attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
-  }));
-
-  // All meetups across every month — feeds the paginated "All Meetups" list.
+  // All meetups across every month — feeds the paginated "All Meetups" list,
+  // and carries each meetup's personal colour (the month endpoint doesn't).
   const meetupsApi = useMeetupsApi();
   const { data: allApiMeetups = [] } = useQuery({
     queryKey: ['meetups'],
@@ -1174,6 +1228,13 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     enabled: !!user?.username,
     staleTime: 60_000,
   });
+  const colorById = new Map(allApiMeetups.flatMap(m => (m.my_color ? [[m._id, m.my_color] as const] : [])));
+
+  const meetupList = (data ? buildMeetupList(visibleMeetups, timeFormat) : []).map(m => ({
+    ...m,
+    attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
+    myColor: colorById.get(m.id),
+  }));
   const visibleAll = allApiMeetups.filter(m => {
     const mine = m.responses?.find(r => r.user_id?._id === myId);
     return !mine || mine.status !== 'declined';
@@ -1185,6 +1246,7 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     .map(m => ({
       ...m,
       attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
+      myColor: colorById.get(m.id),
     }));
 
   const markDay = useMutation({
