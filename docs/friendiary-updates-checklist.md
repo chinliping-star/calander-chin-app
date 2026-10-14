@@ -84,3 +84,32 @@ Get it checked by a lawyer before publishing (Singapore PDPA).
 - [~] **Policy pages** — `/privacy` and `/terms` pages added (public, no login). Text is Chin's draft. "Message Board" renamed to "Message Wall". Unfilled `[placeholders]` show in yellow.
   - [ ] Fill every `[placeholder]` in `Frontend/src/features/legal/content/policies.ts`.
   - [ ] Lawyer review — Chin's side, not ours.
+
+## Part C — Updates of 13/10/2026
+
+Source: Chin's "13/10/2026 updates" doc. Item 8 (Android app) skipped on request.
+
+- [x] **#1 Interests: edit + notes** (S)
+  Own profile → Interests tab → "Edit interests". Add/remove (presets or your own, max 30) and write a note per interest (max 300 chars). Visitors see the notes.
+  Saved as `users.interest_notes`. Files: `InterestsPanel.tsx`, `profile/interests.ts`
+- [x] **#2 Calendar: pick a colour per event** (S)
+  Open a meetup on the calendar → "Colour on my calendar" (10 colours + default). Personal: only changes how it looks on *your* calendar.
+  New API: `PATCH /meetups/:id/color`. Stored in `meetups.event_colors` (never sent as-is; `GET /meetups` returns `my_color`).
+- [x] **#3 Theme effects + adopt from a profile** (M)
+  Settings → Appearance → Theme effects: Snowfall, Christmas, Rain, Sunny, Autumn leaves, Fireworks, Fireflies, Thunder, Dragon. Saved as `users.scene_effect`.
+  Visiting someone's profile shows *their* effect, plus a "Use this theme" pop-up.
+  "Pikachu thunder" is built as **Thunder ⚡** (yellow electric bolts) — Pikachu is a Pokémon trademark, so no Pikachu character/name.
+- [x] **#4 Effect sounds** (S)
+  Sound on/off + volume under Theme effects. Sounds are generated in the browser (no audio files). Off by default, saved per device.
+- [x] **#5 Interactive dragon** (M)
+  Dragon peeks out from behind the page, eyes follow the mouse; mouse comes close → it hides and pops up somewhere else.
+- [x] **#6 Admin panel** (S — most of it already existed: analytics, users, block/suspend, content, reports, CSV export, audit log)
+  Added: **Good user** badge (set in Moderate), Users filter "Good users" / "Premium", coins column, give/take coins, dashboard coin numbers and "Most active users (30 days)".
+  New API: `POST /admin/users/:id/coins`, `GET /admin/top-users`
+- [x] **#7 Coins** (M)
+  Earn: new friend +20 (both people, once per pair), diary post +5, post with a picture +10, memory photo +10. Posts/photos earn max 10 times a day each.
+  Spend: 500 coins = 30 days Premium (stacks). Balance chip in the navbar; Settings → Subscription → Coins.
+  New API: `GET /coins/me`, `POST /coins/redeem`. Ledger collection `cointransactions`.
+  - [ ] **Needs decision:** coin amounts and the 500-coin price are placeholders — Chin to confirm.
+  - [ ] **Needs decision:** "earn by sharing" — no share button exists yet to reward. What counts as sharing?
+  - Note: while `ALL_FEATURES_FREE` is on, Premium bought with coins changes nothing visible.

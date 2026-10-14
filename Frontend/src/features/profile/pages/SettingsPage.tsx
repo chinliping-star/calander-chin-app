@@ -15,6 +15,7 @@ import { SupportEmailModal } from '../components/SupportEmailModal.tsx';
 import { ActiveSessions } from '../components/ActiveSessions.tsx';
 import type { SettingsSection } from '../components/SettingsSidebar.tsx';
 import { EffectPicker } from '../../effects/components/EffectPicker.tsx';
+import { CoinsCard } from '../../coins/components/CoinsCard.tsx';
 
 const inputStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
@@ -1258,6 +1259,12 @@ function SubscriptionSection() {
           </Link>
         </div>
       </SectionCard>
+      <div className="mt-6">
+        <SectionCard>
+          <SectionHeading id="coins-heading">Coins</SectionHeading>
+          <CoinsCard />
+        </SectionCard>
+      </div>
     </section>
   );
 }

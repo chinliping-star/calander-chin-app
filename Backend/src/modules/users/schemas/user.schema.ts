@@ -112,6 +112,21 @@ export class User {
   @Prop({ default: false })
   is_premium: boolean;
 
+  /** Where premium came from. 'coins' premium ends at premium_until. */
+  @Prop({ type: String, enum: ['stripe', 'coins', 'admin', null], default: null })
+  premium_source: 'stripe' | 'coins' | 'admin' | null;
+
+  @Prop({ type: Date, default: null })
+  premium_until: Date | null;
+
+  /** Coin balance (earned by adding friends, posting, memory photos). */
+  @Prop({ default: 0, min: 0 })
+  coins: number;
+
+  /** "Good user" badge set by admins. */
+  @Prop({ default: false })
+  is_trusted: boolean;
+
   @Prop({ default: false })
   is_admin: boolean;
 

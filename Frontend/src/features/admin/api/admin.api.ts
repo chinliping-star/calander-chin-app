@@ -15,6 +15,10 @@ export interface AdminUser {
   role: 'user' | 'moderator' | 'admin';
   is_premium: boolean;
   is_admin: boolean;
+  is_trusted?: boolean;
+  coins?: number;
+  premium_source?: 'stripe' | 'coins' | 'admin' | null;
+  premium_until?: string | null;
   created_at: string;
   deleted_at?: string | null;
   suspended_until?: string | null;
@@ -43,11 +47,20 @@ export interface AdminStats {
     totalCommunities: number;
     reportedPosts: number;
     reportedUsers: number;
+    trustedUsers: number;
   };
+  coins: { circulating: number; earned: number; redeemed: number; redemptions: number };
+  topUsers: TopUser[];
   charts: {
     userGrowth: { date: string; count: number }[];
     postVolume: { date: string; count: number }[];
   };
+}
+
+export interface TopUser {
+  earned: number;
+  actions: number;
+  user: { _id: string; username: string; display_name?: string; avatar_url?: string; coins?: number; is_trusted?: boolean; status: string };
 }
 
 export interface AdminUserDetail {
@@ -62,6 +75,7 @@ export interface ModerateUserPayload {
   role?: 'user' | 'moderator' | 'admin';
   is_premium?: boolean;
   is_admin?: boolean;
+  is_trusted?: boolean;
 }
 
 export interface AdminPost {
@@ -197,6 +211,9 @@ export function useAdminApi() {
     moderateUser: (id: string, body: ModerateUserPayload) =>
       api.patch<AdminUserDetail>(`/admin/users/${id}`, body),
     deleteUser:  (id: string) => api.delete<{ ok: boolean }>(`/admin/users/${id}`),
+    adjustCoins: (id: string, amount: number, note: string) =>
+      api.post<{ balance: number }>(`/admin/users/${id}/coins`, { amount, note }),
+    topUsers: (days = 30) => api.get<TopUser[]>(`/admin/top-users?days=${days}`),
     restoreUser: (id: string) => api.post<{ ok: boolean }>(`/admin/users/${id}/restore`),
 
     listPosts: (p: { page?: number; search?: string }) =>

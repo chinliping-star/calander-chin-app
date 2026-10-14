@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Users, Crown, Ban, PauseCircle, FileText, CalendarDays, Boxes, UserPlus } from 'lucide-react';
+import { Loader2, Users, Crown, Ban, PauseCircle, FileText, CalendarDays, Boxes, UserPlus, Coins, BadgeCheck, Flag } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAdminApi, type AdminStats } from '../api/admin.api.ts';
 
 function Kpi({ label, value, icon: Icon, tint }: {
@@ -73,11 +74,51 @@ export function AdminDashboard() {
         <Kpi label="Total Posts"      value={k.totalPosts}      icon={FileText} />
         <Kpi label="Total Meetups"    value={k.totalMeetups}    icon={CalendarDays} />
         <Kpi label="Communities"      value={k.totalCommunities} icon={Boxes} />
+        <Kpi label="Good Users"       value={k.trustedUsers ?? 0} icon={BadgeCheck} />
+        <Kpi label="Open Reports"     value={k.reportedPosts + k.reportedUsers} icon={Flag} />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Kpi label="Coins held by users" value={data.coins?.circulating ?? 0} icon={Coins} tint="#fef3c7" />
+        <Kpi label="Coins earned (all time)" value={data.coins?.earned ?? 0} icon={Coins} tint="#fef3c7" />
+        <Kpi label="Coins spent on Premium" value={data.coins?.redeemed ?? 0} icon={Crown} tint="#fef3c7" />
+        <Kpi label="Premium bought with coins" value={data.coins?.redemptions ?? 0} icon={Crown} tint="#fef3c7" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MiniBars title="User Growth (14 days)" data={data.charts.userGrowth} />
         <MiniBars title="Posts Created (14 days)" data={data.charts.postVolume} />
+      </div>
+
+      <div className="rounded-2xl p-5" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-bold" style={{ color: 'var(--text-h)' }}>Most active users (30 days)</p>
+          <Link to="/admin/users" className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>Manage users →</Link>
+        </div>
+        <p className="text-xs mb-3" style={{ color: 'var(--text)' }}>
+          Ranked by coins earned from real activity (friends, posts, photos). Good candidates for the Good User badge.
+        </p>
+        {(data.topUsers ?? []).length === 0 ? (
+          <p className="text-sm py-6 text-center" style={{ color: 'var(--text)' }}>No activity yet.</p>
+        ) : (
+          <ol className="flex flex-col divide-y" style={{ borderColor: 'var(--border)' }}>
+            {data.topUsers.map((t, i) => (
+              <li key={t.user._id} className="flex items-center gap-3 py-2 text-sm">
+                <span className="w-5 text-right font-bold" style={{ color: 'var(--text)' }}>{i + 1}</span>
+                <div className="h-7 w-7 rounded-full overflow-hidden shrink-0" style={{ background: 'var(--color-neutral)' }}>
+                  {t.user.avatar_url && <img src={t.user.avatar_url} alt="" className="h-full w-full object-cover" />}
+                </div>
+                <span className="flex-1 min-w-0 truncate" style={{ color: 'var(--text-h)' }}>
+                  {t.user.display_name || t.user.username}
+                  {t.user.is_trusted && <BadgeCheck size={13} className="inline ml-1" style={{ color: '#059669' }} aria-label="Good user" />}
+                  <span className="ml-1 text-xs" style={{ color: 'var(--text)' }}>@{t.user.username}</span>
+                </span>
+                <span className="text-xs" style={{ color: 'var(--text)' }}>{t.actions} actions</span>
+                <span className="font-bold" style={{ color: '#b45309' }}>+{t.earned}</span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useChatApi } from '../../features/chat/api/chat.api.ts';
 import { useNotificationsApi } from '../../features/notifications/api/notifications.api.ts';
 import { NotificationPanel } from '../../features/notifications/components/NotificationPanel.tsx';
+import { CoinBalance } from '../../features/coins/components/CoinBalance.tsx';
 
 export function Navbar() {
   const { pathname } = useLocation();
@@ -169,6 +170,8 @@ export function Navbar() {
                 </span>
               )}
             </Link>
+
+            <CoinBalance />
 
             <div className="relative">
               <button
