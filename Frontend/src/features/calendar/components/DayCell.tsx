@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { cn } from '../../../lib/utils.ts';
 import type { CalendarDayData } from '../types.ts';
+import { textOn } from '../eventColors.ts';
 
 interface MeetupClickInfo {
   date: string;
@@ -15,6 +16,7 @@ export interface DayCellMeetup {
   status: 'accepted' | 'pending';
   attendance?: 'attended' | 'missed' | 'skipped';
   color?: string; // proposer's theme colour
+  myColor?: string; // colour the viewer picked for this meetup
 }
 
 // Up to this many meetups may be planned on a single day.
@@ -54,9 +56,16 @@ function MeetupChip({ m, date, onMeetupClick }: {
   // Accepted = "Planned" → follows the active theme (var(--color-primary)).
   // Pending = purple, per the calendar legend. (Proposer's own theme colour is
   // surfaced on their profile, not on every chip — keeps the calendar coherent.)
-  const style: CSSProperties = m.status === 'accepted'
-    ? { backgroundColor: 'var(--color-primary)', color: '#fff' }
-    : { backgroundColor: '#ede9fe', color: '#7c3aed' };
+  // A colour the user picked wins; pending ones keep a dashed edge.
+  const style: CSSProperties = m.myColor
+    ? {
+        backgroundColor: m.myColor,
+        color: textOn(m.myColor),
+        ...(m.status === 'pending' ? { outline: '1px dashed #7c3aed', outlineOffset: '-1px' } : {}),
+      }
+    : m.status === 'accepted'
+      ? { backgroundColor: 'var(--color-primary)', color: '#fff' }
+      : { backgroundColor: '#ede9fe', color: '#7c3aed' };
   return (
     <button
       type="button"
@@ -83,7 +92,7 @@ function MeetupBars({ meetups, date, onMeetupClick }: {
           aria-label={`View meetup: ${m.label}`}
           onClick={(e) => { e.stopPropagation(); onMeetupClick?.({ date, eventLabel: m.label, status: m.status }); }}
           className="relative z-30 h-1.5 w-full rounded-full"
-          style={{ backgroundColor: m.status === 'accepted' ? 'var(--color-primary)' : '#c084fc' }}
+          style={{ backgroundColor: m.myColor ?? (m.status === 'accepted' ? 'var(--color-primary)' : '#c084fc') }}
         />
       ))}
     </div>

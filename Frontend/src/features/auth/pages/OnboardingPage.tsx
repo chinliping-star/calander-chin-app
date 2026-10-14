@@ -7,12 +7,8 @@ import { useAuthStore } from '../../../store/auth.ts';
 import type { User } from '../../../types/index.ts';
 import { ConsentCheckboxes } from '../../legal/components/ConsentCheckboxes.tsx';
 import { makeConsent, readConsent } from '../../legal/consent.ts';
+import { PRESET_INTERESTS } from '../../profile/interests.ts';
 
-const INTERESTS = [
-  '🎵 Music', '🎮 Gaming', '🍕 Food', '✈️ Travel', '⚽ Sports',
-  '📚 Reading', '🎨 Art', '🎬 Movies', '🌿 Nature', '💻 Tech',
-  '🧘 Wellness', '🐾 Pets', '📸 Photography', '🛍️ Shopping', '🎭 Theatre',
-];
 
 const COUNTRIES = [
   'Pakistan', 'India', 'United States', 'United Kingdom', 'Canada',
@@ -289,7 +285,7 @@ export function OnboardingPage() {
               <p className="text-xs" style={{ color: 'var(--text)' }}>Pick at least 2 — helps find friends with same vibe</p>
 
               <div className="flex flex-wrap gap-2">
-                {INTERESTS.map(interest => {
+                {PRESET_INTERESTS.map(interest => {
                   const selected = form.interests.includes(interest);
                   return (
                     <button

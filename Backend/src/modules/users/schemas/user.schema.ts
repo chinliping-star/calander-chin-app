@@ -38,6 +38,10 @@ export class User {
   @Prop({ type: [String], default: [] })
   hobbies: string[];
 
+  /** Optional note per interest, shown on the profile (e.g. "Food" → "Love ramen"). */
+  @Prop({ type: [{ tag: { type: String, trim: true }, note: { type: String, trim: true } }], _id: false, default: [] })
+  interest_notes: { tag: string; note: string }[];
+
   @Prop({ trim: true })
   bio: string;
 
