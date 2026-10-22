@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createScene } from '../engine.ts';
 import { EffectSound, resumeAudioOnGesture } from '../sound.ts';
-import { useEffectSound } from '../effects.ts';
+import { useEffectSound, type SceneEffect } from '../effects.ts';
 import { useActiveEffect } from '../useActiveEffect.ts';
 import { Dragon } from './Dragon.tsx';
+
+// These paint a dark sky, so cards stay more opaque to keep text readable.
+const NIGHT_SKY_EFFECTS = new Set<SceneEffect>(['fireworks', 'fireflies', 'thunder']);
 
 function usePrefersReducedMotion(): boolean {
   const query = '(prefers-reduced-motion: reduce)';
@@ -41,6 +44,14 @@ export function SceneEffects() {
   }, [effect, soundOn]);
 
   useEffect(() => { soundRef.current?.setVolume(volume); }, [volume]);
+
+  // Turns cards see-through (see "Glass surfaces" in index.css) so the effect shows behind them.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (effect === 'none') root.removeAttribute('data-glass');
+    else root.setAttribute('data-glass', NIGHT_SKY_EFFECTS.has(effect) ? 'dark' : 'light');
+    return () => root.removeAttribute('data-glass');
+  }, [effect]);
 
   // Browsers block audio until the user interacts — retry on first tap.
   useEffect(() => {
