@@ -266,6 +266,41 @@
   color: #475569;
 }
 
+/* ── Glass surfaces ─────────────────────────────────────────────────────────
+   While a background effect is on, SceneEffects sets data-glass="light|dark"
+   on <html>. Surface tokens turn semi-transparent so the effect shows through
+   cards. The *-solid copies resolve on <html>, where each theme sets colours. */
+:root {
+  --bg-solid: var(--bg);
+  --tertiary-solid: var(--color-tertiary);
+  --neutral-solid: var(--color-neutral);
+  --border-solid: var(--border);
+  --glass: 60%;
+}
+:root[data-glass="dark"] {
+  --glass: 80%;
+}
+:root[data-glass] body {
+  --bg: color-mix(in srgb, var(--bg-solid) var(--glass), transparent);
+  --color-tertiary: color-mix(in srgb, var(--tertiary-solid) var(--glass), transparent);
+  --color-neutral: color-mix(in srgb, var(--neutral-solid) calc(var(--glass) - 15%), transparent);
+  --border: color-mix(in srgb, var(--border-solid) 55%, transparent);
+}
+/* Header stays mostly solid so content scrolling under it doesn't clash with nav text */
+:root[data-glass] header.sticky {
+  --bg: color-mix(in srgb, var(--bg-solid) 85%, transparent);
+}
+/* Modals, menus and anything pinned over the page keep solid surfaces */
+:root[data-glass] .fixed,
+:root[data-glass] [role="dialog"],
+:root[data-glass] [role="menu"],
+:root[data-glass] [role="listbox"] {
+  --bg: var(--bg-solid);
+  --color-tertiary: var(--tertiary-solid);
+  --color-neutral: var(--neutral-solid);
+  --border: var(--border-solid);
+}
+
 /* ── Custom Cursors ─────────────────────────────────────────────────────────── */
 
 [data-cursor="star"] * { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E⭐%3C/text%3E%3C/svg%3E") 8 8, auto !important; }

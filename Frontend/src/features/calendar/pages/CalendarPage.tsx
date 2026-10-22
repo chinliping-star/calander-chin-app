@@ -21,7 +21,7 @@ export function CalendarPage() {
         <div
           className="order-1 flex flex-col flex-1 rounded-2xl p-5 lg:order-2"
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg)',
             border: '1px solid var(--border)',
             boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
           }}
