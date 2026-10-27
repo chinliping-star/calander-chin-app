@@ -1,6 +1,6 @@
 // Generated from "Chin Friendiary website Updates.docx" (2026-10-11).
-// Text is Chin's draft. Fill every [placeholder] and have a lawyer review
-// before this goes live. "Message Board" renamed to "Message Wall" to match the app.
+// Text is Chin's draft. Owner name, emails and dates are DUMMY values for now —
+// replace them (see docs/friendiary-updates-checklist.md) before this goes live. "Message Board" renamed to "Message Wall" to match the app.
 
 export type LegalBlock =
   | { t: 'h2'; text: string }
@@ -11,7 +11,7 @@ export type LegalBlock =
 export const PRIVACY_POLICY: LegalBlock[] = [
   {
     "t": "p",
-    "text": "Effective Date: [Insert date]\nLast Updated: [Insert date]"
+    "text": "Effective Date: 11 October 2026\nLast Updated: 11 October 2026"
   },
   {
     "t": "p",
@@ -35,7 +35,7 @@ export const PRIVACY_POLICY: LegalBlock[] = [
   },
   {
     "t": "p",
-    "text": "Friendiary is operated by [Full legal name of owner or business], based in Singapore."
+    "text": "Friendiary is operated by Friendiary (owner name to be confirmed), based in Singapore."
   },
   {
     "t": "p",
@@ -43,7 +43,7 @@ export const PRIVACY_POLICY: LegalBlock[] = [
   },
   {
     "t": "p",
-    "text": "Email: [Privacy contact email]"
+    "text": "Email: privacy@friendiary.com"
   },
   {
     "t": "h2",
@@ -337,7 +337,7 @@ export const PRIVACY_POLICY: LegalBlock[] = [
   },
   {
     "t": "p",
-    "text": "Our database is hosted in [database region, e.g. Singapore]. Some providers may process data in other countries, including the United States."
+    "text": "Our providers may store or process data in Singapore or in other countries, including the United States."
   },
   {
     "t": "h2",
@@ -381,7 +381,7 @@ export const PRIVACY_POLICY: LegalBlock[] = [
   },
   {
     "t": "p",
-    "text": "[Confirm deletion timing, treatment of sent messages and backup retention.]"
+    "text": "When you delete your account, it is hidden right away. We will update this section with the exact timing for full deletion of your data and backups."
   },
   {
     "t": "h2",
@@ -408,7 +408,7 @@ export const PRIVACY_POLICY: LegalBlock[] = [
   },
   {
     "t": "p",
-    "text": "Please contact [Privacy contact email] for assistance."
+    "text": "Please contact privacy@friendiary.com for assistance."
   },
   {
     "t": "h2",
@@ -444,7 +444,7 @@ export const PRIVACY_POLICY: LegalBlock[] = [
   },
   {
     "t": "p",
-    "text": "Friendiary\nWebsite: https://friendiary.com\nOperator: [Full legal name]\nData Protection Officer: [Name or role]\nEmail: [Privacy contact email]"
+    "text": "Friendiary\nWebsite: https://friendiary.com\nOperator: Friendiary (owner name to be confirmed)\nData Protection Officer: The Friendiary Owner\nEmail: privacy@friendiary.com"
   },
   {
     "t": "h2",
@@ -467,7 +467,7 @@ export const PRIVACY_POLICY: LegalBlock[] = [
 export const TERMS: LegalBlock[] = [
   {
     "t": "p",
-    "text": "Effective Date: [Insert date]"
+    "text": "Effective Date: 11 October 2026"
   },
   {
     "t": "p",
@@ -775,7 +775,7 @@ export const TERMS: LegalBlock[] = [
   },
   {
     "t": "p",
-    "text": "Friendiary\nWebsite: https://friendiary.com\nOperator: [Full legal name]\nEmail: [Support email]"
+    "text": "Friendiary\nWebsite: https://friendiary.com\nOperator: Friendiary (owner name to be confirmed)\nEmail: support@friendiary.com"
   },
   {
     "t": "h2",

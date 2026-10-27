@@ -82,7 +82,12 @@ Get it checked by a lawyer before publishing (Singapore PDPA).
 - [ ] **Security** — answer: passwords (Clerk), HTTPS, DB access rules.
 - [x] **Cookies and third parties** — filled: only Clerk's essential sign-in cookies; no analytics or ad tracking found in the code. No email provider yet (support tickets are saved in the database).
 - [~] **Policy pages** — `/privacy` and `/terms` pages added (public, no login). Text is Chin's draft. "Message Board" renamed to "Message Wall". Unfilled `[placeholders]` show in yellow.
-  - [ ] Fill every `[placeholder]` in `Frontend/src/features/legal/content/policies.ts`.
+  - [ ] **Replace DUMMY values** in `Frontend/src/features/legal/content/policies.ts` with Chin's real details:
+    - "Friendiary (owner name to be confirmed)" → owner / business legal name
+    - privacy@friendiary.com, support@friendiary.com → real emails (or create these mailboxes in Hostinger)
+    - "The Friendiary Owner" → Data Protection Officer name or role
+    - "11 October 2026" → real effective date
+    - Account deletion paragraph → real timing, once decided
   - [ ] Lawyer review — Chin's side, not ours.
 
 ## Part C — Updates of 13/10/2026

@@ -283,10 +283,10 @@ function ProfileSection() {
                 onChange={handleCoverChange}
               />
             </div>
-            {/* Size hint only when there is no cover yet, or when the pick failed */}
-            {(coverError || !coverSrc) && (
-              <p className="mt-1.5 text-xs" style={{ color: coverError ? '#dc2626' : 'var(--text)' }}>
-                {coverError ?? 'Wide banner ratio (4:1). At least 1200×300px, e.g. 1584×396 or 1600×400.'}
+            {/* Only show a message when the picked image was rejected */}
+            {coverError && (
+              <p className="mt-1.5 text-xs" role="alert" style={{ color: '#dc2626' }}>
+                {coverError}
               </p>
             )}
           </div>
