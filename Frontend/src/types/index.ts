@@ -22,6 +22,8 @@ export interface User {
   scene_effect?: string;
   is_premium?: boolean;
   is_admin?: boolean;
+  /** Admin via the server's ADMIN_EMAILS config. */
+  is_owner_admin?: boolean;
   clerk_id?: string;
   privacy?: UserPrivacy;
 }

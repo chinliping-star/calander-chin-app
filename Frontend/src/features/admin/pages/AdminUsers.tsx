@@ -73,7 +73,7 @@ function ModerateModal({ user, onClose }: { user: AdminUser; onClose: () => void
         </label>
 
         <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: 'var(--text-h)' }}>
-          Role
+          Role label <span className="font-normal" style={{ color: 'var(--text)' }}>(shown on the profile — panel access is the "Admin access" box below)</span>
           <select className={field} style={fieldStyle} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as ModerateUserPayload['role'] }))}>
             <option value="user">User</option>
             <option value="moderator">Moderator</option>
@@ -92,13 +92,32 @@ function ModerateModal({ user, onClose }: { user: AdminUser; onClose: () => void
             Premium
           </label>
           <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-h)' }}>
-            <input type="checkbox" checked={form.is_admin} onChange={e => setForm(f => ({ ...f, is_admin: e.target.checked }))} />
-            Admin
-          </label>
-          <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-h)' }}>
             <input type="checkbox" checked={form.is_trusted} onChange={e => setForm(f => ({ ...f, is_trusted: e.target.checked }))} />
             Good user
           </label>
+        </div>
+
+        <div className="flex flex-col gap-1 rounded-xl p-3" style={{ background: 'var(--color-neutral)', border: '1px solid var(--border)' }}>
+          <label className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-h)', opacity: user.is_owner_admin ? 0.6 : 1 }}>
+            <input
+              type="checkbox"
+              checked={!!form.is_admin}
+              disabled={user.is_owner_admin}
+              onChange={e => setForm(f => ({ ...f, is_admin: e.target.checked }))}
+            />
+            <Shield size={14} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
+            Admin access
+          </label>
+          <p className="text-xs" style={{ color: 'var(--text)' }}>
+            {user.is_owner_admin
+              ? 'Owner admin — set in the server config (ADMIN_EMAILS). Change it there, not here.'
+              : 'Can open this admin panel and manage users, content and settings.'}
+          </p>
+          {form.is_admin && !user.is_admin && (
+            <p className="text-xs font-semibold" style={{ color: '#b45309' }}>
+              @{user.username} will get full admin access when you save.
+            </p>
+          )}
         </div>
         {user.premium_source === 'coins' && user.premium_until && (
           <p className="text-xs" style={{ color: 'var(--text)' }}>Premium bought with coins, until {user.premium_until.slice(0, 10)}.</p>
@@ -149,6 +168,7 @@ function ModerateModal({ user, onClose }: { user: AdminUser; onClose: () => void
           {save.isPending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
           Save changes
         </button>
+        {save.isError && <p role="alert" className="text-xs" style={{ color: '#dc2626' }}>{(save.error as Error).message}</p>}
       </div>
     </div>
   );
@@ -209,6 +229,7 @@ export function AdminUsers() {
           <option value="blocked">Blocked</option>
           <option value="trusted">Good users</option>
           <option value="premium">Premium</option>
+          <option value="admins">Admins</option>
         </select>
       </div>
 
@@ -243,7 +264,10 @@ export function AdminUsers() {
                         <p className="font-semibold truncate flex items-center gap-1.5" style={{ color: 'var(--text-h)' }}>
                           {u.display_name || u.username}
                           {u.is_premium && <span className="text-[9px] font-bold" style={{ color: 'var(--color-primary)' }}>★</span>}
-                          {u.is_admin && <Shield size={11} style={{ color: 'var(--color-primary)' }} />}
+                          {u.is_admin && <Shield size={11} style={{ color: 'var(--color-primary)' }} aria-label="Admin" />}
+                          {u.is_owner_admin && (
+                            <span className="rounded-full px-1.5 py-px text-[9px] font-bold uppercase" style={{ background: 'var(--accent-bg)', color: 'var(--color-primary)' }}>Owner</span>
+                          )}
                           {u.is_trusted && <BadgeCheck size={12} style={{ color: '#059669' }} aria-label="Good user" />}
                         </p>
                         <p className="text-xs truncate" style={{ color: 'var(--text)' }}>{u.email || `@${u.username}`}</p>
@@ -262,7 +286,13 @@ export function AdminUsers() {
                       {u.deleted_at ? (
                         <button onClick={() => restore.mutate(u._id)} title="Restore" className="rounded-lg p-1.5" style={{ color: '#059669' }}><RotateCcw size={15} /></button>
                       ) : (
-                        <button onClick={() => { if (confirm(`Delete @${u.username}? (soft delete)`)) del.mutate(u._id); }} title="Delete" className="rounded-lg p-1.5" style={{ color: '#dc2626' }}><Trash2 size={15} /></button>
+                        <button
+                          onClick={() => { if (confirm(`Delete @${u.username}? (soft delete)`)) del.mutate(u._id, { onError: (e) => alert((e as Error).message) }); }}
+                          disabled={u.is_owner_admin}
+                          title={u.is_owner_admin ? 'Owner admins can’t be deleted here' : 'Delete'}
+                          className="rounded-lg p-1.5 disabled:opacity-30"
+                          style={{ color: '#dc2626' }}
+                        ><Trash2 size={15} /></button>
                       )}
                     </div>
                   </td>

@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
-import { ModerateUserDto, AdjustCoinsDto } from './dto/moderate-user.dto';
+import { ModerateUserDto, AdjustCoinsDto, AddAdminDto } from './dto/moderate-user.dto';
 import { ResolveReportDto } from '../reports/dto/create-report.dto';
 import { AuditInterceptor } from '../audit/audit.interceptor';
 import { AuditService } from '../audit/audit.service';
@@ -68,8 +68,8 @@ export class AdminController {
   }
 
   @Patch('users/:id')
-  moderateUser(@Param('id') id: string, @Body() dto: ModerateUserDto) {
-    return this.adminService.moderateUser(id, dto);
+  moderateUser(@CurrentUser() clerkId: string, @Param('id') id: string, @Body() dto: ModerateUserDto) {
+    return this.adminService.moderateUser(clerkId, id, dto);
   }
 
   /** Give (+) or take (-) coins. */
@@ -86,10 +86,28 @@ export class AdminController {
     return this.adminService.topUsers(d);
   }
 
+  // ── Admins ────────────────────────────────────────────────────────────────
+  @Get('admins')
+  listAdmins() {
+    return this.adminService.listAdmins();
+  }
+
+  @Post('admins')
+  @HttpCode(HttpStatus.OK)
+  addAdmin(@Body() dto: AddAdminDto) {
+    return this.adminService.addAdminByEmail(dto.email);
+  }
+
+  @Delete('admins/:id')
+  @HttpCode(HttpStatus.OK)
+  removeAdmin(@CurrentUser() clerkId: string, @Param('id') id: string) {
+    return this.adminService.removeAdmin(clerkId, id);
+  }
+
   @Delete('users/:id')
   @HttpCode(HttpStatus.OK)
-  deleteUser(@Param('id') id: string) {
-    return this.adminService.softDeleteUser(id);
+  deleteUser(@CurrentUser() clerkId: string, @Param('id') id: string) {
+    return this.adminService.softDeleteUser(clerkId, id);
   }
 
   @Post('users/:id/restore')
