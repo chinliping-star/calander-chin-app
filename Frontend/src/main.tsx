@@ -5,9 +5,11 @@ import './index.css'
 import App from './App.tsx'
 import { applyTheme, useThemeStore } from './lib/theme.ts'
 import { applyCursor, usePreferences } from './lib/preferences.ts'
+import { initPwa } from './features/pwa/install.ts'
 
 applyTheme(useThemeStore.getState().theme);
 applyCursor(usePreferences.getState().cursor);
+initPwa();
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 if (!PUBLISHABLE_KEY) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY');
