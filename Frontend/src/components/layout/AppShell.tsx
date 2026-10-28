@@ -14,7 +14,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-neutral)' }}>
       <ThemeSync />
-      {/* Animated background (snow, rain, dragon…) sits behind everything below */}
+      {/* Theme effect (snow, rain, dragon…) is a transparent overlay above the page */}
       <SceneEffects />
       <div className="relative" style={{ zIndex: 1 }}>
         <Navbar />

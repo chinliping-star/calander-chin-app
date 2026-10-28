@@ -22,7 +22,7 @@ export const EFFECTS: EffectMeta[] = [
   { id: 'fireworks', label: 'Fireworks',  emoji: '🎆', blurb: 'Night sky celebration' },
   { id: 'fireflies', label: 'Fireflies',  emoji: '✨', blurb: 'Glowing summer night' },
   { id: 'thunder',   label: 'Thunder',    emoji: '⚡', blurb: 'Electric storm' },
-  { id: 'dragon',    label: 'Dragon',     emoji: '🐉', blurb: 'A shy dragon that hides from your mouse' },
+  { id: 'dragon',    label: 'Dragon',     emoji: '🐉', blurb: 'Flies over your page, flees from your mouse' },
 ];
 
 export function effectMeta(id?: string | null): EffectMeta | undefined {

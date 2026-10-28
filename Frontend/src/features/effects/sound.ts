@@ -158,7 +158,7 @@ export class EffectSound {
   }
 
   /** Sound for a moment in the animation (firework burst, thunder strike, dragon). */
-  trigger(e: SceneEvent | 'dragon') {
+  trigger(e: SceneEvent) {
     if (!ctx || !this.out || ctx.state !== 'running') return;
     if (e === 'burst' && this.effect === 'fireworks') {
       burst(ctx, this.out, 900, 0.7, 0.5, 'lowpass');
