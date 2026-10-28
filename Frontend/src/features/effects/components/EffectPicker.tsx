@@ -22,7 +22,7 @@ export function EffectPicker() {
       <div>
         <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text)' }}>Background effect</p>
         <p className="text-sm mb-4" style={{ color: 'var(--text)' }}>
-          Animated scene behind your pages. Friends who visit your profile see it too, and can use it themselves.
+          Animated effect over your pages. Friends who visit your profile see it too, and can use it themselves.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {EFFECTS.map(e => {

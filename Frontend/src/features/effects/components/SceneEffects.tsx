@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { createScene } from '../engine.ts';
+import { createScene, type Pointer } from '../engine.ts';
 import { EffectSound, resumeAudioOnGesture } from '../sound.ts';
-import { useEffectSound, type SceneEffect } from '../effects.ts';
+import { useEffectSound } from '../effects.ts';
 import { useActiveEffect } from '../useActiveEffect.ts';
-import { Dragon } from './Dragon.tsx';
-
-// These paint a dark sky, so cards stay more opaque to keep text readable.
-const NIGHT_SKY_EFFECTS = new Set<SceneEffect>(['fireworks', 'fireflies', 'thunder']);
 
 function usePrefersReducedMotion(): boolean {
   const query = '(prefers-reduced-motion: reduce)';
@@ -22,7 +18,9 @@ function usePrefersReducedMotion(): boolean {
 }
 
 /**
- * Full-screen animated background behind the page content, plus its sound.
+ * Full-screen animated effect drawn OVER the page content, plus its sound.
+ * Transparent and pointer-events: none, so the page background stays as it is
+ * and every click goes through. Sits under the navbar and modals (z-50).
  * Mounted once in AppShell.
  */
 export function SceneEffects() {
@@ -31,6 +29,7 @@ export function SceneEffects() {
   const { soundOn, volume } = useEffectSound();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const soundRef = useRef<EffectSound | null>(null);
+  const pointerRef = useRef<Pointer>({ x: 0, y: 0, active: false });
 
   // Sound bed follows the effect + the per-device sound toggle.
   useEffect(() => {
@@ -45,14 +44,6 @@ export function SceneEffects() {
 
   useEffect(() => { soundRef.current?.setVolume(volume); }, [volume]);
 
-  // Turns cards see-through (see "Glass surfaces" in index.css) so the effect shows behind them.
-  useEffect(() => {
-    const root = document.documentElement;
-    if (effect === 'none') root.removeAttribute('data-glass');
-    else root.setAttribute('data-glass', NIGHT_SKY_EFFECTS.has(effect) ? 'dark' : 'light');
-    return () => root.removeAttribute('data-glass');
-  }, [effect]);
-
   // Browsers block audio until the user interacts — retry on first tap.
   useEffect(() => {
     if (!soundOn) return;
@@ -64,6 +55,24 @@ export function SceneEffects() {
     };
   }, [soundOn]);
 
+  // Mouse position for interactive scenes (the dragon watches and flees from it).
+  useEffect(() => {
+    if (effect === 'none') return;
+    const p = pointerRef.current;
+    const move = (e: PointerEvent) => { p.x = e.clientX; p.y = e.clientY; p.active = true; };
+    const leave = () => { p.active = false; };
+    window.addEventListener('pointermove', move, { passive: true });
+    window.addEventListener('pointerdown', move, { passive: true });
+    document.documentElement.addEventListener('pointerleave', leave);
+    window.addEventListener('blur', leave);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerdown', move);
+      document.documentElement.removeEventListener('pointerleave', leave);
+      window.removeEventListener('blur', leave);
+    };
+  }, [effect]);
+
   // Animation loop
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -73,6 +82,7 @@ export function SceneEffects() {
     const scene = createScene(effect, {
       reducedMotion,
       emit: (e) => soundRef.current?.trigger(e),
+      pointer: pointerRef.current,
     });
     if (!scene) return;
 
@@ -109,11 +119,11 @@ export function SceneEffects() {
   if (effect === 'none') return null;
 
   return (
-    <>
-      <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, width: '100vw', height: '100vh' }} aria-hidden="true" />
-      {effect === 'dragon' && (
-        <Dragon reducedMotion={reducedMotion} onHide={() => soundRef.current?.trigger('dragon')} />
-      )}
-    </>
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none"
+      style={{ zIndex: 40, width: '100vw', height: '100vh' }}
+      aria-hidden="true"
+    />
   );
 }

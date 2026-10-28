@@ -104,10 +104,12 @@ Source: Chin's "13/10/2026 updates" doc. Item 8 (Android app) skipped on request
   Settings → Appearance → Theme effects: Snowfall, Christmas, Rain, Sunny, Autumn leaves, Fireworks, Fireflies, Thunder, Dragon. Saved as `users.scene_effect`.
   Visiting someone's profile shows *their* effect, plus a "Use this theme" pop-up.
   "Pikachu thunder" is built as **Thunder ⚡** (yellow electric bolts) — Pikachu is a Pokémon trademark, so no Pikachu character/name.
+  Reworked 2026-10-28: effects are now a transparent overlay ABOVE the content — the page background and cards stay normal (no tinted sky, no see-through "glass" cards). More realistic: depth layers + wind for snow/rain/leaves, snow settles at the bottom, rain splashes, tumbling maple leaves, fairy-light garland for Christmas, sun glow + rays + lens flare, peony/ring/willow/crackle fireworks, blinking fireflies, flickering branched lightning.
 - [x] **#4 Effect sounds** (S)
   Sound on/off + volume under Theme effects. Sounds are generated in the browser (no audio files). Off by default, saved per device.
 - [x] **#5 Interactive dragon** (M)
   Dragon peeks out from behind the page, eyes follow the mouse; mouse comes close → it hides and pops up somewhere else.
+  Reworked 2026-10-28: now a winged serpentine dragon flying OVER the page (wings flap, body waves, puffs of fire). Eyes and head follow the mouse; mouse comes close → it flees off-screen and sneaks back in from the side farthest from the mouse.
 - [x] **#6 Admin panel** (S — most of it already existed: analytics, users, block/suspend, content, reports, CSV export, audit log)
   Added: **Good user** badge (set in Moderate), Users filter "Good users" / "Premium", coins column, give/take coins, dashboard coin numbers and "Most active users (30 days)".
   New API: `POST /admin/users/:id/coins`, `GET /admin/top-users`
