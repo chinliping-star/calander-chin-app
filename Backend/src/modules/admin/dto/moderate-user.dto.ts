@@ -1,4 +1,5 @@
 import {
+  IsEmail,
   IsOptional,
   IsString,
   IsBoolean,
@@ -51,4 +52,10 @@ export class AdjustCoinsDto {
   @IsString()
   @MaxLength(200)
   note: string;
+}
+
+export class AddAdminDto {
+  @IsEmail()
+  @MaxLength(254)
+  email: string;
 }

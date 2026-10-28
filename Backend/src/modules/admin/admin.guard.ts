@@ -9,6 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import type { Request } from 'express';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import { isEffectiveAdmin } from './admin-access';
 
 /**
  * Allows the request only if the authenticated user is an admin.
@@ -35,15 +36,9 @@ export class AdminGuard implements CanActivate {
       .exec();
     if (!user) throw new ForbiddenException('User not found');
 
-    const allowlist = (this.config.get<string>('ADMIN_EMAILS') ?? '')
-      .split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean);
-
-    const email = (user.email ?? '').toLowerCase();
-    const isAdmin = !!user.is_admin || (!!email && allowlist.includes(email));
-
-    if (!isAdmin) throw new ForbiddenException('Admin access required');
+    if (!isEffectiveAdmin(user, this.config.get<string>('ADMIN_EMAILS'))) {
+      throw new ForbiddenException('Admin access required');
+    }
     return true;
   }
 }

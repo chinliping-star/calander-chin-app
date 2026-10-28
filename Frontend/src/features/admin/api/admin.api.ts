@@ -15,6 +15,8 @@ export interface AdminUser {
   role: 'user' | 'moderator' | 'admin';
   is_premium: boolean;
   is_admin: boolean;
+  /** Admin via the server's ADMIN_EMAILS config — can't be changed in the panel. */
+  is_owner_admin?: boolean;
   is_trusted?: boolean;
   coins?: number;
   premium_source?: 'stripe' | 'coins' | 'admin' | null;
@@ -215,6 +217,10 @@ export function useAdminApi() {
       api.post<{ balance: number }>(`/admin/users/${id}/coins`, { amount, note }),
     topUsers: (days = 30) => api.get<TopUser[]>(`/admin/top-users?days=${days}`),
     restoreUser: (id: string) => api.post<{ ok: boolean }>(`/admin/users/${id}/restore`),
+
+    listAdmins:  () => api.get<AdminUser[]>('/admin/admins'),
+    addAdmin:    (email: string) => api.post<{ ok: boolean; username: string }>('/admin/admins', { email }),
+    removeAdmin: (id: string) => api.delete<{ ok: boolean }>(`/admin/admins/${id}`),
 
     listPosts: (p: { page?: number; search?: string }) =>
       api.get<Paginated<AdminPost>>(`/admin/posts${qs(p)}`),

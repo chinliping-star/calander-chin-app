@@ -1,10 +1,11 @@
 import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Flag, Megaphone, ScrollText, Settings, MessageSquare, ArrowLeft, Loader2, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Flag, Megaphone, ScrollText, Settings, MessageSquare, ArrowLeft, Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useIsAdmin } from '../hooks/useIsAdmin.ts';
 
 const NAV = [
   { to: '/admin',              label: 'Dashboard',     icon: LayoutDashboard, end: true },
   { to: '/admin/users',        label: 'Users',         icon: Users,           end: false },
+  { to: '/admin/admins',       label: 'Admins',        icon: ShieldCheck,     end: false },
   { to: '/admin/content',      label: 'Content',       icon: FileText,        end: false },
   { to: '/admin/reports',      label: 'Reports',       icon: Flag,            end: false },
   { to: '/admin/announcements', label: 'Announcements', icon: Megaphone,      end: false },

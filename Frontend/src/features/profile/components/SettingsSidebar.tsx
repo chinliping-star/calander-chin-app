@@ -1,8 +1,9 @@
-﻿import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays, Crown, BarChart2 } from 'lucide-react';
+﻿import { User, Lock, Bell, Settings, HelpCircle, LogOut, Palette, CalendarDays, Crown, BarChart2, ShieldCheck } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useClerk } from '@clerk/clerk-react';
 import { cn } from '../../../lib/utils.ts';
 import { useAuthStore } from '../../../store/auth.ts';
+import { useIsAdmin } from '../../admin/hooks/useIsAdmin.ts';
 
 export type SettingsSection = 'profile' | 'appearance' | 'calendar' | 'privacy' | 'notifications' | 'account' | 'subscription' | 'help';
 
@@ -26,6 +27,7 @@ export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
   const navigate = useNavigate();
   const { clearAuth } = useAuthStore();
   const { signOut } = useClerk();
+  const { isAdmin } = useIsAdmin();
 
   async function handleLogout() {
     clearAuth();
@@ -89,6 +91,19 @@ export function SettingsSidebar({ active, onSelect }: SettingsSidebarProps) {
               Analytics
             </Link>
           </li>
+          {/* Only admins see this — the panel itself is also admin-only on the server */}
+          {isAdmin && (
+            <li>
+              <Link
+                to="/admin"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-full text-sm font-medium transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+                style={{ color: 'var(--text)' }}
+              >
+                <ShieldCheck size={15} />
+                Admin panel
+              </Link>
+            </li>
+          )}
         </ul>
       </nav>
 

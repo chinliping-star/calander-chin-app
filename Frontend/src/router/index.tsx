@@ -24,6 +24,7 @@ import ActivityPage from '../features/activity/pages/ActivityPage.tsx';
 import { AdminLayout } from '../features/admin/pages/AdminLayout.tsx';
 import { AdminDashboard } from '../features/admin/pages/AdminDashboard.tsx';
 import { AdminUsers } from '../features/admin/pages/AdminUsers.tsx';
+import { AdminAdmins } from '../features/admin/pages/AdminAdmins.tsx';
 import { AdminContent } from '../features/admin/pages/AdminContent.tsx';
 import { AdminReports } from '../features/admin/pages/AdminReports.tsx';
 import { AdminAnnouncements } from '../features/admin/pages/AdminAnnouncements.tsx';
@@ -74,6 +75,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true,        element: <AdminDashboard /> },
           { path: 'users',      element: <AdminUsers /> },
+          { path: 'admins',     element: <AdminAdmins /> },
           { path: 'content',    element: <AdminContent /> },
           { path: 'reports',       element: <AdminReports /> },
           { path: 'announcements', element: <AdminAnnouncements /> },

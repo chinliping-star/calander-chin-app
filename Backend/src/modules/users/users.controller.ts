@@ -11,6 +11,8 @@ import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guar
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { CoinsService } from '../coins/coins.service';
+import { ConfigService } from '@nestjs/config';
+import { isEffectiveAdmin, isOwnerAdmin } from '../admin/admin-access';
 
 @Controller('users')
 export class UsersController {
@@ -18,6 +20,7 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly coinsService: CoinsService,
+    private readonly config: ConfigService,
   ) {}
 
   // Search users by username/display_name — must be before :username param
@@ -61,8 +64,16 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   async getMe(@CurrentUser() clerkId: string) {
     const user = await this.usersService.findByClerkId(clerkId);
-    if (user) await this.coinsService.expireCoinPremium(user);
-    return user ?? null;
+    if (!user) return null;
+    await this.coinsService.expireCoinPremium(user);
+    // Owner admins (ADMIN_EMAILS) may not have the DB flag — report the
+    // effective value so the app shows them the admin panel.
+    const raw = this.config.get<string>('ADMIN_EMAILS');
+    return {
+      ...user.toObject(),
+      is_admin: isEffectiveAdmin(user, raw),
+      is_owner_admin: isOwnerAdmin(user.email, raw),
+    };
   }
 
   // First-time onboarding — create profile in our DB
