@@ -194,11 +194,11 @@ export class UsersService {
       }
     }
 
-    // Missing privacy field (older accounts) = original all-public behaviour.
+    // Missing private_account = private (friends-only), the default.
     const privacy = (user as { privacy?: User['privacy'] }).privacy ?? {};
     const meetupsVisible =
       isSelf ||
-      (privacy.show_meetups !== false && (privacy.private_account !== true || isFriend));
+      (privacy.show_meetups !== false && (privacy.private_account === false || isFriend));
 
     // ── Friends (accepted both directions) ──────────────────────────────────
     // Always fetched for the count; the visible LIST follows the rule:

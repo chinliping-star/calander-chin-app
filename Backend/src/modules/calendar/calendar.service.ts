@@ -32,9 +32,9 @@ export class CalendarService {
       throw new NotFoundException(`User @${username} not found`);
     }
 
-    // Private account → calendar contents are friends-only. Strangers (and
-    // guests) get the user header but an empty month (no days, no meetups).
-    if (user.privacy?.private_account === true) {
+    // Private account (the default) → calendar contents are friends-only. Strangers
+    // (and guests) get the user header but an empty month (no days, no meetups).
+    if (user.privacy?.private_account !== false) {
       const viewer = viewerClerkId
         ? await this.userModel.findOne({ clerk_id: viewerClerkId }).select('_id').exec()
         : null;

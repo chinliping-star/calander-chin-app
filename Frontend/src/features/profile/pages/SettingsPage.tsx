@@ -686,7 +686,7 @@ function CalendarSection() {
 // ─── Privacy ──────────────────────────────────────────────────────────────────
 
 const PRIVACY_DEFAULTS = {
-  private_account: false,
+  private_account: true,
   friend_requests: true,
   discoverability: true,
   show_meetups: true,

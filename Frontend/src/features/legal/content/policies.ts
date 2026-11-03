@@ -173,11 +173,19 @@ export const PRIVACY_POLICY: LegalBlock[] = [
   },
   {
     "t": "h3",
+    "text": "Diary Posts"
+  },
+  {
+    "t": "p",
+    "text": "Diary posts are visible to your accepted friends by default, unless you choose Public. A Public post can be seen by anyone, including people who are not signed in. You can also make a post Private so only you can see it."
+  },
+  {
+    "t": "h3",
     "text": "Calendars"
   },
   {
     "t": "p",
-    "text": "Your calendar and availability information are intended to be visible only to your accepted friends."
+    "text": "Your calendar and availability information are intended to be visible only to your accepted friends. If you turn off Private Account in Settings, anyone can see your calendar."
   },
   {
     "t": "h3",

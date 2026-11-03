@@ -74,12 +74,12 @@ export class User {
   cursor: string;
 
   /**
-   * Privacy toggles. Missing field (older accounts) = defaults below, which
-   * mirror the app's original all-public behaviour.
+   * Privacy toggles. Missing field = defaults below. Calendars are
+   * friends-only unless the user turns Private Account off.
    */
   @Prop({
     type: {
-      private_account: { type: Boolean, default: false }, // true → calendar + meetups friends-only
+      private_account: { type: Boolean, default: true },  // true → calendar + meetups friends-only (the Privacy Policy promise)
       friend_requests: { type: Boolean, default: true },  // false → nobody can send requests
       discoverability: { type: Boolean, default: true },  // false → hidden from search
       show_meetups: { type: Boolean, default: true },     // false → meetup history hidden from profile
