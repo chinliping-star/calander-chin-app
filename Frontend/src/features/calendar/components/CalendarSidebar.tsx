@@ -8,6 +8,8 @@ import { useFriendsApi } from '../../friends/api/friends.api.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
 import { Shoutbox } from '../../friends/components/Shoutbox.tsx';
 import { themeColor } from '../../../lib/theme.ts';
+import { PresenceDot } from '../../chat/components/PresenceDot.tsx';
+import { usePresenceContext } from '../../chat/context/presence.tsx';
 
 const CARD_STYLE: CSSProperties = {
   backgroundColor: 'var(--bg)',
@@ -24,6 +26,7 @@ function bioPreview(bio: string, words = 4): string {
 export function CalendarSidebar() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { onlineUsers } = usePresenceContext();
 
   const displayName = user?.display_name || user?.username || 'You';
   const username = user?.username || '';
@@ -152,7 +155,7 @@ export function CalendarSidebar() {
                 style={{ textDecoration: 'none' }}
               >
                 <span
-                  className="rounded-full shrink-0 block"
+                  className="relative rounded-full shrink-0 block"
                   style={{ background: themeColor(f.friend.theme), padding: '2px' }}
                   title={`${f.friend.display_name}'s theme`}
                 >
@@ -162,6 +165,7 @@ export function CalendarSidebar() {
                     className="h-7 w-7 rounded-full object-cover block"
                     width={28} height={28}
                   />
+                  <PresenceDot online={onlineUsers.has(f.friend._id)} size={9} className="absolute bottom-0 right-0" />
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-h)' }}>

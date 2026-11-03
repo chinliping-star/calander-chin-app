@@ -41,6 +41,8 @@ import type { User } from '../../../types/index.ts';
 import type { InterestNote } from '../interests.ts';
 import { isSceneEffect, useEffectOverride } from '../../effects/effects.ts';
 import { AdoptEffectToast } from '../../effects/components/AdoptEffectToast.tsx';
+import { PresenceDot } from '../../chat/components/PresenceDot.tsx';
+import { usePresenceContext } from '../../chat/context/presence.tsx';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -491,6 +493,7 @@ export function ProfilePage() {
   });
 
   const isFriend = friends.some(f => f.friend.username === username);
+  const { onlineUsers } = usePresenceContext();
   const hasPendingRequest = requests.some(r =>
     (r.requester_id.username === me?.username && r.recipient_id.username === username) ||
     (r.recipient_id.username === me?.username && r.requester_id.username === username)
@@ -605,18 +608,29 @@ export function ProfilePage() {
 
             {/* Avatar + name overlaid on cover */}
             <div className="absolute left-6 bottom-4 flex items-end gap-4">
-              <img
-                src={avatarUrl}
-                alt={`${displayName}'s avatar`}
-                className="h-28 w-28 rounded-full object-cover"
-                width={112}
-                height={112}
-                style={{ border: '4px solid var(--bg)', boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}
-              />
+              <span className="relative shrink-0">
+                <img
+                  src={avatarUrl}
+                  alt={`${displayName}'s avatar`}
+                  className="h-28 w-28 rounded-full object-cover"
+                  width={112}
+                  height={112}
+                  style={{ border: '4px solid var(--bg)', boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}
+                />
+                {/* Friends only: the presence feed lists everyone, strangers shouldn't see it */}
+                {isFriend && !isOwnProfile && (
+                  <PresenceDot online={!!profileUser._id && onlineUsers.has(profileUser._id)} size={20} ringColor="#fff" className="absolute bottom-2 right-2" />
+                )}
+              </span>
               <div className="pb-2">
                 <h1 className="text-2xl font-black text-white drop-shadow" style={{ margin: 0 }}>{displayName}</h1>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.9)' }}>@{profileUser.username}</p>
+                  {isFriend && !isOwnProfile && !!profileUser._id && onlineUsers.has(profileUser._id) && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase" style={{ backgroundColor: '#22c55e', color: '#fff' }}>
+                      Online
+                    </span>
+                  )}
                   {themeMeta && (
                     <span
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
