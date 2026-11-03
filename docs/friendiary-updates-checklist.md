@@ -71,8 +71,9 @@ Get it checked by a lawyer before publishing (Singapore PDPA).
 - [~] **Privacy permissions** — audit done.
   - [x] Fixed: public profile endpoint leaked email/phone (see "Found while working").
   - [x] OK: calendar, memories, Message Wall, chat, friends — all need login.
-  - [ ] **Needs decision:** by default, strangers and logged-out visitors CAN see a user's meetups (title, date) on their profile, unless the user turns on "Private account". The policy says calendars are friends-only. Either make friends-only the default, or change the policy text.
-  - [ ] **Needs decision:** diary posts set to "Public" are visible to anyone. Policy should say "unless you choose Public".
+  - [x] Calendars are now friends-only by default (`privacy.private_account` defaults to true). Users can turn "Private Account" off in Settings; the policy says so.
+    - [ ] **Existing users still have `private_account: false` saved.** Run once in MongoDB Atlas to make them friends-only too: `db.users.updateMany({}, { $set: { "privacy.private_account": true } })`
+  - [x] Policy now has a "Diary Posts" section: friends by default, "unless you choose Public".
 - [x] **Registration** — sign-up page has the required box (13+ and Terms, with links) and an optional promo box. Both start unchecked. Google and email sign-up are both blocked until the box is ticked. Onboarding asks again if consent is missing (e.g. Google sign-in that skipped sign-up). Backend refuses to create a profile without it and saves `consent` (policy version, promo opt-in, server time) on the user.
   Policy version lives in `Frontend/src/features/legal/consent.ts` — bump it when the policy changes.
 - [ ] **Account deletion** — exists in Settings, but it is a **soft delete only**: account is hidden and banned in Clerk, but email, phone, posts, photos and messages stay in the database forever. The policy promises "delete or anonymise". **Needs decision:** e.g. keep 30 days for recovery, then a job wipes personal data and photos.
@@ -89,6 +90,9 @@ Get it checked by a lawyer before publishing (Singapore PDPA).
     - "11 October 2026" → real effective date
     - Account deletion paragraph → real timing, once decided
   - [ ] Lawyer review — Chin's side, not ours.
+
+- [x] **Friend's profile shows their theme** (2026-11-03) — visiting a friend's profile now applies their colour theme and cursor to the whole page (before: only a theme label). The cursor is now saved on the account (`users.cursor`).
+- [x] **Security: anyone could make themselves Premium** — `PATCH /users/me` accepted `is_premium`. Removed from the DTO.
 
 ## Part C — Updates of 13/10/2026
 

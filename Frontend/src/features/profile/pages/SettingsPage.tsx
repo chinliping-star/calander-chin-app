@@ -591,6 +591,13 @@ function ThemeSection() {
 
 function CalendarSection() {
   const { weekStart, defaultView, timeFormat, setWeekStart, setDefaultView, setTimeFormat, cursor, setCursor } = usePreferences();
+  const api = useApi();
+
+  // Saved on the account too, so friends see my cursor on my profile.
+  function handleCursorSelect(id: typeof cursor) {
+    setCursor(id);
+    api.patch('/users/me', { cursor: id }).catch(() => {/* silent — local cursor already applied */});
+  }
 
   function RadioGroup<T extends string>({
     label, value, options, onChange,
@@ -652,7 +659,7 @@ function CalendarSection() {
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => setCursor(c.id)}
+                  onClick={() => handleCursorSelect(c.id)}
                   aria-pressed={cursor === c.id}
                   className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl transition-all focus-visible:outline-none"
                   style={cursor === c.id
@@ -679,7 +686,7 @@ function CalendarSection() {
 // ─── Privacy ──────────────────────────────────────────────────────────────────
 
 const PRIVACY_DEFAULTS = {
-  private_account: false,
+  private_account: true,
   friend_requests: true,
   discoverability: true,
   show_meetups: true,

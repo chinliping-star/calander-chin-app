@@ -8,6 +8,11 @@ export const SCENE_EFFECTS = [
   'fireworks', 'fireflies', 'thunder', 'dragon',
 ] as const;
 
+export const CURSORS = [
+  'default', 'star', 'heart', 'flower', 'sparkle',
+  'butterfly', 'rainbow', 'kitty', 'teddy', 'cherry', 'moon',
+] as const;
+
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: false } })
 export class User {
   @Prop({ required: true, unique: true, trim: true })
@@ -64,13 +69,17 @@ export class User {
   @Prop({ enum: SCENE_EFFECTS, default: 'none' })
   scene_effect: string;
 
+  /** Custom cursor. Visitors see it on this user's profile. */
+  @Prop({ enum: CURSORS, default: 'default' })
+  cursor: string;
+
   /**
-   * Privacy toggles. Missing field (older accounts) = defaults below, which
-   * mirror the app's original all-public behaviour.
+   * Privacy toggles. Missing field = defaults below. Calendars are
+   * friends-only unless the user turns Private Account off.
    */
   @Prop({
     type: {
-      private_account: { type: Boolean, default: false }, // true → calendar + meetups friends-only
+      private_account: { type: Boolean, default: true },  // true → calendar + meetups friends-only (the Privacy Policy promise)
       friend_requests: { type: Boolean, default: true },  // false → nobody can send requests
       discoverability: { type: Boolean, default: true },  // false → hidden from search
       show_meetups: { type: Boolean, default: true },     // false → meetup history hidden from profile
