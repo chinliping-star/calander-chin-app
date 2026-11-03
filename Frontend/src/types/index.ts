@@ -20,6 +20,7 @@ export interface User {
   theme?: string;
   /** Animated background effect id (see features/effects). */
   scene_effect?: string;
+  cursor?: string;
   is_premium?: boolean;
   is_admin?: boolean;
   /** Admin via the server's ADMIN_EMAILS config. */

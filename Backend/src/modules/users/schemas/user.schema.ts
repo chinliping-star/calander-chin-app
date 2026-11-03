@@ -8,6 +8,11 @@ export const SCENE_EFFECTS = [
   'fireworks', 'fireflies', 'thunder', 'dragon',
 ] as const;
 
+export const CURSORS = [
+  'default', 'star', 'heart', 'flower', 'sparkle',
+  'butterfly', 'rainbow', 'kitty', 'teddy', 'cherry', 'moon',
+] as const;
+
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: false } })
 export class User {
   @Prop({ required: true, unique: true, trim: true })
@@ -63,6 +68,10 @@ export class User {
    * user's profile and can adopt it. 'none' = off. */
   @Prop({ enum: SCENE_EFFECTS, default: 'none' })
   scene_effect: string;
+
+  /** Custom cursor. Visitors see it on this user's profile. */
+  @Prop({ enum: CURSORS, default: 'default' })
+  cursor: string;
 
   /**
    * Privacy toggles. Missing field (older accounts) = defaults below, which

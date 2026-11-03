@@ -12,7 +12,8 @@ import { InterestsPanel } from '../components/InterestsPanel.tsx';
 import { PostFeed } from '../../posts/components/PostFeed.tsx';
 import { NewPostModal } from '../../posts/components/NewPostModal.tsx';
 import { usePostsApi } from '../../posts/api/posts.api.ts';
-import { THEMES } from '../../../lib/theme.ts';
+import { THEMES, applyTheme, useThemeStore, type Theme } from '../../../lib/theme.ts';
+import { CURSORS, applyCursor, usePreferences, type CursorStyle } from '../../../lib/preferences.ts';
 import {
   UserPlus,
   MessageCircle,
@@ -515,6 +516,19 @@ export function ProfilePage() {
     setEffectOverride(ownerEffect);
     return () => setEffectOverride(null);
   }, [isOwnProfile, profileUser, ownerEffect, setEffectOverride]);
+
+  // ...and their colour theme and cursor. Unset/old values ('pastel-pink') mean the defaults.
+  const ownerTheme: Theme = THEMES.find(t => t.id === profileUser?.theme)?.id ?? 'pink';
+  const ownerCursor: CursorStyle = CURSORS.find(c => c.id === profileUser?.cursor)?.id ?? 'default';
+  useEffect(() => {
+    if (isOwnProfile || !profileUser) return;
+    applyTheme(ownerTheme);
+    applyCursor(ownerCursor);
+    return () => {
+      applyTheme(useThemeStore.getState().theme);
+      applyCursor(usePreferences.getState().cursor);
+    };
+  }, [isOwnProfile, profileUser, ownerTheme, ownerCursor]);
 
   useEffect(() => {
     if (!username) return;
