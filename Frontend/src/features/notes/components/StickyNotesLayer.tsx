@@ -289,7 +289,8 @@ export function StickyNotesLayer() {
       ))}
 
       {/* Launcher FAB (bottom-right) */}
-      <div className="fixed right-4 bottom-4 z-50 flex flex-col items-end gap-2">
+      {/* mobile: sits above the bottom nav (~90px tall, shown below xl) */}
+      <div className="fixed right-4 bottom-28 xl:bottom-4 z-50 flex flex-col items-end gap-2">
         {menuOpen && (
           <div
             className="rounded-2xl p-2 flex flex-col gap-1 w-56"

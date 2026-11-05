@@ -75,7 +75,7 @@ export function CalendarSidebar() {
           />
         </div>
 
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex w-full min-w-0 flex-col items-center gap-1">
           <p className="text-sm font-bold leading-tight" style={{ color: 'var(--text-h)' }}>
             {displayName}
           </p>
@@ -84,7 +84,7 @@ export function CalendarSidebar() {
           </p>
           {/* Bio takes the badge's place; default label when no bio yet */}
           <span
-            className="mt-1 max-w-full truncate rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+            className="mt-1 block max-w-full truncate rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
             style={{ backgroundColor: '#f3e8ff', color: '#7c3aed' }}
           >
             {user?.bio ? `✦ ${bioPreview(user.bio)}` : '✦ cutie planner'}
