@@ -9,6 +9,7 @@ import { LoginPage } from '../features/auth/pages/LoginPage.tsx';
 // Every page except login loads on demand, so the first paint ships less JS (calendar pulls framer-motion, presence pulls socket.io).
 const CalendarPage = lazy(() => import('../features/calendar/pages/CalendarPage.tsx').then(m => ({ default: m.CalendarPage })));
 const PresenceProvider = lazy(() => import('../features/chat/context/presence.tsx').then(m => ({ default: m.PresenceProvider })));
+const LandingPage = lazy(() => import('../features/landing/pages/LandingPage.tsx').then(m => ({ default: m.LandingPage })));
 const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage.tsx').then(m => ({ default: m.RegisterPage })));
 const OnboardingPage = lazy(() => import('../features/auth/pages/OnboardingPage.tsx').then(m => ({ default: m.OnboardingPage })));
 const LegalPage = lazy(() => import('../features/legal/pages/LegalPage.tsx').then(m => ({ default: m.LegalPage })));
@@ -59,7 +60,7 @@ export const router = createBrowserRouter([
   { path: '/privacy',      element: <LegalPage doc="privacy" /> },
   { path: '/terms',        element: <LegalPage doc="terms" /> },
   { path: '/sso-callback', element: <AuthenticateWithRedirectCallback /> },
-  { path: '/',             element: <Navigate to="/login" replace /> },
+  { path: '/',             element: <PublicGuard><LandingPage /></PublicGuard> },
 
   // Protected — single AuthGuard wraps all, persists across child route changes
   {
