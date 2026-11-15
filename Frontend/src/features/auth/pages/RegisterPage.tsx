@@ -269,7 +269,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4">
+    <div role="main" className="relative min-h-screen flex items-center justify-center p-4">
       {/* Overlay only for the Google redirect flow. During email sign-up the
           Clerk captcha (#clerk-captcha) may need user interaction, so nothing
           must cover it — the submit button shows its own "Creating…" state. */}
@@ -372,7 +372,7 @@ export function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowPw(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-60"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 transition-opacity hover:opacity-60"
                     style={{ color: 'var(--text)' }}
                     aria-label={showPw ? 'Hide password' : 'Show password'}
                   >
@@ -424,7 +424,7 @@ export function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirm(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-60"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 transition-opacity hover:opacity-60"
                     style={{ color: 'var(--text)' }}
                     aria-label={showConfirm ? 'Hide password' : 'Show password'}
                   >

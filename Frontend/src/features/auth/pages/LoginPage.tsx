@@ -147,7 +147,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4">
+    <div role="main" className="relative min-h-screen flex items-center justify-center p-4">
       {loading && (
         <div className="fixed inset-0 flex flex-col items-center justify-center gap-8" style={{ zIndex: 100, background: 'linear-gradient(135deg, #fff8fb 0%, #fdf4ff 50%, #f8f0ff 100%)' }}>
           <style>{`
@@ -233,7 +233,7 @@ export function LoginPage() {
                       style={{ border: '1.5px solid var(--border)', backgroundColor: 'var(--color-neutral)', color: 'var(--text-h)' }}
                     />
                     <button type="button" onClick={() => setShowPw(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-60" style={{ color: 'var(--text)' }}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 hover:opacity-60" style={{ color: 'var(--text)' }}
                       aria-label={showPw ? 'Hide password' : 'Show password'}>
                       <EyeIcon open={showPw} />
                     </button>
@@ -334,7 +334,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPw(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-60"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 transition-opacity hover:opacity-60"
                 style={{ color: 'var(--text)' }}
                 aria-label={showPw ? 'Hide password' : 'Show password'}
               >
@@ -344,7 +344,7 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => { setMode('forgot'); setError(''); }}
-              className="self-end text-xs font-semibold hover:opacity-70"
+              className="self-end py-1 text-xs font-semibold hover:opacity-70"
               style={{ color: 'var(--color-primary-text)' }}
             >
               Forgot password?
