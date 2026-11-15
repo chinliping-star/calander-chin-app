@@ -2,6 +2,6 @@
   "buildCommand": "npm --prefix Frontend install && npm --prefix Frontend run build",
   "outputDirectory": "Frontend/dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!.well-known/).*)", "destination": "/index.html" }
   ]
 }

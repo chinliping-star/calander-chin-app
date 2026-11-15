@@ -1,0 +1,14 @@
+# Friendiary
+
+> Friendiary is a cute personal social calendar. Everyone gets a shareable calendar page, friends propose meetups on free days, and accepted meetups appear on both calendars. Photos from past meetups live in a shared memory album.
+
+## Main pages
+
+- [Sign in](https://www.friendiary.com/login): log in with email or Google
+- [Create an account](https://www.friendiary.com/register): sign up for free
+- [Pricing](https://www.friendiary.com/pricing): free and premium plans
+
+## Policies
+
+- [Privacy Policy](https://www.friendiary.com/privacy)
+- [Terms & Conditions](https://www.friendiary.com/terms)

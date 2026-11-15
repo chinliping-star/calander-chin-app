@@ -58,7 +58,7 @@ export function InstallAppBanner() {
           disabled={busy}
           aria-expanded={ios ? showIosSteps : undefined}
           className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold transition-opacity hover:opacity-90 active:scale-95 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
-          style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
+          style={{ background: 'var(--color-primary-strong)', color: '#fff' }}
         >
           <Download size={14} aria-hidden="true" />
           Download app
