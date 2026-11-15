@@ -338,10 +338,11 @@ export function RegisterPage() {
             <form onSubmit={handleRegister} className="flex flex-col gap-4">
               {/* Email */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
+                <label htmlFor="register-field-1" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
                   Email
                 </label>
                 <input
+                id="register-field-1"
                   type="email"
                   required
                   value={email}
@@ -354,11 +355,12 @@ export function RegisterPage() {
 
               {/* Password + strength */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
+                <label htmlFor="register-field-2" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
                   Password
                 </label>
                 <div className="relative">
                   <input
+                id="register-field-2"
                     type={showPw ? 'text' : 'password'}
                     required
                     value={password}
@@ -401,11 +403,12 @@ export function RegisterPage() {
 
               {/* Confirm password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
+                <label htmlFor="register-field-3" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
                   Confirm Password
                 </label>
                 <div className="relative">
                   <input
+                id="register-field-3"
                     type={showConfirm ? 'text' : 'password'}
                     required
                     value={confirm}
@@ -454,7 +457,7 @@ export function RegisterPage() {
                 type="submit"
                 disabled={loading || !isLoaded}
                 className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60"
-                style={{ backgroundColor: 'var(--color-primary)' }}
+                style={{ backgroundColor: 'var(--color-primary-strong)' }}
               >
                 {loading ? 'Creating…' : 'Create account ✨'}
               </button>
@@ -464,10 +467,11 @@ export function RegisterPage() {
           /* Verify step */
           <form onSubmit={handleVerify} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
+              <label htmlFor="register-field-4" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
                 Verification Code
               </label>
               <input
+                id="register-field-4"
                 type="text"
                 required
                 value={code}
@@ -491,7 +495,7 @@ export function RegisterPage() {
               type="submit"
               disabled={loading || !isLoaded}
               className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60"
-              style={{ backgroundColor: 'var(--color-primary)' }}
+              style={{ backgroundColor: 'var(--color-primary-strong)' }}
             >
               {loading ? 'Verifying…' : 'Verify & continue 🌸'}
             </button>
@@ -512,7 +516,7 @@ export function RegisterPage() {
           <Link
             to="/login"
             className="font-semibold hover:opacity-80 focus-visible:outline-none"
-            style={{ color: 'var(--color-primary)', textDecoration: 'none' }}
+            style={{ color: 'var(--color-primary-text)', textDecoration: 'none' }}
           >
             Sign in
           </Link>

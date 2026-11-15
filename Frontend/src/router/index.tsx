@@ -5,10 +5,10 @@ import { DocumentTitle } from '../components/layout/DocumentTitle.tsx';
 import { AuthGuard } from '../features/auth/components/AuthGuard.tsx';
 import { PublicGuard } from '../features/auth/components/PublicGuard.tsx';
 import { LoginPage } from '../features/auth/pages/LoginPage.tsx';
-import { CalendarPage } from '../features/calendar/pages/CalendarPage.tsx';
-import { PresenceProvider } from '../features/chat/context/presence.tsx';
 
-// Every page except the two landing ones (login, own calendar) loads on demand, so the first paint ships less JS.
+// Every page except login loads on demand, so the first paint ships less JS (calendar pulls framer-motion, presence pulls socket.io).
+const CalendarPage = lazy(() => import('../features/calendar/pages/CalendarPage.tsx').then(m => ({ default: m.CalendarPage })));
+const PresenceProvider = lazy(() => import('../features/chat/context/presence.tsx').then(m => ({ default: m.PresenceProvider })));
 const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage.tsx').then(m => ({ default: m.RegisterPage })));
 const OnboardingPage = lazy(() => import('../features/auth/pages/OnboardingPage.tsx').then(m => ({ default: m.OnboardingPage })));
 const LegalPage = lazy(() => import('../features/legal/pages/LegalPage.tsx').then(m => ({ default: m.LegalPage })));

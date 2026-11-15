@@ -5,6 +5,9 @@
   --color-primary: #FF7FB1;
   --color-primary-light: #FFB3CE;
   --color-primary-dark: #CC5A87;
+  /* WCAG AA on white: pink for small text (5.3:1) and for white-text buttons (4.7:1) */
+  --color-primary-text: #B83D72;
+  --color-primary-strong: #C9407B;
   --color-secondary: #4A3E4E;
   --color-secondary-light: #6B5C70;
   --color-tertiary: #FFF0F6;

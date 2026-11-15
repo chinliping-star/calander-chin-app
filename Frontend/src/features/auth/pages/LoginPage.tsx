@@ -199,8 +199,9 @@ export function LoginPage() {
         {mode === 'forgot' && (
           <form onSubmit={fStep === 'request' ? sendResetCode : resetPassword} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Email</label>
+              <label htmlFor="login-field-1" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Email</label>
               <input
+                id="login-field-1"
                 type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 disabled={fStep === 'reset'}
                 placeholder="you@example.com"
@@ -212,8 +213,9 @@ export function LoginPage() {
             {fStep === 'reset' && (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Reset code</label>
+                  <label htmlFor="login-field-2" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>Reset code</label>
                   <input
+                id="login-field-2"
                     type="text" inputMode="numeric" required value={fCode} onChange={e => setFCode(e.target.value)}
                     placeholder="123456"
                     className="w-full rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2"
@@ -221,9 +223,10 @@ export function LoginPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>New password</label>
+                  <label htmlFor="login-field-3" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>New password</label>
                   <div className="relative">
                     <input
+                id="login-field-3"
                       type={showPw ? 'text' : 'password'} required value={fNewPw} onChange={e => setFNewPw(e.target.value)}
                       placeholder="••••••••"
                       className="w-full rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:ring-2"
@@ -241,7 +244,7 @@ export function LoginPage() {
 
             {fInfo && (
               <p className="text-xs font-medium text-center rounded-xl py-2 px-3"
-                style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary)' }}>{fInfo}</p>
+                style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--color-primary-text)' }}>{fInfo}</p>
             )}
             {error && (
               <p className="text-xs font-medium text-center rounded-xl py-2 px-3"
@@ -250,7 +253,7 @@ export function LoginPage() {
 
             <button type="submit" disabled={loading || !isLoaded}
               className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-60"
-              style={{ backgroundColor: 'var(--color-primary)' }}>
+              style={{ backgroundColor: 'var(--color-primary-strong)' }}>
               {loading ? 'Please wait…' : fStep === 'request' ? 'Send reset code' : 'Reset password 🌸'}
             </button>
 
@@ -290,10 +293,11 @@ export function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
+            <label htmlFor="login-field-4" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
               Email
             </label>
             <input
+                id="login-field-4"
               type="email"
               required
               value={email}
@@ -309,11 +313,12 @@ export function LoginPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
+            <label htmlFor="login-field-5" className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text)' }}>
               Password
             </label>
             <div className="relative">
               <input
+                id="login-field-5"
                 type={showPw ? 'text' : 'password'}
                 required
                 value={password}
@@ -340,7 +345,7 @@ export function LoginPage() {
               type="button"
               onClick={() => { setMode('forgot'); setError(''); }}
               className="self-end text-xs font-semibold hover:opacity-70"
-              style={{ color: 'var(--color-primary)' }}
+              style={{ color: 'var(--color-primary-text)' }}
             >
               Forgot password?
             </button>
@@ -357,7 +362,7 @@ export function LoginPage() {
             type="submit"
             disabled={loading || !isLoaded}
             className="w-full rounded-2xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60"
-            style={{ backgroundColor: 'var(--color-primary)' }}
+            style={{ backgroundColor: 'var(--color-primary-strong)' }}
           >
             {loading ? 'Signing in…' : 'Sign in 🌸'}
           </button>
@@ -368,7 +373,7 @@ export function LoginPage() {
           <Link
             to="/register"
             className="font-semibold hover:opacity-80 focus-visible:outline-none"
-            style={{ color: 'var(--color-primary)', textDecoration: 'none' }}
+            style={{ color: 'var(--color-primary-text)', textDecoration: 'none' }}
           >
             Create one
           </Link>
