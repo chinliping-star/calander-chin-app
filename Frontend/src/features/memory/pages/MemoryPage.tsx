@@ -924,7 +924,7 @@ export function MemoryPage() {
           <div>
             <p className="font-bold text-lg" style={{ color: 'var(--text-h)' }}>No meetups yet</p>
             <p className="text-sm mt-1.5 max-w-xs mx-auto leading-relaxed" style={{ color: 'var(--text)' }}>
-              Once you have accepted meetups, they'll appear here ready for photos.
+              After you meet up with friends, your meetups appear here ready for photos.
             </p>
           </div>
         </motion.div>

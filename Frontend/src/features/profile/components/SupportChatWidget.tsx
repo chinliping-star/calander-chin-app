@@ -72,6 +72,13 @@ export function SupportChatWidget({ onClose }: { onClose: () => void }) {
   const [typing, setTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Escape closes the chat, like any dialog.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
@@ -111,7 +118,7 @@ export function SupportChatWidget({ onClose }: { onClose: () => void }) {
     <div
       className="fixed bottom-5 right-5 z-[9999] flex flex-col rounded-2xl overflow-hidden"
       style={{
-        width: 340, height: 460, background: 'var(--bg)',
+        width: 'min(340px, calc(100vw - 40px))', height: 'min(460px, calc(100dvh - 120px))', background: 'var(--bg)',
         border: '1px solid var(--border)', boxShadow: '0 16px 48px rgba(0,0,0,0.18)',
       }}
       role="dialog"
@@ -123,8 +130,13 @@ export function SupportChatWidget({ onClose }: { onClose: () => void }) {
           <Headset size={16} color="#fff" />
           <p className="text-sm font-bold" style={{ color: '#fff' }}>Live Support</p>
         </div>
-        <button onClick={onClose} aria-label="Close chat" className="text-white/90 hover:text-white">
-          <X size={16} />
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close chat"
+          className="-mr-2 flex h-9 w-9 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
+          <X size={20} />
         </button>
       </div>
 

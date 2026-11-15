@@ -5,6 +5,12 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preload" as="image" href="/logo.png" fetchpriority="high" />
+    <!-- Font never blocks first paint: loads as "print" then switches to all; text shows in the fallback font meanwhile -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" /></noscript>
     <meta name="theme-color" content="#FF7FB1" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -21,7 +27,8 @@
     <meta name="twitter:image" content="/logo.png" />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- App shell: paints the logo before the JS bundle runs; React replaces it on first render -->
+    <div id="root"><div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg,#fff8fb 0%,#fdf4ff 50%,#f8f0ff 100%);font-family:system-ui,sans-serif"><img src="/logo.png" alt="Friendiary" width="140" height="140" fetchpriority="high" /><p style="margin:0;color:#4A3E4E;font-size:14px;font-weight:600">Loading your Friendiary…</p></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

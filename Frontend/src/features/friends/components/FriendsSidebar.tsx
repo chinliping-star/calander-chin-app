@@ -52,17 +52,16 @@ export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebar
 
   return (
     <aside
-      className="flex flex-col h-full rounded-2xl p-5 gap-2"
+      className="flex flex-col h-full rounded-2xl p-4 lg:p-5 gap-2 lg:min-h-[520px]"
       style={{
         backgroundColor: 'var(--bg)',
         border: '1px solid var(--border)',
         boxShadow: '0 2px 12px rgba(74,62,78,0.08)',
-        minHeight: '520px',
       }}
       aria-label="Friends navigation"
     >
       {/* Profile header */}
-      <div className="mb-4">
+      <div className="mb-1 lg:mb-4">
         <p className="font-bold text-base truncate" style={{ color: 'var(--text-h)' }}>
           {user?.display_name ?? user?.username ?? '—'}
         </p>
@@ -73,17 +72,18 @@ export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebar
 
       {/* Nav items */}
       <nav aria-label="Friends sections">
-        <ul className="flex flex-col gap-1" role="list">
+        {/* Mobile: one scrollable row of chips so the friend list stays on screen */}
+        <ul className="flex gap-1 overflow-x-auto -mx-1 px-1 pb-1 lg:flex-col lg:overflow-visible lg:mx-0 lg:px-0 lg:pb-0" role="list">
           {NAV_ITEMS.map(({ key, label, icon: Icon, badge }) => {
             const isActive = active === key;
             return (
-              <li key={key}>
+              <li key={key} className="shrink-0">
                 <button
                   type="button"
                   onClick={() => onSelect(key)}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2',
+                    'lg:w-full whitespace-nowrap flex items-center justify-between gap-3 px-3 py-2 rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2',
                     isActive ? 'text-white' : 'hover:opacity-80',
                   )}
                   style={
@@ -113,14 +113,14 @@ export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebar
       </nav>
 
       {/* Spacer */}
-      <div className="flex-1" />
+      <div className="hidden lg:block flex-1" />
 
       {/* Bottom actions */}
-      <div className="flex flex-col gap-1 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex flex-col gap-1 lg:border-t lg:pt-4" style={{ borderColor: 'var(--border)' }}>
         <button
           type="button"
           onClick={() => navigate('/settings?section=help')}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+          className="hidden lg:flex items-center gap-2.5 px-3 py-2 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
           style={{ color: 'var(--text)' }}
         >
           <HelpCircle size={16} />
@@ -129,7 +129,7 @@ export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebar
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+          className="hidden lg:flex items-center gap-2.5 px-3 py-2 rounded-full text-sm transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
           style={{ color: 'var(--color-primary)' }}
         >
           <LogOut size={16} />
@@ -139,7 +139,7 @@ export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebar
         <button
           type="button"
           onClick={() => onAddFriend ? onAddFriend() : navigate('/friends?discover=true')}
-          className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
+          className="lg:mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2"
           style={{ backgroundColor: 'var(--color-primary)' }}
         >
           <UserPlus size={15} />

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  StickyNote as StickyIcon,
   Plus,
   X,
   Eye,
@@ -371,17 +370,32 @@ export function StickyNotesLayer() {
         <button
           type="button"
           onClick={() => setMenuOpen((o) => !o)}
-          className="grid place-items-center h-12 w-12 rounded-full text-white shadow-lg transition-transform hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+          className="grid place-items-center h-12 w-12 rounded-full shadow-lg transition-transform hover:scale-105 hover:-rotate-6 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
           style={{
-            backgroundColor: 'var(--color-secondary)',
+            backgroundColor: 'var(--bg)',
+            border: '1px solid var(--border)',
             boxShadow: '0 6px 20px rgba(74,62,78,0.25)',
           }}
           aria-label="Sticky notes"
           aria-expanded={menuOpen}
         >
-          <StickyIcon size={20} />
+          <StickyNoteMark />
         </button>
       </div>
     </>
+  );
+}
+
+/** Launcher mark: a tilted yellow note with a folded corner and a pink pin. */
+function StickyNoteMark() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+      <g transform="rotate(-8 16 16)">
+        <path d="M6 6h20v14l-6 6H6z" fill="#FDE68A" stroke="#F59E0B" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M26 20h-6v6z" fill="#FCD34D" stroke="#F59E0B" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M10 13h11M10 17h8" stroke="#D97706" strokeWidth="1.4" strokeLinecap="round" opacity="0.7" />
+      </g>
+      <circle cx="16" cy="6" r="2.6" fill="#FF7FB1" stroke="#fff" strokeWidth="1" />
+    </svg>
   );
 }

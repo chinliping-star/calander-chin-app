@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Send, Plus, Paperclip, FileText, Smile, Mic } from 'lucide-react';
+import { Send, Smile } from 'lucide-react';
 
 const EMOJIS = [
   '😀','😂','😍','🥰','😎','😉','😮','😢','😭','😡','👍','👎','🙏','👏','🙌',
@@ -95,18 +95,6 @@ export function ChatInput({ onSend, onTyping, disabled, editValue, onCancelEdit 
         {/* Toolbar */}
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-1" style={{ color: 'var(--text)' }}>
-            {[Plus, Paperclip, FileText].map((Icon, i) => (
-              <button
-                key={i}
-                type="button"
-                disabled
-                title="Coming soon"
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors opacity-70 hover:opacity-100"
-              >
-                <Icon size={18} strokeWidth={1.5} />
-              </button>
-            ))}
-
             {/* Emoji picker */}
             <div className="relative" ref={emojiRef}>
               <button
@@ -140,15 +128,6 @@ export function ChatInput({ onSend, onTyping, disabled, editValue, onCancelEdit 
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              className="w-8 h-8 rounded-lg flex items-center justify-center opacity-70 hover:opacity-100"
-              style={{ color: 'var(--text)' }}
-            >
-              <Mic size={18} strokeWidth={1.5} />
-            </button>
             <button
               onClick={handleSend}
               disabled={!value.trim() || disabled}
