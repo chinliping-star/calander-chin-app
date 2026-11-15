@@ -279,9 +279,7 @@ export function RegisterPage() {
         className="relative w-full max-w-md rounded-3xl p-10 flex flex-col gap-6"
         style={{
           zIndex: 1,
-          backgroundColor: 'rgba(255,255,255,0.82)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
+          backgroundColor: 'rgba(255,255,255,0.93)', // no backdrop blur: it re-blurred the animated background every frame (mobile TBT)
           border: '1px solid rgba(167,139,250,0.20)',
           boxShadow: '0 8px 60px rgba(167,139,250,0.15), 0 2px 20px rgba(74,62,78,0.08)',
         }}

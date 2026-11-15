@@ -77,7 +77,7 @@ export function AuthAnimatedBg() {
             width: 520, height: 520,
             top: '-120px', left: '-140px',
             background: 'radial-gradient(circle at 35% 40%, rgba(255,127,177,0.22) 0%, rgba(255,182,213,0.12) 50%, transparent 75%)',
-            animation: 'blobMorph 12s ease-in-out infinite, floatB 18s ease-in-out infinite',
+            animation: 'floatB 18s ease-in-out infinite', willChange: 'transform', borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%',
             filter: 'blur(2px)',
           }}
         />
@@ -89,7 +89,7 @@ export function AuthAnimatedBg() {
             width: 600, height: 600,
             bottom: '-180px', right: '-160px',
             background: 'radial-gradient(circle at 60% 55%, rgba(167,139,250,0.20) 0%, rgba(216,180,254,0.10) 50%, transparent 75%)',
-            animation: 'blobMorph 15s ease-in-out infinite reverse, floatA 22s ease-in-out infinite',
+            animation: 'floatA 22s ease-in-out infinite', willChange: 'transform', borderRadius: '30% 60% 70% 40% / 50% 60% 30% 60%',
             filter: 'blur(3px)',
           }}
         />
@@ -101,7 +101,7 @@ export function AuthAnimatedBg() {
             width: 300, height: 300,
             top: '30%', right: '8%',
             background: 'radial-gradient(circle at 40% 40%, rgba(255,200,220,0.25) 0%, rgba(255,127,177,0.08) 60%, transparent 80%)',
-            animation: 'blobMorph 9s ease-in-out infinite, floatC 14s ease-in-out infinite',
+            animation: 'floatC 14s ease-in-out infinite', willChange: 'transform', borderRadius: '50% 60% 30% 60% / 30% 70% 60% 40%',
             filter: 'blur(1px)',
           }}
         />
@@ -157,7 +157,7 @@ export function AuthAnimatedBg() {
                 borderRadius: '50%',
                 border: '3px solid rgba(255,127,177,0.50)',
                 boxShadow: '0 0 16px rgba(255,127,177,0.3), inset 0 0 16px rgba(255,127,177,0.1)',
-                animation: 'pulseGlow 3s ease-in-out infinite',
+
               }}
             />
           </div>
