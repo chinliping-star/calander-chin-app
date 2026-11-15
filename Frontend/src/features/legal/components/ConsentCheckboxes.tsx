@@ -34,9 +34,9 @@ export function ConsentCheckboxes({ agreed, onAgreedChange, marketing, onMarketi
         />
         <span>
           I confirm that I am at least 13 years old and agree to Friendiary's{' '}
-          <Link to="/terms" target="_blank" className="font-semibold underline" style={{ color: 'var(--color-primary)' }}>Terms &amp; Conditions</Link>.
+          <Link to="/terms" target="_blank" className="font-semibold underline" style={{ color: 'var(--color-primary-text)' }}>Terms &amp; Conditions</Link>.
           {' '}I have read the{' '}
-          <Link to="/privacy" target="_blank" className="font-semibold underline" style={{ color: 'var(--color-primary)' }}>Privacy Policy</Link>.
+          <Link to="/privacy" target="_blank" className="font-semibold underline" style={{ color: 'var(--color-primary-text)' }}>Privacy Policy</Link>.
         </span>
       </label>
 
