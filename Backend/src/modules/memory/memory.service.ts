@@ -12,6 +12,14 @@ import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { effectivePremium } from '../../common/feature-flags';
 import { CoinsService } from '../coins/coins.service';
 
+/**
+ * Latest meetup date (YYYY-MM-DD) that has started somewhere on Earth.
+ * shortcut: uses UTC+14 so a meetup counts from its day in any timezone; pass the viewer's tz if exact cut-off ever matters.
+ */
+function lastStartedDate(): string {
+  return new Date(Date.now() + 14 * 3600_000).toISOString().slice(0, 10);
+}
+
 /** Album row: meetup fields + whether the current viewer archived it. */
 export type AlbumMeetup = Record<string, unknown> & { archived: boolean };
 
@@ -81,6 +89,9 @@ export class MemoryService {
 
     if (meetup.status !== 'accepted') {
       throw new ForbiddenException('Can only add photos to accepted meetups');
+    }
+    if (meetup.date > lastStartedDate()) {
+      throw new ForbiddenException('Photos can be added once the meetup day arrives');
     }
 
     // Each participant may add up to 5 photos to a memory.
@@ -202,6 +213,8 @@ export class MemoryService {
           { participants: userObjId },
         ],
         status: 'accepted',
+        // A memory only exists once the meetup has happened.
+        date: { $lte: lastStartedDate() },
       })
       .populate('proposer_id', 'username display_name avatar_url')
       .populate('owner_id',    'username display_name avatar_url')

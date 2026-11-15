@@ -18,6 +18,7 @@ import { useChatApi } from '../../features/chat/api/chat.api.ts';
 import { useNotificationsApi } from '../../features/notifications/api/notifications.api.ts';
 import { NotificationPanel } from '../../features/notifications/components/NotificationPanel.tsx';
 import { CoinBalance } from '../../features/coins/components/CoinBalance.tsx';
+import { playChime, setAppBadge } from '../../features/notifications/alert.ts';
 
 export function Navbar() {
   const { pathname } = useLocation();
@@ -45,6 +46,7 @@ export function Navbar() {
   async function handleLogout() {
     setAvatarMenuOpen(false);
     setMoreOpen(false);
+    setAppBadge(0);
     clearAuth();
     await signOut();
     navigate('/login');
@@ -67,6 +69,16 @@ export function Navbar() {
     enabled: !!user,
   });
   const notifCount = notifUnread?.count ?? 0;
+
+  // Ring + app-icon badge when something new arrives. Skips the first value after mount so page changes stay quiet.
+  const alertTotal = notifUnread && unreadData ? notifCount + unreadCount : undefined;
+  const prevAlertTotal = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (alertTotal === undefined) return;
+    if (prevAlertTotal.current !== undefined && alertTotal > prevAlertTotal.current) playChime();
+    prevAlertTotal.current = alertTotal;
+    setAppBadge(alertTotal);
+  }, [alertTotal]);
 
   // Pre-fetch full notification list in background so bell panel opens instantly
   const qc = useQueryClient();
@@ -286,6 +298,36 @@ export function Navbar() {
           </div>
         </div>
       </header>
+
+      {/* ── Mobile + tablet top bar: coins + notifications stay in reach ── */}
+      {user && (
+        <header
+          className="sticky top-0 z-40 flex h-14 items-center justify-between border-b px-4 xl:hidden"
+          style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--border)' }}
+        >
+          <Logo to={`/${user.username}/calendar`} size={56} showText={false} />
+          <div className="flex items-center gap-2">
+            <CoinBalance />
+            <button
+              type="button"
+              aria-label={notifCount > 0 ? `Notifications, ${notifCount} unread` : 'Notifications'}
+              onClick={() => setNotifOpen(o => !o)}
+              className="relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2"
+              style={{ color: 'var(--color-secondary)', backgroundColor: notifOpen ? 'var(--accent-bg)' : 'var(--color-neutral)' }}
+            >
+              <Bell size={18} />
+              {notifCount > 0 && (
+                <span
+                  className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                  style={{ backgroundColor: 'var(--color-primary)' }}
+                >
+                  {notifCount > 99 ? '99+' : notifCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </header>
+      )}
 
       {/* ── Mobile + tablet bottom nav ── */}
       <nav

@@ -1,43 +1,48 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react';
 import { DocumentTitle } from '../components/layout/DocumentTitle.tsx';
 import { AuthGuard } from '../features/auth/components/AuthGuard.tsx';
 import { PublicGuard } from '../features/auth/components/PublicGuard.tsx';
 import { LoginPage } from '../features/auth/pages/LoginPage.tsx';
-import { RegisterPage } from '../features/auth/pages/RegisterPage.tsx';
-import { OnboardingPage } from '../features/auth/pages/OnboardingPage.tsx';
-import { LegalPage } from '../features/legal/pages/LegalPage.tsx';
 import { CalendarPage } from '../features/calendar/pages/CalendarPage.tsx';
-import { FriendsPage } from '../features/friends/pages/FriendsPage.tsx';
-import { SettingsPage } from '../features/profile/pages/SettingsPage.tsx';
-import { ProfilePage } from '../features/profile/pages/ProfilePage.tsx';
-import { NewMeetupPage } from '../features/meetup/pages/NewMeetupPage.tsx';
-import { ProposeMeetupPage } from '../features/meetup/pages/ProposeMeetupPage.tsx';
-import { SavedDraftsPage } from '../features/meetup/pages/SavedDraftsPage.tsx';
-import { PricingPage } from '../features/pricing/pages/PricingPage.tsx';
-import { DiaryPage } from '../features/diary/pages/DiaryPage.tsx';
-import { MemoryPage } from '../features/memory/pages/MemoryPage.tsx';
-import { ChatPage } from '../features/chat/pages/ChatPage.tsx';
 import { PresenceProvider } from '../features/chat/context/presence.tsx';
-import AnalyticsPage from '../features/analytics/pages/AnalyticsPage.tsx';
-import ActivityPage from '../features/activity/pages/ActivityPage.tsx';
-import { AdminLayout } from '../features/admin/pages/AdminLayout.tsx';
-import { AdminDashboard } from '../features/admin/pages/AdminDashboard.tsx';
-import { AdminUsers } from '../features/admin/pages/AdminUsers.tsx';
-import { AdminAdmins } from '../features/admin/pages/AdminAdmins.tsx';
-import { AdminContent } from '../features/admin/pages/AdminContent.tsx';
-import { AdminReports } from '../features/admin/pages/AdminReports.tsx';
-import { AdminAnnouncements } from '../features/admin/pages/AdminAnnouncements.tsx';
-import { AdminAudit } from '../features/admin/pages/AdminAudit.tsx';
-import { AdminSettings } from '../features/admin/pages/AdminSettings.tsx';
-import { AdminFeedback } from '../features/admin/pages/AdminFeedback.tsx';
+
+// Every page except the two landing ones (login, own calendar) loads on demand, so the first paint ships less JS.
+const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage.tsx').then(m => ({ default: m.RegisterPage })));
+const OnboardingPage = lazy(() => import('../features/auth/pages/OnboardingPage.tsx').then(m => ({ default: m.OnboardingPage })));
+const LegalPage = lazy(() => import('../features/legal/pages/LegalPage.tsx').then(m => ({ default: m.LegalPage })));
+const FriendsPage = lazy(() => import('../features/friends/pages/FriendsPage.tsx').then(m => ({ default: m.FriendsPage })));
+const SettingsPage = lazy(() => import('../features/profile/pages/SettingsPage.tsx').then(m => ({ default: m.SettingsPage })));
+const ProfilePage = lazy(() => import('../features/profile/pages/ProfilePage.tsx').then(m => ({ default: m.ProfilePage })));
+const NewMeetupPage = lazy(() => import('../features/meetup/pages/NewMeetupPage.tsx').then(m => ({ default: m.NewMeetupPage })));
+const ProposeMeetupPage = lazy(() => import('../features/meetup/pages/ProposeMeetupPage.tsx').then(m => ({ default: m.ProposeMeetupPage })));
+const SavedDraftsPage = lazy(() => import('../features/meetup/pages/SavedDraftsPage.tsx').then(m => ({ default: m.SavedDraftsPage })));
+const PricingPage = lazy(() => import('../features/pricing/pages/PricingPage.tsx').then(m => ({ default: m.PricingPage })));
+const DiaryPage = lazy(() => import('../features/diary/pages/DiaryPage.tsx').then(m => ({ default: m.DiaryPage })));
+const MemoryPage = lazy(() => import('../features/memory/pages/MemoryPage.tsx').then(m => ({ default: m.MemoryPage })));
+const ChatPage = lazy(() => import('../features/chat/pages/ChatPage.tsx').then(m => ({ default: m.ChatPage })));
+const AnalyticsPage = lazy(() => import('../features/analytics/pages/AnalyticsPage.tsx'));
+const ActivityPage = lazy(() => import('../features/activity/pages/ActivityPage.tsx'));
+const AdminLayout = lazy(() => import('../features/admin/pages/AdminLayout.tsx').then(m => ({ default: m.AdminLayout })));
+const AdminDashboard = lazy(() => import('../features/admin/pages/AdminDashboard.tsx').then(m => ({ default: m.AdminDashboard })));
+const AdminUsers = lazy(() => import('../features/admin/pages/AdminUsers.tsx').then(m => ({ default: m.AdminUsers })));
+const AdminAdmins = lazy(() => import('../features/admin/pages/AdminAdmins.tsx').then(m => ({ default: m.AdminAdmins })));
+const AdminContent = lazy(() => import('../features/admin/pages/AdminContent.tsx').then(m => ({ default: m.AdminContent })));
+const AdminReports = lazy(() => import('../features/admin/pages/AdminReports.tsx').then(m => ({ default: m.AdminReports })));
+const AdminAnnouncements = lazy(() => import('../features/admin/pages/AdminAnnouncements.tsx').then(m => ({ default: m.AdminAnnouncements })));
+const AdminAudit = lazy(() => import('../features/admin/pages/AdminAudit.tsx').then(m => ({ default: m.AdminAudit })));
+const AdminSettings = lazy(() => import('../features/admin/pages/AdminSettings.tsx').then(m => ({ default: m.AdminSettings })));
+const AdminFeedback = lazy(() => import('../features/admin/pages/AdminFeedback.tsx').then(m => ({ default: m.AdminFeedback })));
 
 // Root layout — animated per-page document title sits above every route.
 function RootLayout() {
   return (
     <>
       <DocumentTitle />
-      <Outlet />
+      <Suspense fallback={null}>
+        <Outlet />
+      </Suspense>
     </>
   );
 }
