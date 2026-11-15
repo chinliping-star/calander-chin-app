@@ -5,7 +5,7 @@ const BRAND = 'Friendiary';
 
 // Pages with a fixed path → [label, short info]
 const STATIC: Record<string, [string, string]> = {
-  '/':          ['Welcome', 'your cute social calendar'],
+  '/':          ['Plan meetups with friends', 'your cute social calendar'],
   '/login':     ['Sign in', 'welcome back'],
   '/register':  ['Create account', 'join the fun'],
   '/onboarding':['Set up profile', 'almost there'],
@@ -52,9 +52,11 @@ export function DocumentTitle() {
   useEffect(() => {
     const { label, info } = pageInfo(pathname);
 
-    // Respect reduced-motion: static title, no animation.
+    // Static title for reduced-motion users and for crawlers: Google indexed a mid-scroll
+    // marquee frame ("back Friendiary Sign in") as the page title.
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) {
+    const isBot = /bot|crawl|spider|slurp|lighthouse|headless/i.test(navigator.userAgent);
+    if (reduce || isBot) {
       document.title = `${label} ✦ ${BRAND}`;
       return;
     }
