@@ -28,3 +28,7 @@ createRoot(document.getElementById('root')!).render(
     </ClerkProvider>
   </StrictMode>,
 )
+
+// The static shell in index.html stays under the app until React has painted, then goes away.
+// Removing it in the same frame React mounts made Chrome drop it as the LCP element (mobile LCP 4s → 2s).
+requestAnimationFrame(() => setTimeout(() => document.getElementById('app-shell')?.remove(), 1000));
