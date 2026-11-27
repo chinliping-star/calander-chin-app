@@ -12,6 +12,7 @@ import { PeopleYouMayKnow } from '../components/PeopleYouMayKnow.tsx';
 import { useFriendsApi, type ApiFriend } from '../api/friends.api.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
 import { ProposalCard } from '../../meetup/components/ProposalCard.tsx';
+import { isOpenProposal, isConfirmedProposal, isMyPendingInvite } from '../../meetup/proposals.ts';
 import { useAuthStore } from '../../../store/auth.ts';
 import type { SidebarSection, FriendProfile } from '../types.ts';
 
@@ -43,11 +44,7 @@ function InvitesPanel() {
 
   // Show an invite only while MY own RSVP is pending — independent of others.
   // Proposals (poll-style) live in their own tab, so exclude them here.
-  const pending = meetups.filter(m =>
-    !m.is_proposal &&
-    m.proposer_id?._id !== user?._id &&
-    m.responses?.find(r => r.user_id?._id === user?._id)?.status === 'pending',
-  );
+  const pending = meetups.filter(m => isMyPendingInvite(m, user?._id));
   const [responded, setResponded] = useState<Map<string, 'accepted' | 'declined'>>(new Map());
 
   const accept = useMutation({
@@ -173,10 +170,9 @@ function ProposalsPanel() {
     staleTime: 30_000,
   });
 
-  // Open polls (still voting) first, then recently-locked ones for context.
-  const proposals = meetups.filter(m => m.is_proposal);
-  const open = proposals.filter(m => !m.locked_slot_id);
-  const recentlyLocked = proposals.filter(m => m.locked_slot_id);
+  // Open polls (still voting) first, then upcoming locked ones for context.
+  const open = meetups.filter(m => isOpenProposal(m));
+  const recentlyLocked = meetups.filter(m => isConfirmedProposal(m));
 
   return (
     <section aria-labelledby="proposals-heading">
@@ -191,7 +187,7 @@ function ProposalsPanel() {
         <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-primary)' }} /></div>
       )}
 
-      {!isLoading && proposals.length === 0 && (
+      {!isLoading && open.length === 0 && recentlyLocked.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: 'var(--text)' }}>
           <Inbox size={40} style={{ opacity: 0.3 }} />
           <p className="text-sm font-medium">No proposals yet</p>

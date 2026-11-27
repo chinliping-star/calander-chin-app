@@ -34,21 +34,35 @@ interface ShoutboxProps {
    * friend. No other friend can read or post in it.
    */
   friendId?: string;
+  /**
+   * When set, shows this user's wall (their shouts + their friends'), as on
+   * their profile. Posting still broadcasts, so it lands on this wall too.
+   */
+  wallOwnerId?: string;
   /** heading text override */
   title?: string;
 }
 
-export function Shoutbox({ hideHeading = false, friendId, title }: ShoutboxProps) {
+export function Shoutbox({ hideHeading = false, friendId, wallOwnerId, title }: ShoutboxProps) {
   const { user } = useAuthStore();
   const api = useShoutboxApi();
   const qc = useQueryClient();
   const [draft, setDraft] = useState('');
 
-  const queryKey = friendId ? ['shoutbox-private', friendId] : ['shoutbox-feed'];
+  const queryKey = friendId
+    ? ['shoutbox-private', friendId]
+    : wallOwnerId
+      ? ['shoutbox-wall', wallOwnerId]
+      : ['shoutbox-feed'];
 
   const { data: messages = [], isLoading, isError } = useQuery({
     queryKey,
-    queryFn: () => (friendId ? api.getPrivateFeed(friendId) : api.getFeed()),
+    queryFn: () =>
+      friendId
+        ? api.getPrivateFeed(friendId)
+        : wallOwnerId
+          ? api.getWall(wallOwnerId)
+          : api.getFeed(),
     enabled: !!user,
     staleTime: 10_000,
     refetchInterval: 15_000,
@@ -61,6 +75,7 @@ export function Shoutbox({ hideHeading = false, friendId, title }: ShoutboxProps
     onSuccess: () => {
       setDraft('');
       qc.invalidateQueries({ queryKey });
+      if (!friendId) qc.invalidateQueries({ queryKey: ['shoutbox-feed'] });
     },
   });
 

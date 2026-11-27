@@ -85,7 +85,8 @@ interface MeetupItem {
   invited: { name: string; avatar?: string; status: 'pending' | 'accepted' | 'declined' }[]; // everyone except the proposer (declined hidden)
   participantIds: string[];                             // extra invitee ids (excludes proposer, includes owner)
   color: string;                                        // proposer's theme colour
-  myColor?: string;                                     // colour the viewer picked
+  myColor?: string;                                     // colour shown: viewer's pick, else the creator's
+  ownColor?: string;                                    // colour the viewer picked
 }
 
 interface MeetupDetailInfo {
@@ -182,6 +183,8 @@ function buildMeetupList(meetups: ApiMeetup[], timeFormat: '12h' | '24h'): Meetu
           .map(p => p._id)
           .filter(id => id !== proposerId),
         color: themeColor(m.proposer_id?.theme),
+        myColor: m.my_color ?? undefined,
+        ownColor: m.own_color ?? undefined,
       };
     })
     // Sort by date ascending so the list is chronological, not random
@@ -212,13 +215,19 @@ function EventColorPicker({ meetupId, current }: { meetupId: string; current?: s
     mutationFn: (color: string | null) => meetupsApi.setColor(meetupId, color),
     onMutate: (color) => setPicked(color),
     onError: () => setPicked(current ?? null),
-    onSettled: () => qc.invalidateQueries({ queryKey: ['meetups'] }),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['meetups'] });
+      void qc.invalidateQueries({ queryKey: ['calendar'] });
+    },
   });
   const ring = '0 0 0 2px var(--bg), 0 0 0 4px var(--text-h)';
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-semibold" style={{ color: 'var(--text-h)' }}>Colour on my calendar</p>
+      <p className="text-xs font-semibold" style={{ color: 'var(--text-h)' }}>Event colour</p>
+      <p className="text-[11px]" style={{ color: 'var(--text)' }}>
+        Friends see the colour the creator picks, unless they pick their own.
+      </p>
       <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Meetup colour">
         <button
           type="button"
@@ -516,7 +525,7 @@ function MeetupDetailModal({
         )}
 
         {/* Personal colour — how this meetup looks on my calendar */}
-        {!editing && meetup && <EventColorPicker meetupId={meetup.id} current={meetup.myColor} />}
+        {!editing && meetup && <EventColorPicker meetupId={meetup.id} current={meetup.ownColor} />}
 
         {/* Attendance — only for past, accepted meetups (view mode) */}
         {!editing && canMarkAttendance && meetup && (
@@ -1219,8 +1228,7 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
 
   const overrides = data ? buildOverrides(data.days, visibleMeetups) : {};
   // Bug 10.1: pass timeFormat to buildMeetupList so times are pre-formatted
-  // All meetups across every month — feeds the paginated "All Meetups" list,
-  // and carries each meetup's personal colour (the month endpoint doesn't).
+  // All meetups across every month — feeds the paginated "All Meetups" list.
   const meetupsApi = useMeetupsApi();
   const { data: allApiMeetups = [] } = useQuery({
     queryKey: ['meetups'],
@@ -1228,12 +1236,10 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     enabled: !!user?.username,
     staleTime: 60_000,
   });
-  const colorById = new Map(allApiMeetups.flatMap(m => (m.my_color ? [[m._id, m.my_color] as const] : [])));
 
   const meetupList = (data ? buildMeetupList(visibleMeetups, timeFormat) : []).map(m => ({
     ...m,
     attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
-    myColor: colorById.get(m.id),
   }));
   const visibleAll = allApiMeetups.filter(m => {
     const mine = m.responses?.find(r => r.user_id?._id === myId);
@@ -1246,7 +1252,6 @@ export function CalendarGrid({ isOwn = true }: { isOwn?: boolean }) {
     .map(m => ({
       ...m,
       attendance: attendanceMap.get(m.id) as MeetupItem['attendance'],
-      myColor: colorById.get(m.id),
     }));
 
   const markDay = useMutation({

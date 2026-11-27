@@ -124,3 +124,32 @@ Source: Chin's "13/10/2026 updates" doc. Item 8 (Android app) skipped on request
   - [ ] **Needs decision:** coin amounts and the 500-coin price are placeholders — Chin to confirm.
   - [ ] **Needs decision:** "earn by sharing" — no share button exists yet to reward. What counts as sharing?
   - Note: while `ALL_FEATURES_FREE` is on, Premium bought with coins changes nothing visible.
+
+## Part D — Meeting of 05/11/2026
+
+Source: Chin's list from the 5 Nov meeting (19 items).
+
+- [x] **#1 Memories only after the meetup happened** — done 2026-11-15 (QA round 2).
+- [x] **#2 / #3 Message Wall on a profile** (M) — each profile now has a Message Wall card (Overview tab, right side): the owner's messages + their friends' messages. Only the owner and the owner's friends can see it. A friend's message on it shows on the owner's own wall too.
+  New API: `GET /shoutbox/wall/:userId`. Files: `shoutbox.service.ts`, `Shoutbox.tsx`, `ProfilePage.tsx`
+- [x] **#4 Event colour seen by friends** (S) — the colour the creator picks now shows on every friend's calendar. A friend can still pick their own colour, which wins for them only.
+  `GET /meetups` and `GET /calendar/:username` send `my_color` (own pick, else creator's) and `own_color`. Files: `chip-colors.ts`, `meetups.service.ts`, `calendar.service.ts`, `CalendarGrid.tsx`
+- [x] **#5 Bio overflow** — done 2026-11-05.
+- [x] **#6 Chat buttons** — non-working attach/file/mic buttons removed 2026-11-15 (not built).
+- [x] **#7 Coins on mobile** — done 2026-11-15.
+- [x] **#8 Friends section shows settings first** — done 2026-11-15.
+- [x] **#9 Sticky notes blocks bottom button** — done 2026-11-05.
+- [ ] **#10 Logo** — waiting for Chin's logo.
+- [x] **#11 Notification ring** — done 2026-11-15.
+- [ ] **#12 Privacy policy / Terms** — pages live at `/privacy` and `/terms` with footer links. Still DUMMY values — need Chin's real details (see Part B).
+- [ ] **#13 Remove Clerk** (L) — not started. Needs a decision and estimate (login rewrite + moving users). See #18.
+- [x] **#14 Sticky note icon** — done 2026-11-15.
+- [x] **#15 Live chat does not close** — done 2026-11-15.
+- [x] **#16 Website score** — Lighthouse 94–100, done 2026-11-15.
+- [x] **#17 Testing** (S) — first automated tests: `npm test` in `Backend/` and `Frontend/` (Node test runner, no new packages). Covers event colour, proposal and invite counts.
+- [ ] **#18 Console errors** — checked live site 2026-11-27 (calendar, friends, profile): no JS errors. Only warning: **Clerk runs with development keys in production** (strict usage limits). Fix is in the Clerk dashboard: create a Production instance, set `VITE_CLERK_PUBLISHABLE_KEY` (Vercel) and `CLERK_SECRET_KEY` (Railway) to the live keys. Users in the dev instance do not move over by themselves — plan a user export/import first. Need Chin's screenshot if she saw other errors.
+- [x] **#19 Proposal counts and data** (S) — fixed:
+  - Proposals badge counted cancelled and expired polls. Now only polls still open for voting.
+  - "Confirmed" section never showed: locking a slot sets `is_proposal = false`, so they were filtered out. Now found by `locked_slot_id` (upcoming only).
+  - Invites badge counted meetups I sent and ones I already answered. Now matches the Invites list.
+  File: `Frontend/src/features/meetup/proposals.ts`

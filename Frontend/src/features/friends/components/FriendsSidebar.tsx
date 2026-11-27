@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../../lib/utils.ts';
 import { useAuthStore } from '../../../store/auth.ts';
 import { useMeetupsApi } from '../../meetup/api/meetups.api.ts';
+import { isOpenProposal, isMyPendingInvite } from '../../meetup/proposals.ts';
 import type { SidebarSection } from '../types.ts';
 
 interface FriendsSidebarProps {
@@ -27,9 +28,9 @@ export function FriendsSidebar({ active, onSelect, onAddFriend }: FriendsSidebar
 
   const today = new Date().toISOString().split('T')[0];
   const upcomingCount = meetups.filter(m => m.date >= today && m.status === 'accepted' && !m.is_proposal).length;
-  const pendingCount = meetups.filter(m => m.status === 'pending' && !m.is_proposal).length;
-  // Open proposals I'm part of (still voting/unlocked).
-  const proposalCount = meetups.filter(m => m.is_proposal && !m.locked_slot_id).length;
+  const pendingCount = meetups.filter(m => isMyPendingInvite(m, user?._id)).length;
+  // Open proposals I'm part of (still voting, not cancelled or expired).
+  const proposalCount = meetups.filter(m => isOpenProposal(m, today)).length;
 
   const NAV_ITEMS: {
     key: SidebarSection;
