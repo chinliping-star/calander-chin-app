@@ -66,10 +66,30 @@ export class ShoutboxService {
    * Newest first up to the tier limit, returned oldest → newest for display.
    */
   async getFeed(viewerClerkId: string) {
+    return this.wallOf(await this.resolveUser(viewerClerkId));
+  }
+
+  /**
+   * A user's Message Wall as their profile shows it: the owner's shouts plus
+   * their friends' shouts. Only the owner and the owner's friends may read it.
+   */
+  async getWall(viewerClerkId: string, ownerId: string) {
+    if (!isValidObjectId(ownerId)) throw new BadRequestException('Invalid user id');
     const viewer = await this.resolveUser(viewerClerkId);
-    const viewerId = viewer._id as Types.ObjectId;
-    const authors = [viewerId, ...(await this.friendIds(viewerId))];
-    const limit = effectivePremium(viewer.is_premium) ? PREMIUM_LIMIT : FREE_LIMIT;
+    const owner = await this.userModel.findById(ownerId).exec();
+    if (!owner) throw new NotFoundException('User not found');
+    const ownerFriends = await this.friendIds(owner._id as Types.ObjectId);
+    const viewerId = (viewer._id as Types.ObjectId).toString();
+    if (viewerId !== ownerId && !ownerFriends.some((id) => id.toString() === viewerId)) {
+      throw new ForbiddenException('Only friends can see this wall');
+    }
+    return this.wallOf(owner, ownerFriends);
+  }
+
+  private async wallOf(owner: UserDocument, friends?: Types.ObjectId[]) {
+    const ownerId = owner._id as Types.ObjectId;
+    const authors = [ownerId, ...(friends ?? (await this.friendIds(ownerId)))];
+    const limit = effectivePremium(owner.is_premium) ? PREMIUM_LIMIT : FREE_LIMIT;
 
     const messages = await this.shoutModel
       .find({ author_id: { $in: authors } })

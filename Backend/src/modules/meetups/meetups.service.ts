@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Meetup, MeetupDocument } from './schemas/meetup.schema';
+import { chipColors } from './chip-colors';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { CalendarDay, CalendarDayDocument } from '../calendar/schemas/calendar-day.schema';
 import { CreateMeetupDto } from './dto/create-meetup.dto';
@@ -385,12 +386,12 @@ export class MeetupsService {
       .populate('responses.user_id', 'username display_name avatar_url theme')
       .sort({ date: 1, time: 1 })
       .exec();
-    // Each person only gets their own chip colour.
+    // Each person gets their own chip colour, falling back to the creator's.
     const uid = userObjId.toString();
     return docs.map((d) => {
+      const creatorId = String(d.populated('proposer_id') ?? d.proposer_id);
       const { event_colors, ...rest } = d.toObject();
-      const mine = (event_colors ?? []).find((c) => c.user_id.toString() === uid);
-      return { ...rest, my_color: mine?.color ?? null };
+      return { ...rest, ...chipColors(event_colors, uid, creatorId) };
     });
   }
 

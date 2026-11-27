@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CalendarDay, CalendarDayDocument } from './schemas/calendar-day.schema';
 import { Meetup, MeetupDocument } from '../meetups/schemas/meetup.schema';
+import { chipColors } from '../meetups/chip-colors';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { Friendship, FriendshipDocument } from '../friendships/schemas/friendship.schema';
 import { MarkDayDto } from './dto/mark-day.dto';
@@ -32,13 +33,14 @@ export class CalendarService {
       throw new NotFoundException(`User @${username} not found`);
     }
 
+    const viewer = viewerClerkId
+      ? await this.userModel.findOne({ clerk_id: viewerClerkId }).select('_id').exec()
+      : null;
+    const viewerId = viewer?._id as Types.ObjectId | undefined;
+
     // Private account (the default) → calendar contents are friends-only. Strangers
     // (and guests) get the user header but an empty month (no days, no meetups).
     if (user.privacy?.private_account !== false) {
-      const viewer = viewerClerkId
-        ? await this.userModel.findOne({ clerk_id: viewerClerkId }).select('_id').exec()
-        : null;
-      const viewerId = viewer?._id as Types.ObjectId | undefined;
       const isSelf = !!viewerId && viewerId.toString() === user._id.toString();
       if (!isSelf) {
         const isFriend = !!viewerId && !!(await this.friendshipModel
@@ -77,6 +79,7 @@ export class CalendarService {
           status: { $in: ['pending', 'accepted'] },
           is_proposal: { $ne: true }, // hide unlocked proposals from the calendar
         })
+        .select('+event_colors')
         .populate('proposer_id', 'username display_name avatar_url theme')
         .populate('owner_id', 'username display_name avatar_url theme')
         .populate('participants', 'username display_name avatar_url theme')
@@ -84,7 +87,15 @@ export class CalendarService {
         .exec(),
     ]);
 
-    return { user, days, meetups };
+    // Same chip colour rule as GET /meetups; raw event_colors never leave the server.
+    const vid = viewerId?.toString() ?? null;
+    const coloured = meetups.map((d) => {
+      const creatorId = String(d.populated('proposer_id') ?? d.proposer_id);
+      const { event_colors, ...rest } = d.toObject();
+      return { ...rest, ...chipColors(event_colors, vid, creatorId) };
+    });
+
+    return { user, days, meetups: coloured };
   }
 
   async markDay(clerkId: string, dto: MarkDayDto): Promise<CalendarDayDocument> {

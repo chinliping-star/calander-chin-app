@@ -42,8 +42,10 @@ export interface ApiMeetup {
   memory_uploaders?: string[];
   /** Memory album only: true if the current user archived this memory. */
   archived?: boolean;
-  /** The viewer's personal chip colour for this meetup (GET /meetups only). */
+  /** Chip colour shown to the viewer: their own pick, else the creator's. */
   my_color?: string | null;
+  /** The viewer's own pick only (null = using the creator's colour). */
+  own_color?: string | null;
   created_at: string;
 }
 

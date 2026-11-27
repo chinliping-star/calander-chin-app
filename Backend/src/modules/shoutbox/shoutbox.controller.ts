@@ -23,6 +23,12 @@ export class ShoutboxController {
     return this.shoutboxService.getFeed(clerkId);
   }
 
+  /** A user's Message Wall (owner + their friends' shouts); owner and friends only. */
+  @Get('wall/:userId')
+  getWall(@CurrentUser() clerkId: string, @Param('userId') userId: string) {
+    return this.shoutboxService.getWall(clerkId, userId);
+  }
+
   @Post()
   postShout(@CurrentUser() clerkId: string, @Body() dto: PostShoutDto) {
     return this.shoutboxService.postShout(clerkId, dto);

@@ -762,6 +762,11 @@ export function ProfilePage() {
               <div className="flex flex-col gap-6">
                 <FriendsRailCard friends={tabFriends} onViewAll={() => setActiveTab('friends')} />
                 <InterestsRailCard interests={interests} notes={interestNotes} onViewAll={() => setActiveTab('interests')} />
+                {(isOwnProfile || isFriend) && profileUser._id && (
+                  <Card className="p-6">
+                    <Shoutbox key={profileUser._id} wallOwnerId={profileUser._id} title={`${displayName}'s Message Wall`} />
+                  </Card>
+                )}
               </div>
             </div>
           )}

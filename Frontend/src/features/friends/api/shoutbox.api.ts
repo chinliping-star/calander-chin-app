@@ -21,6 +21,8 @@ export function useShoutboxApi() {
   return {
     /** Shared friend feed: own + friends' shouts */
     getFeed: () => api.get<ShoutMessage[]>('/shoutbox'),
+    /** A user's wall as their profile shows it (owner + their friends) */
+    getWall: (userId: string) => api.get<ShoutMessage[]>(`/shoutbox/wall/${userId}`),
     postShout: (body: string) => api.post<ShoutMessage>('/shoutbox', { body }),
     deleteShout: (id: string) =>
       api.delete<{ deleted: boolean }>(`/shoutbox/message/${id}`),
